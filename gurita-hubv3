@@ -1,83 +1,86 @@
--- [[ RENZO GURITA - XRAY GURITA V5.2 ORIGINAL FLAT ]] --
+-- [[ RENZO GURITA - XRAY GURITA V5.3 STABLE REPAIR ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 
--- 1. FUNGSI VISUAL (WARNA ASLI TAPI FLAT)
+-- 1. PAKSA MENU MUNCUL DULUAN (ANTI-BUG)
+local SG = Instance.new("ScreenGui", game.CoreGui)
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 180, 0, 120); Main.Position = UDim2.new(0.5, -90, 0.2, 0)
+Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Main.Active = true; Main.Draggable = true; Instance.new("UICorner", Main)
+local Border = Instance.new("Frame", Main); Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2); Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0; Instance.new("UICorner", Border)
+
+local function CreateBtn(txt, pos, cb)
+    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(0, 160, 255); b.BackgroundTransparency = 0.8; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; b.Text = txt; Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() cb(b) end) return b
+end
+
+-- Toggles
+_G.TracerActive = false
+_G.XrayActive = false
+
+-- 2. FUNGSI VISUAL FIX (WARNA ASLI + FLAT)
 local function ApplyVisual(v)
-    pcall(function()
-        if v:IsA("BasePart") or v:IsA("MeshPart") then
-            -- PROTEKSI: Jangan sentuh karakter Ezra
-            if v:IsDescendantOf(lp.Character) or v.Parent:FindFirstChild("Humanoid") then 
-                return 
-            end
+    if v:IsA("BasePart") or v:IsA("MeshPart") then
+        -- Blacklist Player & Ava
+        if v:IsDescendantOf(lp.Character) or v.Parent:FindFirstChild("Humanoid") then return end
 
-            local name = v.Name:lower()
+        local name = v.Name:lower()
+        
+        -- FLAT COLOR: Cuma ganti Material, JANGAN ganti Color (Biar gak biru/pelangi)
+        v.Material = Enum.Material.Plastic
+        if v:IsA("MeshPart") then v.TextureID = "" end
+        v.CastShadow = false
 
-            -- A. FLAT COLOR LOGIC (Pakai warna asli objek)
-            v.Material = Enum.Material.Plastic -- Buang tekstur kasar
-            if v:IsA("MeshPart") then v.TextureID = "" end -- Hapus gambar mesh
-            v.CastShadow = false
-
-            -- B. XRAY LOGIC (Tembok & Base)
-            local isBuilding = name:find("wall") or name:find("base") or name:find("dinding") or name:find("roof")
-            
-            if isBuilding then
+        -- XRAY LOGIC
+        if _G.XrayActive then
+            if name:find("wall") or name:find("base") or name:find("dinding") or name:find("roof") then
                 v.Transparency = 0.5
-            else
-                -- LANTAI (Tetap pakai warna aslinya tapi Flat)
-                if name:find("floor") or name:find("lantai") or name:find("ground") then
-                    v.Transparency = 0
-                    -- Tidak ganti warna, cuma ganti material biar Flat
-                end
             end
-
-            -- C. PEMBERSIH RUMPUT (Biar enteng & pandangan luas)
-            if name:find("grass") or name:find("leaf") or name:find("tree") then
-                v.Transparency = 1
-                v.CanCollide = true
+        else
+            if name:find("wall") or name:find("base") or name:find("dinding") or name:find("roof") then
+                v.Transparency = 0
             end
         end
+
+        -- Hapus Rumput pengganggu
+        if name:find("grass") or name:find("leaf") then
+            v.Transparency = 1
+        end
+    end
+end
+
+-- 3. TRACER BIRU (STABIL)
+local function AddTracer(plr)
+    local Line = Drawing.new("Line")
+    Line.Visible = false; Line.Color = Color3.fromRGB(0, 160, 255); Line.Thickness = 1.5
+    
+    RunService.RenderStepped:Connect(function()
+        if _G.TracerActive and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, onScreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+            if onScreen then
+                Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                Line.To = Vector2.new(pos.X, pos.Y); Line.Visible = true
+            else Line.Visible = false end
+        else Line.Visible = false end
     end)
 end
 
--- 2. TRACER BIRU NEON (AUTO-ON)
-local function AddTracer(plr)
-    local Line = Drawing.new("Line")
-    Line.Visible = true
-    Line.Color = Color3.fromRGB(0, 160, 255)
-    Line.Thickness = 1.5
-    
-    local function UpdateTracer()
-        local c = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                local root = plr.Character.HumanoidRootPart
-                local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
-                if onScreen then
-                    Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                    Line.To = Vector2.new(pos.X, pos.Y)
-                    Line.Visible = true
-                else Line.Visible = false end
-            else Line.Visible = false end
-        end)
-        plr.CharacterRemoving:Connect(function() c:Disconnect() Line.Visible = false end)
-    end
-    task.spawn(UpdateTracer)
-end
-
--- 3. EKSEKUSI OTOMATIS
-for _, v in pairs(workspace:GetDescendants()) do
-    ApplyVisual(v)
-end
-
-workspace.DescendantAdded:Connect(function(v)
-    task.wait()
-    ApplyVisual(v)
+-- 4. TOMBOL MENU
+CreateBtn("TRACER BIRU: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b)
+    _G.TracerActive = not _G.TracerActive
+    b.Text = _G.TracerActive and "TRACER: ON" or "TRACER BIRU: OFF"
 end)
 
-for _, p in pairs(Players:GetPlayers()) do
-    if p ~= lp then AddTracer(p) end
-end
+CreateBtn("XRAY BASE: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b)
+    _G.XrayActive = not _G.XrayActive
+    b.Text = _G.XrayActive and "XRAY: ON" or "XRAY BASE: OFF"
+    for _, v in pairs(workspace:GetDescendants()) do ApplyVisual(v) end
+end)
+
+-- INIT
+for _, p in pairs(Players:GetPlayers()) do if p ~= lp then AddTracer(p) end end
 Players.PlayerAdded:Connect(AddTracer)
+for _, v in pairs(workspace:GetDescendants()) do ApplyVisual(v) end
+workspace.DescendantAdded:Connect(ApplyVisual)
