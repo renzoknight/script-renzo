@@ -1,56 +1,66 @@
--- [[ RENZO GURITA - FLAT GRAPHIC + FAST AUTO GRAB ]] --
+-- [[ GURITA-HUB - MENU EDITION ]] --
 
-local function ApplyFast(v)
+-- 1. Load UI Library (Membuat Menu)
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/7Lib/7Lib/main/7Lib.lua"))()
+local Window = Library:Window("GURITA-HUB", "Steal a Brainrot", Color3.fromRGB(255, 0, 0))
+local Tab = Window:Tab("Main")
+
+-- 2. FITUR FLAT COLOR (Langsung Polos Saat Execute)
+local function ApplyFlat(v)
     if v:IsA("BasePart") or v:IsA("MeshPart") then
         v.Material = Enum.Material.Plastic
         v.Reflectance = 0
         v.CastShadow = false
     end
     if v:IsA("Texture") then v:Destroy() end
-    if v:IsA("SpecialMesh") then v.TextureId = "" end
+    if v:IsA("SpecialMesh") or v:IsA("MeshPart") then v.TextureID = "" end
 end
 
--- 1. OPTIMASI GRAFIK (Anti-Lag)
 task.spawn(function()
-    local descendants = game:GetDescendants()
-    for i = 1, #descendants do
-        ApplyFast(descendants[i])
-        if i % 150 == 0 then task.wait() end
+    for _, v in ipairs(game:GetDescendants()) do ApplyFlat(v) end
+    game.DescendantAdded:Connect(ApplyFlat)
+end)
+
+-- 3. LOGIKA AUTO GRAB (0.1 DETIK)
+_G.AutoGrab = false
+
+Tab:Toggle("Auto Grab 0.1s", function(state)
+    _G.AutoGrab = state
+    if state then
+        Library:Notification("GURITA-HUB", "Auto Grab: AKTIF", "Done")
+    else
+        Library:Notification("GURITA-HUB", "Auto Grab: MATI", "Done")
     end
 end)
-game.DescendantAdded:Connect(ApplyFast)
-
--- 2. AUTO GRAB / STEAL (0.1s - Khusus Steal a Brainrot)
-local Player = game.Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
-local Root = Character:WaitForChild("HumanoidRootPart")
 
 task.spawn(function()
     while task.wait(0.1) do
-        pcall(function()
-            -- Mencari item di Workspace (biasanya di folder 'Items' atau 'Dropped')
-            local itemsFolder = workspace:FindFirstChild("Items") or workspace:FindFirstChild("DroppedItems") or workspace
-            
-            for _, item in ipairs(itemsFolder:GetChildren()) do
-                if item:IsA("BasePart") or item:IsA("Model") then
-                    local touchPart = item:IsA("Model") and (item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")) or item
-                    
-                    if touchPart then
-                        -- Metode Firetouch untuk ambil instan tanpa gerak
-                        firetouchinterest(Root, touchPart, 0)
-                        firetouchinterest(Root, touchPart, 1)
+        if _G.AutoGrab then
+            pcall(function()
+                local Character = game.Players.LocalPlayer.Character
+                local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+                if Root then
+                    for _, v in ipairs(workspace:GetDescendants()) do
+                        -- Auto ambil item tombol E
+                        if v:IsA("ProximityPrompt") then
+                            fireproximityprompt(v)
+                        -- Auto ambil item sistem sentuh
+                        elseif v:IsA("TouchTransmitter") then
+                            firetouchinterest(Root, v.Parent, 0)
+                            firetouchinterest(Root, v.Parent, 1)
+                        end
                     end
                 end
-            end
-        end)
+            end)
+        end
     end
 end)
 
--- 3. OPTIMASI LIGHTING
-local Lighting = game:GetService("Lighting")
-Lighting.GlobalShadows = false
-Lighting.Brightness = 2
-Lighting.EnvironmentDiffuseScale = 0
+-- 4. OPTIMASI LIGHTING
+local L = game:GetService("Lighting")
+L.GlobalShadows = false
+L.Brightness = 2
+L.EnvironmentDiffuseScale = 0
 settings().Rendering.QualityLevel = 1
 
-print("Renzo: Grafik Polos + Auto Grab 0.1s Aktif!")
+Library:Notification("GURITA-HUB", "Berhasil Dimuat!", "Enjoy")
