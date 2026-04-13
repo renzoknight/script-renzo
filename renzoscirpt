@@ -1,90 +1,108 @@
--- [[ GURITA HUB V5.2 - NAMELESS STYLE (NO LAG) ]] --
+-- [[ GURITA HUB V5.6 - ALL BRAINROT DETECTOR (NO MINIMUM) ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
-local RunService = game:GetService("RunService")
 
 _G.ESP_Ezra = true
 
--- Fungsi hapus sisa ESP biar bersih
 local function Cleanup()
     for _, v in pairs(workspace:GetDescendants()) do
-        if v.Name == "EzraBox" or v.Name == "EzraTag" then
+        if v.Name == "EzraTag" or v.Name == "EzraBox" then
             v:Destroy()
         end
     end
 end
 
--- Fungsi pasang Box & Label (Mirip Nameless)
-local function CreateESP(part, txt)
-    -- Label Nama & Perm/s
+-- Fungsi mencari Nama Brainrot yang murni
+local function GetRealBrainrotName(labelObj)
+    local scope = labelObj:FindFirstAncestorWhichIsA("Model") or labelObj:FindFirstAncestorWhichIsA("Folder") or labelObj.Parent
+    local foundName = "Brainrot"
+    
+    for _, child in pairs(scope:GetDescendants()) do
+        if child:IsA("TextLabel") and child ~= labelObj then
+            local t = child.Text
+            -- Filter Nama Player: Buang yang ada 's Base, LVL, atau angka murni
+            if not t:find("'s") and not t:find("/") and not t:find("LVL") and not tonumber(t) and #t > 1 then
+                foundName = t
+                break
+            end
+        end
+    end
+    return foundName
+end
+
+local function ApplyFullESP(part, bName, incomeTxt)
     local billboard = Instance.new("BillboardGui", part)
     billboard.Name = "EzraTag"
     billboard.AlwaysOnTop = true
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.ExtentsOffset = Vector3.new(0, 3, 0)
+    billboard.Size = UDim2.new(0, 300, 0, 100)
+    billboard.ExtentsOffset = Vector3.new(0, 5, 0)
     
     local label = Instance.new("TextLabel", billboard)
     label.BackgroundTransparency = 1
     label.Size = UDim2.new(1, 0, 1, 0)
-    label.Text = "★ " .. txt .. " ★"
+    -- Nama Putih BOLD, Income KUNING
+    label.Text = "<b>" .. bName .. "</b>\n<font color='#FFFF00'>" .. incomeTxt .. "</font>"
+    label.RichText = true
     label.Font = Enum.Font.GothamBold
-    label.TextSize = 22 -- Ukuran pas sesuai request
-    label.TextColor3 = Color3.fromRGB(255, 255, 0)
+    label.TextSize = 25 -- Tetap Gede & Jelas
+    label.TextColor3 = Color3.new(1, 1, 1)
     label.TextStrokeTransparency = 0
 
-    -- Box Highlight (Biar barangnya kelihatan)
     local box = Instance.new("BoxHandleAdornment", part)
     box.Name = "EzraBox"
     box.AlwaysOnTop = true
-    box.Size = part.Size + Vector3.new(0.5, 0.5, 0.5)
-    box.Color3 = Color3.fromRGB(0, 255, 255)
-    box.Transparency = 0.5
-    box.ZIndex = 5
+    box.Size = part.Size + Vector3.new(0.3, 0.3, 0.3)
+    box.Color3 = Color3.fromRGB(0, 255, 255) -- Warna Cyan (Biru Muda)
+    box.Transparency = 0.7
+    box.Adornee = part
 end
 
--- Scanner Pintar (Hanya scan yang penting)
-local function ScanSultan()
+local function ScanAllBrainrots()
     Cleanup()
     if not _G.ESP_Ezra then return end
     
     for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("TextLabel") and v.Parent and v.Parent:IsA("BasePart") then
+        if v:IsA("TextLabel") then
             local t = v.Text:upper()
-            -- Scan hanya yang punya income Million atau Billion
-            if t:find("M") or t:find("B") then
-                local num = tonumber(t:match("%d+%.?%d*"))
-                if num and num >= 15 then -- Sesuai target Abang (15M+)
-                    CreateESP(v.Parent, v.Text)
+            -- Scan SEMUA yang ada tanda penghasilan, mau 1 atau 100B
+            if t:find("/S") or t:find("M/S") or t:find("B/S") or t:find("PERM/S") then
+                local targetPart = v:FindFirstAncestorWhichIsA("BasePart") or (v.Parent:IsA("BasePart") and v.Parent)
+                
+                if targetPart then
+                    local realName = GetRealBrainrotName(v)
+                    ApplyFullESP(targetPart, realName, v.Text)
                 end
             end
         end
     end
 end
 
--- UI Tombol Simple
+-- UI Tombol Refresh
 local sg = Instance.new("ScreenGui", game:GetService("CoreGui"))
 local btn = Instance.new("TextButton", sg)
-btn.Size = UDim2.new(0, 130, 0, 40)
-btn.Position = UDim2.new(0, 15, 0.5, 0)
-btn.Text = "ESP BOX: ON"
-btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+btn.Size = UDim2.new(0, 160, 0, 50)
+btn.Position = UDim2.new(0, 20, 0.5, 0)
+btn.Text = "SCAN ALL BRAINROT"
+btn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 btn.TextColor3 = Color3.new(1, 1, 1)
 btn.Font = Enum.Font.GothamBold
 Instance.new("UICorner", btn)
+local st = Instance.new("UIStroke", btn); st.Color = Color3.new(0,1,1); st.Thickness = 2
 
 btn.MouseButton1Click:Connect(function()
-    _G.ESP_Ezra = not _G.ESP_Ezra
-    btn.Text = _G.ESP_Ezra and "ESP BOX: ON" or "ESP BOX: OFF"
-    if _G.ESP_Ezra then ScanSultan() else Cleanup() end
+    ScanAllBrainrots()
+    btn.Text = "SCANNING..."
+    task.wait(1)
+    btn.Text = "SCAN ALL BRAINROT"
 end)
 
--- Auto refresh setiap 15 detik biar gak berat
+-- Auto scan pelan biar gak lag karakter
 task.spawn(function()
     while true do
-        if _G.ESP_Ezra then ScanSultan() end
-        task.wait(15)
+        if _G.ESP_Ezra then ScanAllBrainrots() end
+        task.wait(25) -- Jeda lebih lama karena scan lebih banyak barang
     end
 end)
 
-ScanSultan()
+ScanAllBrainrots()
