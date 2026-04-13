@@ -1,21 +1,6 @@
--- [[ GURITA-HUB: GOST STEAL V2 - NAMELESS ENGINE ]] --
+-- [[ GURITA-HUB: AUTO STEAL FINAL BYPASS ]] --
 
--- 1. OPTIMISASI RENDER (AGAR SCRIPT JALAN MULUS)
-local function Optimize(v)
-    pcall(function()
-        if v:IsA("BasePart") then
-            v.Material = Enum.Material.Plastic
-            v.Reflectance = 0
-        elseif v:IsA("Texture") or v:IsA("Decal") then
-            v:Destroy()
-        end
-    end)
-end
-task.spawn(function()
-    for _, v in ipairs(workspace:GetDescendants()) do Optimize(v) end
-end)
-
--- 2. UI GOST STEAL v2 (PERSIS FOTO)
+-- 1. UI GOST STEAL v2
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 180, 0, 110)
@@ -34,7 +19,7 @@ ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ActionBtn.Font = Enum.Font.SourceSansBold
 Instance.new("UICorner", ActionBtn).CornerRadius = UDim.new(0, 8)
 
--- 3. LOGIKA AUTO STEAL (BYPASS NAMELESS METHOD)
+-- 2. LOGIKA REMOTE STEAL (DARI SIMPLESPY ABANG)
 _G.StealActive = false
 
 ActionBtn.MouseButton1Click:Connect(function()
@@ -44,37 +29,20 @@ ActionBtn.MouseButton1Click:Connect(function()
 end)
 
 task.spawn(function()
-    local lp = game.Players.LocalPlayer
-    while task.wait(0.05) do -- Sinkronisasi cepat 0.05s
+    -- Path Remote dari foto SimpleSpy Abang
+    -- Nama remote: 0b43c17e5ca18...
+    local remotePath = game:GetService("ReplicatedStorage"):WaitForChild("0b43c17e5ca184988716b110f5453086")
+    
+    while task.wait(0.3) do -- Jeda biar gak kick
         if _G.StealActive then
             pcall(function()
-                local char = lp.Character
-                local root = char:FindFirstChild("HumanoidRootPart")
-                if not root then return end
-
-                -- Nameless Logic: Mencari Proximity di dalam Model khusus
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("ProximityPrompt") then
-                        -- Cek apakah tombol ini adalah tombol Mencuri/Steal
-                        if v.ActionText:lower():find("mencuri") or v.ObjectText:lower():find("brainrot") then
-                            local parent = v.Parent
-                            local dist = (parent:GetPivot().Position - root.Position).Magnitude
-                            
-                            -- Radius 15 stud (Sesuai Nameless Grab)
-                            if dist < 15 then
-                                -- Bypass Sinkronisasi:
-                                v.HoldDuration = 0
-                                v.RequiresLineOfSight = false
-                                
-                                -- Eksekusi instan
-                                fireproximityprompt(v)
-                                
-                                -- Paksa server menerima input
-                                task.wait(0.02)
-                            end
-                        end
-                    end
-                end
+                -- Args dari foto Abang
+                local args = {
+                    [1] = "33\163A33\163A"
+                }
+                
+                -- Tembak langsung ke server
+                remotePath:FireServer(unpack(args))
             end)
         end
     end
