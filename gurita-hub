@@ -1,11 +1,21 @@
--- [[ GURITA-HUB - MENU EDITION ]] --
+-- [[ GURITA-HUB STABLE VERSION ]] --
 
--- 1. Load UI Library (Membuat Menu)
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/7Lib/7Lib/main/7Lib.lua"))()
-local Window = Library:Window("GURITA-HUB", "Steal a Brainrot", Color3.fromRGB(255, 0, 0))
-local Tab = Window:Tab("Main")
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- 2. FITUR FLAT COLOR (Langsung Polos Saat Execute)
+local Window = Rayfield:CreateWindow({
+   Name = "GURITA-HUB",
+   LoadingTitle = "Steal a Brainrot Edition",
+   LoadingSubtitle = "by Renzo",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "GuritaHubConfig",
+      FileName = "Main"
+   }
+})
+
+local Tab = Window:CreateTab("Main Farming", 4483362458)
+
+-- 1. FITUR FLAT COLOR (Otomatis Aktif)
 local function ApplyFlat(v)
     if v:IsA("BasePart") or v:IsA("MeshPart") then
         v.Material = Enum.Material.Plastic
@@ -13,7 +23,9 @@ local function ApplyFlat(v)
         v.CastShadow = false
     end
     if v:IsA("Texture") then v:Destroy() end
-    if v:IsA("SpecialMesh") or v:IsA("MeshPart") then v.TextureID = "" end
+    if v:IsA("SpecialMesh") or v:IsA("MeshPart") then 
+        v.TextureID = "" 
+    end
 end
 
 task.spawn(function()
@@ -21,17 +33,17 @@ task.spawn(function()
     game.DescendantAdded:Connect(ApplyFlat)
 end)
 
--- 3. LOGIKA AUTO GRAB (0.1 DETIK)
+-- 2. FITUR AUTO GRAB 0.1s
 _G.AutoGrab = false
 
-Tab:Toggle("Auto Grab 0.1s", function(state)
-    _G.AutoGrab = state
-    if state then
-        Library:Notification("GURITA-HUB", "Auto Grab: AKTIF", "Done")
-    else
-        Library:Notification("GURITA-HUB", "Auto Grab: MATI", "Done")
-    end
-end)
+local Toggle = Tab:CreateToggle({
+   Name = "Auto Grab 0.1s",
+   CurrentValue = false,
+   Flag = "Toggle1", 
+   Callback = function(Value)
+      _G.AutoGrab = Value
+   end,
+})
 
 task.spawn(function()
     while task.wait(0.1) do
@@ -41,10 +53,8 @@ task.spawn(function()
                 local Root = Character and Character:FindFirstChild("HumanoidRootPart")
                 if Root then
                     for _, v in ipairs(workspace:GetDescendants()) do
-                        -- Auto ambil item tombol E
                         if v:IsA("ProximityPrompt") then
                             fireproximityprompt(v)
-                        -- Auto ambil item sistem sentuh
                         elseif v:IsA("TouchTransmitter") then
                             firetouchinterest(Root, v.Parent, 0)
                             firetouchinterest(Root, v.Parent, 1)
@@ -56,11 +66,13 @@ task.spawn(function()
     end
 end)
 
--- 4. OPTIMASI LIGHTING
-local L = game:GetService("Lighting")
-L.GlobalShadows = false
-L.Brightness = 2
-L.EnvironmentDiffuseScale = 0
+-- Optimasi Lighting & Rendering
+game:GetService("Lighting").GlobalShadows = false
 settings().Rendering.QualityLevel = 1
 
-Library:Notification("GURITA-HUB", "Berhasil Dimuat!", "Enjoy")
+Rayfield:Notify({
+   Title = "GURITA-HUB Loaded",
+   Content = "Grafik Polos & Auto Grab Siap!",
+   Duration = 5,
+   Image = 4483362458,
+})
