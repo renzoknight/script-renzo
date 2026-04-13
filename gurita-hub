@@ -1,59 +1,47 @@
--- [[ GURITA-HUB: FORCE STEAL BYPASS ]] --
+-- [[ GURITA-HUB: THE LAST RESORT - HUMAN MIMIC ]] --
 
 local lp = game.Players.LocalPlayer
 _G.StealActive = false
 
--- UI TOGGLE (Gak usah bagus, yang penting fungsi)
+-- UI SEADANYA
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Btn = Instance.new("TextButton", SG)
 Btn.Size = UDim2.new(0, 150, 0, 50)
 Btn.Position = UDim2.new(0.5, -75, 0.02, 0)
-Btn.Text = "FORCE STEAL: OFF"
-Btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+Btn.Text = "AUTO STEAL: OFF"
+Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Btn.TextColor3 = Color3.new(1, 1, 1)
 
 Btn.MouseButton1Click:Connect(function()
     _G.StealActive = not _G.StealActive
-    Btn.Text = _G.StealActive and "FORCE STEAL: ON" or "FORCE STEAL: OFF"
+    Btn.Text = _G.StealActive and "AUTO STEAL: ON" or "AUTO STEAL: OFF"
     Btn.BackgroundColor3 = _G.StealActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
 end)
 
--- LOGIKA STEAL (FOKUS KE TARGET FOLDER)
 task.spawn(function()
-    while task.wait(0.1) do -- Speed dinaikin biar gak keduluan orang
+    while task.wait(0.5) do
         if _G.StealActive then
             pcall(function()
                 local root = lp.Character.HumanoidRootPart
-                
-                -- Folder yang Abang temuin tadi
+                -- Pakai folder yang Abang temuin tadi
                 local folder = workspace:FindFirstChild("RenderedMovingAnimal")
                 
                 if folder then
                     for _, item in ipairs(folder:GetChildren()) do
-                        local p = item:FindFirstChildOfClass("ProximityPrompt") or item:FindFirstChildWhichIsA("ProximityPrompt", true)
+                        local prompt = item:FindFirstChildOfClass("ProximityPrompt") or item:FindFirstChildWhichIsA("ProximityPrompt", true)
                         
-                        -- Jarak harus deket (Server check)
-                        if p and (item:GetPivot().Position - root.Position).Magnitude < 12 then
+                        if prompt and (item:GetPivot().Position - root.Position).Magnitude < 10 then
+                            -- JANGAN dipaksa 0, biarin ada durasi biar server percaya
+                            -- Tapi kita bantu "Hold" otomatis
                             
-                            -- 1. SINKRONISASI FISHERMAN (Umpan biar gak dikira script)
-                            local fish = game:GetService("ReplicatedStorage"):FindFirstChild("FisherMan")
-                            if fish then fish:FireServer() end
+                            -- Pindah posisi dikit biar beneran nempel
+                            root.CFrame = item:GetPivot() * CFrame.new(0, 2, 0)
                             
-                            -- 2. TEMBAK REMOTE UTAMA (Pake kode rahasia SimpleSpy Abang)
-                            -- Nama remote bakal dicari otomatis yang kodenya panjang
-                            for _, v in ipairs(game:GetService("ReplicatedStorage"):GetChildren()) do
-                                if v:IsA("RemoteEvent") and string.len(v.Name) > 20 then
-                                    v:FireServer(
-                                        "m\\29R\\2\\1\\14\\8W\\21\\12\\0\\8", 
-                                        "\\4\\1Q\\7"
-                                    )
-                                end
-                            end
-
-                            -- 3. PAKSA KLIK TOMBOLNYA
-                            p.HoldDuration = 0
-                            fireproximityprompt(p)
+                            task.wait(0.1)
+                            fireproximityprompt(prompt) -- Eksekusi
                             
-                            break -- Ambil satu-satu biar gak ke-kick
+                            -- Tunggu sampai proses curi selesai (sesuai durasi asli game)
+                            task.wait(prompt.HoldDuration + 0.2) 
                         end
                     end
                 end
