@@ -1,107 +1,63 @@
--- [[ GURITA-HUB: OPTIMIZED ESP & FLAT COLOR ]] --
+-- [[ GURITA-HUB: INSTANT FLAT COLOR & GIANT ESP ]] --
 
-local lp = game.Players.LocalPlayer
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+-- 1. INSTANT PERFORMANCE BOOST (Langsung Jalan Tanpa Menu)
 local Lighting = game:GetService("Lighting")
+local Terrain = workspace:FindFirstChildOfClass("Terrain")
 
-_G.FlatColor = false
-_G.ESPActive = false
+-- Matiin efek visual berat
+Lighting.GlobalShadows = false
+if Terrain then Terrain.WaterWaveSize = 0; Terrain.WaterWaveSpeed = 0; Terrain.WaterReflectance = 0; Terrain.WaterTransparency = 0 end
+settings().Rendering.QualityLevel = 1
 
--- 1. FUNGSI FLAT COLOR (ANTI LAG)
-local function ApplyFlatColor()
-    Lighting.GlobalShadows = false
+local function InstantFlat()
     for _, v in ipairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") or v:IsA("MeshPart") then
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
-        elseif v:IsA("Decal") or v:IsA("Texture") then
+        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") then
             v:Destroy()
         end
     end
 end
+InstantFlat() -- Eksekusi langsung!
 
--- 2. FUNGSI ESP (NAMA BESAR & TEMBUS PANDANG)
-local function CreateESP(plr)
-    local function UpdateESP()
-        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and _G.ESPActive then
-            local char = plr.Character
-            local root = char.HumanoidRootPart
-            
-            -- Buat BillboardGui (Nama di atas kepala)
-            local bbg = root:FindFirstChild("GuritaESP") or Instance.new("BillboardGui", root)
+-- 2. GIANT ESP PLAYER (Auto-Run)
+local function CreateGiantESP(plr)
+    plr.CharacterAdded:Connect(function(char)
+        local root = char:WaitForChild("HumanoidRootPart", 5)
+        if root then
+            local bbg = Instance.new("BillboardGui", root)
             bbg.Name = "GuritaESP"
             bbg.AlwaysOnTop = true
-            bbg.Size = UDim2.new(0, 200, 0, 50)
-            bbg.Adornee = root
-            bbg.ExtentsOffset = Vector3.new(0, 3, 0)
+            bbg.Size = UDim2.new(0, 300, 0, 100) -- Ukuran diperbesar
+            bbg.ExtentsOffset = Vector3.new(0, 5, 0)
 
-            local txt = bbg:FindFirstChild("NameTag") or Instance.new("TextLabel", bbg)
-            txt.Name = "NameTag"
-            txt.BackgroundTransparency = 1
+            local txt = Instance.new("TextLabel", bbg)
             txt.Size = UDim2.new(1, 0, 1, 0)
+            txt.BackgroundTransparency = 1
             txt.Text = plr.Name
-            txt.TextColor3 = Color3.fromRGB(255, 255, 255)
-            txt.TextScaled = true -- Bikin nama jadi besar banget
+            txt.TextColor3 = Color3.fromRGB(255, 255, 0) -- Kuning biar ngejreng
+            txt.TextScaled = true 
             txt.Font = Enum.Font.SourceSansBold
-            txt.TextStrokeTransparency = 0 -- Biar ada garis tepi hitam
-        elseif plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and not _G.ESPActive then
-            if plr.Character.HumanoidRootPart:FindFirstChild("GuritaESP") then
-                plr.Character.HumanoidRootPart.GuritaESP:Destroy()
-            end
+            txt.TextStrokeTransparency = 0
         end
-    end
-    RunService.RenderStepped:Connect(UpdateESP)
+    end)
 end
 
--- Jalankan ESP buat player yang sudah ada & yang baru masuk
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= lp then CreateESP(p) end
+for _, p in ipairs(game.Players:GetPlayers()) do
+    if p ~= game.Players.LocalPlayer then CreateGiantESP(p) end
 end
-Players.PlayerAdded:Connect(function(p) CreateESP(p) end)
+game.Players.PlayerAdded:Connect(CreateGiantESP)
 
--- 3. UI MENU (GURITA HUB)
+-- 3. MINI UI (Cuma buat cek status)
 local SG = Instance.new("ScreenGui", game.CoreGui)
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 150)
-Main.Position = UDim2.new(0.1, 0, 0.4, 0)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Main.Active = true
-Main.Draggable = true
-Instance.new("UICorner", Main)
+local Status = Instance.new("TextLabel", SG)
+Status.Size = UDim2.new(0, 200, 0, 30)
+Status.Position = UDim2.new(0.5, -100, 0, 20)
+Status.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+Status.Text = "GURITA HUB: ACTIVE (OPTIMIZED)"
+Status.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", Status)
 
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "GURITA HUB v3"
-Title.TextColor3 = Color3.new(1,1,1)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.SourceSansBold
-
--- Tombol Flat Color
-local BtnFlat = Instance.new("TextButton", Main)
-BtnFlat.Size = UDim2.new(0.9, 0, 0, 40)
-BtnFlat.Position = UDim2.new(0.05, 0, 0.3, 0)
-BtnFlat.Text = "ACTIVATE FLAT COLOR"
-BtnFlat.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-BtnFlat.TextColor3 = Color3.new(1,1,1)
-
-BtnFlat.MouseButton1Click:Connect(function()
-    _G.FlatColor = true
-    ApplyFlatColor()
-    BtnFlat.Text = "FLAT COLOR: ACTIVE"
-    BtnFlat.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-end)
-
--- Tombol ESP Player
-local BtnESP = Instance.new("TextButton", Main)
-BtnESP.Size = UDim2.new(0.9, 0, 0, 40)
-BtnESP.Position = UDim2.new(0.05, 0, 0.65, 0)
-BtnESP.Text = "ESP PLAYER: OFF"
-BtnESP.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-BtnESP.TextColor3 = Color3.new(1,1,1)
-
-BtnESP.MouseButton1Click:Connect(function()
-    _G.ESPActive = not _G.ESPActive
-    BtnESP.Text = _G.ESPActive and "ESP PLAYER: ON" or "ESP PLAYER: OFF"
-    BtnESP.BackgroundColor3 = _G.ESPActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-end)
+task.wait(3)
+Status:Destroy() -- Notif hilang sendiri biar gak ganggu layar
