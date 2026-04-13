@@ -1,73 +1,136 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.Lib:CreateWindow("Renzo Hub V2", "Potato Edition")
+-- [[ GURITA HUB V4.8 - THE BILLIONAIRE HUNTER ]] --
 
- Variabel Utama
-local Player = game.Players.LocalPlayer
-local Char = Player.Character or Player.CharacterAdded:Wait()
-local Root = Char:WaitForChild("HumanoidRootPart")
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
+local TPS = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
 
- TAB 1: VISUAL (INI UNTUK GRAFIK KAYA DI GAMBAR)
-local Tab1 = Window:NewTab("Visuals")
-local GrafisSec = Tab1:NewSection("Performance Booster")
+-- 1. CONFIG TARGET ANGKA (15M Sampai 100B)
+local MIN_M = 15          -- Minimal 15 Juta
+local MAX_B = 100         -- Maksimal 100 Miliar (Billion)
 
-GrafisSec:NewButton("Aktifkan Potato Mode (Kaya di Gambar)", "Hapus semua tekstur dan lag!", function()
-     Mematikan Rendering Utama
-    settings().Rendering.QualityLevel = 1
-    
-     Mematikan Pencahayaan dan Bayangan
-    game.Lighting.GlobalShadows = false
-    game.Lighting.FogEnd = 9e9
-    
-    -- Mengubah Semua Objek Jadi Polos dan Tanpa Gambar
-    for _, v in ipairs(game:GetDescendants()) do
-        if v:IsA("BasePart") or v:IsA("MeshPart") then
-            -- Ubah Material jadi Polos (kaya plastik)
-            v.Material = Enum.Material.SmoothPlastic
-            -- Matikan pantulan cahaya
-            v.Reflectance = 0
-            v.CastShadow = false
-        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ImageLabel") then
-            -- Hapus Gambar Tembus Pandang dan Ikon
-            v:Destroy()
-        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
-            -- Hapus Efek Partikel
-            v.Enabled = false
-        end
+local filename = "GuritaEzra_Billion.json"
+_G.Settings = { ESP = false, Xray = false, AutoHop = false }
+
+local function SaveSettings()
+    if writefile then pcall(function() writefile(filename, HttpService:JSONEncode(_G.Settings)) end) end
+end
+
+local function LoadSettings()
+    if isfile and isfile(filename) then
+        local success, data = pcall(function() return HttpService:JSONDecode(readfile(filename)) end)
+        if success and data then _G.Settings = data end
     end
-end)
+end
+LoadSettings()
 
--- TAB 2: FARMING
-local Tab2 = Window:NewTab("Auto Farm")
-local FarmSec = Tab2:NewSection("Main Farming")
-
-FarmSec:NewToggle("Auto Steal & Collect", "Loop ringan", function(state)
-    _G.Farm = state
-    task.spawn(function()
-        while _G.Farm do
-            pcall(function()
-                for _, v in ipairs(game.Workspace.Items:GetChildren()) do
-                    if v:IsA("BasePart") and _G.Farm then
-                        Root.CFrame = v.CFrame
-                        firetouchinterest(Root, v, 0)
-                        task.wait()
-                        firetouchinterest(Root, v, 1)
+-- 2. LOGIKA SCANNER ANGKA PINTAR (M & B)
+local function ScanNumbers()
+    local found = false
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("TextLabel") then
+            local txt = v.Text:upper():gsub(",", "")
+            
+            -- Ambil angkanya saja
+            local numStr = txt:match("%d+%.?%d*")
+            local num = tonumber(numStr)
+            
+            if num then
+                -- DETEKSI BILLION (B)
+                if txt:find("B") then
+                    if num >= 1 and num <= MAX_B then
+                        found = true
+                        warn("TARGET BILLION DITEMUKAN: " .. num .. "B/s")
+                        break
+                    end
+                -- DETEKSI MILLION (M)
+                elseif txt:find("M") then
+                    if num >= MIN_M then
+                        found = true
+                        warn("TARGET MILLION DITEMUKAN: " .. num .. "M/s")
+                        break
                     end
                 end
-            end)
-            task.wait(0.1)
+            end
+        end
+    end
+    return found
+end
+
+-- 3. SERVER HOPPER
+local function DoServerHop()
+    local ID = game.PlaceId
+    local success, Servers = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..ID.."/servers/Public?sortOrder=Asc&limit=100"))
+    end)
+    if success then
+        for _, s in pairs(Servers.data) do
+            if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                TPS:TeleportToPlaceInstance(ID, s.id, lp)
+                break
+            end
+        end
+    end
+end
+
+-- 4. VISUAL & FLAT COLOR (BAWAAN EZRA)
+local function ApplyFlat(v)
+    pcall(function()
+        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not v:IsDescendantOf(lp.Character) then
+            v.Material = Enum.Material.Plastic
+            v.CastShadow = false
+            if v:IsA("MeshPart") then v.TextureID = "" end
+            for _, t in pairs(v:GetChildren()) do
+                if t:IsA("Texture") or t:IsA("Decal") then t:Destroy() end
+            end
         end
     end)
+end
+
+-- 5. UI GURITA HUB
+local SG = Instance.new("ScreenGui", pcall(function() return game:GetService("CoreGui") end) and game:GetService("CoreGui") or lp.PlayerGui)
+SG.Name = "GuritaBillionV48"
+
+local Logo = Instance.new("Frame", SG); Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0, 15, 0.45, 0); Logo.BackgroundColor3 = Color3.fromRGB(15, 15, 20); Logo.Active = true; Logo.Draggable = true
+Instance.new("UICorner", Logo).CornerRadius = UDim.new(1, 0)
+local LogoStroke = Instance.new("UIStroke", Logo); LogoStroke.Thickness = 3
+local LogoBtn = Instance.new("TextButton", Logo); LogoBtn.Size = UDim2.new(1, 0, 1, 0); LogoBtn.BackgroundTransparency = 1; LogoBtn.Text = "GH"; LogoBtn.TextColor3 = Color3.new(1, 1, 1); LogoBtn.Font = Enum.Font.GothamBold; LogoBtn.TextSize = 20
+
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 220, 0, 180); Main.Position = UDim2.new(0, 80, 0.45, -90); Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true
+Instance.new("UICorner", Main); local MainStroke = Instance.new("UIStroke", Main); MainStroke.Thickness = 3
+
+LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+
+local function CreateBtn(txt, pos, cb)
+    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(25, 25, 35); b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() cb(b) end) return b
+end
+
+local huntBtn = CreateBtn(_G.Settings.AutoHop and "HUNT 15M-100B: ON" or "HUNT 15M-100B: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b)
+    _G.Settings.AutoHop = not _G.Settings.AutoHop; b.Text = _G.Settings.AutoHop and "HUNT 15M-100B: ON" or "HUNT 15M-100B: OFF"; SaveSettings()
 end)
 
--- TAB 3: MISC
-local Tab3 = Window:NewTab("Misc")
-local MiscSec = Tab3:NewSection("Karakter")
+CreateBtn("MANUAL SERVER HOP", UDim2.new(0.05, 0, 0.55, 0), function() DoServerHop() end)
 
-MiscSec:NewSlider("WalkSpeed", "Kecepatan", 500, 16, function(s)
-    Char.Humanoid.WalkSpeed = s
+-- 6. RUNNER
+RunService.RenderStepped:Connect(function()
+    local color = Color3.fromHSV(tick() % 5 / 5, 0.9, 1)
+    LogoStroke.Color = color; MainStroke.Color = color
 end)
 
-MiscSec:NewButton("Server Hop", "Cari Min Gen Baru", function()
-    local ts = game:GetService("TeleportService")
-    ts:Teleport(game.PlaceId, Player)
+task.spawn(function()
+    for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
+    workspace.DescendantAdded:Connect(ApplyFlat)
+    
+    task.wait(10)
+    if _G.Settings.AutoHop then
+        if ScanNumbers() then
+            _G.Settings.AutoHop = false
+            SaveSettings()
+            huntBtn.Text = "TARGET FOUND!"
+        else
+            DoServerHop()
+        end
+    end
 end)
