@@ -1,11 +1,11 @@
--- [[ RENZO GURITA - HIGH SPEED FLAT COLOR ]] --
+-- [[ RENZO GURITA - AUTO FLAT & ESP AVATAR ]] --
 
 local Lighting = game:GetService("Lighting")
-_G.FlatActive = false
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
 
--- FUNGSI INTI RENZO (DIPERBAIKI BIAR MAP TEMBUS)
-local function ApplyFast(v)
-    if not _G.FlatActive then return end
+-- 1. FITUR WAJIB: AUTO FLAT COLOR (LANGSUNG AKTIF - NO LAG)
+local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
             v.Material = Enum.Material.Plastic
@@ -22,88 +22,110 @@ local function ApplyFast(v)
     end)
 end
 
--- FUNGSI AKTIVASI BERTAHAP (ANTI LAG)
-local function StartFlat()
-    -- 1. Lighting & Rendering (Instan)
-    Lighting.GlobalShadows = false
-    Lighting.Brightness = 2
-    Lighting.EnvironmentDiffuseScale = 0
-    Lighting.EnvironmentSpecularScale = 0
+-- Eksekusi Flat Color Bertahap (Biar Gak Lag)
+task.spawn(function()
     settings().Rendering.QualityLevel = 1
+    Lighting.GlobalShadows = false
     
-    -- 2. Proses Map (Bertahap biar tidak freeze)
-    task.spawn(function()
-        local descendants = workspace:GetDescendants()
-        for i = 1, #descendants do
-            if not _G.FlatActive then break end
-            ApplyFast(descendants[i])
-            if i % 150 == 0 then task.wait() end -- Jeda tiap 150 objek
-        end
-    end)
+    local d = workspace:GetDescendants()
+    for i = 1, #d do
+        ApplyFlat(d[i])
+        if i % 150 == 0 then task.wait() end
+    end
+end)
+workspace.DescendantAdded:Connect(ApplyFlat)
+
+-- 2. FITUR ESP PLAYER (NAMA BESAR & AVATAR)
+_G.ESPActive = false
+
+local function CreateAdvancedESP(plr)
+    local function Setup()
+        local char = plr.Character or plr.CharacterAdded:Wait()
+        local root = char:WaitForChild("HumanoidRootPart", 10)
+        
+        local bbg = root:FindFirstChild("GuritaESP") or Instance.new("BillboardGui", root)
+        bbg.Name = "GuritaESP"
+        bbg.AlwaysOnTop = true
+        bbg.Size = UDim2.new(0, 300, 0, 250)
+        bbg.ExtentsOffset = Vector3.new(0, 10, 0)
+        bbg.Enabled = _G.ESPActive
+
+        -- NAMA RAKSASA (Kuning)
+        local nameLabel = bbg:FindFirstChild("NameLabel") or Instance.new("TextLabel", bbg)
+        nameLabel.Name = "NameLabel"
+        nameLabel.Size = UDim2.new(1, 0, 0.3, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = plr.Name
+        nameLabel.TextColor3 = Color3.new(1, 1, 0)
+        nameLabel.TextScaled = true
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextStrokeTransparency = 0
+
+        -- VIEWPORT (LIAT AVATAR)
+        local viewFrame = bbg:FindFirstChild("ViewFrame") or Instance.new("ViewportFrame", bbg)
+        viewFrame.Name = "ViewFrame"
+        viewFrame.Size = UDim2.new(0.8, 0, 0.7, 0)
+        viewFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
+        viewFrame.BackgroundTransparency = 1
+        
+        -- Update Viewport Model
+        task.spawn(function()
+            while bbg and bbg.Parent do
+                if _G.ESPActive then
+                    viewFrame:ClearAllChildren()
+                    char.Archivable = true
+                    local clone = char:Clone()
+                    clone.Parent = viewFrame
+                    
+                    local cam = Instance.new("Camera", viewFrame)
+                    cam.CFrame = CFrame.new(clone.HumanoidRootPart.Position + clone.HumanoidRootPart.CFrame.LookVector * 5, clone.HumanoidRootPart.Position)
+                    viewFrame.CurrentCamera = cam
+                end
+                task.wait(1)
+            end
+        end)
+    end
+    Setup()
+    plr.CharacterAdded:Connect(Setup)
 end
 
--- [[ UI DESIGN: HULK SCRIPT STYLE ]] --
+-- 3. UI MENU (LIS BIRU - HULK STYLE)
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 220, 0, 100)
-Main.Position = UDim2.new(0.5, -110, 0.2, 0)
-Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20) -- Gelap Biru
+Main.Position = UDim2.new(0.5, -110, 0.1, 0)
+Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20)
 Main.BorderSizePixel = 0
-Main.Active = true
-Main.Draggable = true
+Main.Active = true; Main.Draggable = true
 
--- Lis Biru Menyala (Neon Border)
 local Border = Instance.new("Frame", Main)
-Border.Size = UDim2.new(1, 4, 1, 4)
-Border.Position = UDim2.new(0, -2, 0, -2)
-Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255)
-Border.ZIndex = 0
-Instance.new("UICorner", Border).CornerRadius = UDim.new(0, 8)
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
+Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2)
+Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0
+Instance.new("UICorner", Border); Instance.new("UICorner", Main)
 
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundTransparency = 1
-Title.Text = "RENZO GURITA V3"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 14
+Title.Size = UDim2.new(1, 0, 0, 30); Title.BackgroundTransparency = 1
+Title.Text = "GURITA V3 - ESP"; Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBold; Title.TextSize = 13
 
--- Button Container (Biru Transparan)
-local BtnFrame = Instance.new("Frame", Main)
-BtnFrame.Size = UDim2.new(0.9, 0, 0, 45)
-BtnFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
-BtnFrame.BackgroundColor3 = Color3.fromRGB(0, 160, 255)
-BtnFrame.BackgroundTransparency = 0.8
-BtnFrame.BorderSizePixel = 1
-BtnFrame.BorderColor3 = Color3.fromRGB(0, 160, 255)
-Instance.new("UICorner", BtnFrame).CornerRadius = UDim.new(0, 6)
+local Btn = Instance.new("TextButton", Main)
+Btn.Size = UDim2.new(0.9, 0, 0, 45); Btn.Position = UDim2.new(0.05, 0, 0.45, 0)
+Btn.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Btn.BackgroundTransparency = 0.7
+Btn.Text = "ESP PLAYER: OFF"; Btn.TextColor3 = Color3.new(1,1,1)
+Btn.Font = Enum.Font.GothamBold; Instance.new("UICorner", Btn)
 
-local Btn = Instance.new("TextButton", BtnFrame)
-Btn.Size = UDim2.new(1, 0, 1, 0)
-Btn.BackgroundTransparency = 1
-Btn.Text = "FLAT COLOR: OFF"
-Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-Btn.Font = Enum.Font.GothamBold
-Btn.TextSize = 13
-
--- LOGIKA KLIK
 Btn.MouseButton1Click:Connect(function()
-    _G.FlatActive = not _G.FlatActive
+    _G.ESPActive = not _G.ESPActive
+    Btn.Text = _G.ESPActive and "ESP PLAYER: ON" or "ESP PLAYER: OFF"
+    Btn.TextColor3 = _G.ESPActive and Color3.new(0, 1, 1) or Color3.new(1, 1, 1)
     
-    if _G.FlatActive then
-        Btn.Text = "FLAT COLOR: ON"
-        Btn.TextColor3 = Color3.fromRGB(0, 255, 255) -- Cyan cerah
-        BtnFrame.BackgroundTransparency = 0.6
-        StartFlat()
-    else
-        Btn.Text = "FLAT COLOR: OFF"
-        Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-        BtnFrame.BackgroundTransparency = 0.8
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local e = p.Character.HumanoidRootPart:FindFirstChild("GuritaESP")
+            if e then e.Enabled = _G.ESPActive end
+        end
     end
 end)
 
--- Pantau objek baru
-workspace.DescendantAdded:Connect(ApplyFast)
-
-print("Renzo: Hulk Menu Loaded!")
+for _, p in ipairs(Players:GetPlayers()) do if p ~= lp then CreateAdvancedESP(p) end end
+Players.PlayerAdded:Connect(CreateAdvancedESP)
