@@ -1,61 +1,75 @@
--- [[ GURITA-HUB STABLE VERSION ]] --
+-- [[ GURITA-HUB - FINAL FIXED VERSION ]] --
 
+-- 1. FITUR FLAT COLOR (DIJALANKAN PALING AWAL)
+local function ApplyFlat(v)
+    pcall(function()
+        if v:IsA("BasePart") or v:IsA("MeshPart") then
+            v.Material = Enum.Material.Plastic
+            v.Reflectance = 0
+            v.CastShadow = false
+        end
+        if v:IsA("Texture") or v:IsA("Decal") then 
+            v:Destroy() 
+        end
+        if v:IsA("SpecialMesh") or v:IsA("MeshPart") then 
+            v.TextureID = "" 
+        end
+    end)
+end
+
+-- Langsung hajar grafik begitu script jalan
+for _, v in ipairs(game:GetDescendants()) do
+    ApplyFlat(v)
+end
+game.DescendantAdded:Connect(ApplyFlat)
+
+-- Optimasi Lighting Instan
+local L = game:GetService("Lighting")
+L.GlobalShadows = false
+L.Brightness = 2
+L.EnvironmentDiffuseScale = 0
+settings().Rendering.QualityLevel = 1
+
+-- 2. LOAD MENU (RAYFIELD)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "GURITA-HUB",
    LoadingTitle = "Steal a Brainrot Edition",
    LoadingSubtitle = "by Renzo",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "GuritaHubConfig",
-      FileName = "Main"
-   }
+   ConfigurationSaving = { Enabled = false }
 })
 
 local Tab = Window:CreateTab("Main Farming", 4483362458)
 
--- 1. FITUR FLAT COLOR (Otomatis Aktif)
-local function ApplyFlat(v)
-    if v:IsA("BasePart") or v:IsA("MeshPart") then
-        v.Material = Enum.Material.Plastic
-        v.Reflectance = 0
-        v.CastShadow = false
-    end
-    if v:IsA("Texture") then v:Destroy() end
-    if v:IsA("SpecialMesh") or v:IsA("MeshPart") then 
-        v.TextureID = "" 
-    end
-end
-
-task.spawn(function()
-    for _, v in ipairs(game:GetDescendants()) do ApplyFlat(v) end
-    game.DescendantAdded:Connect(ApplyFlat)
-end)
-
--- 2. FITUR AUTO GRAB 0.1s
+-- 3. VARIABLE & TOGGLE AUTO GRAB
 _G.AutoGrab = false
 
-local Toggle = Tab:CreateToggle({
-   Name = "Auto Grab 0.1s",
+Tab:CreateToggle({
+   Name = "Auto Grab Brainrot Only",
    CurrentValue = false,
-   Flag = "Toggle1", 
    Callback = function(Value)
       _G.AutoGrab = Value
    end,
 })
 
+-- 4. LOGIKA AUTO GRAB YANG DISARING (HANYA ITEM)
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoGrab then
             pcall(function()
-                local Character = game.Players.LocalPlayer.Character
-                local Root = Character and Character:FindFirstChild("HumanoidRootPart")
-                if Root then
-                    for _, v in ipairs(workspace:GetDescendants()) do
-                        if v:IsA("ProximityPrompt") then
+                local Root = game.Players.LocalPlayer.Character.HumanoidRootPart
+                -- Fokus ke folder Items atau objek yang punya nama Brainrot
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then
+                        -- Hanya ambil jika tombolnya untuk Steal/Ambil
+                        if v.ActionText:lower():find("steal") or v.ObjectText:lower():find("brainrot") then
                             fireproximityprompt(v)
-                        elseif v:IsA("TouchTransmitter") then
+                        end
+                    elseif v:IsA("TouchTransmitter") then
+                        -- Hanya ambil jika objeknya adalah Brainrot/Item
+                        local pName = v.Parent.Name:lower()
+                        if pName:find("brainrot") or pName:find("item") then
                             firetouchinterest(Root, v.Parent, 0)
                             firetouchinterest(Root, v.Parent, 1)
                         end
@@ -66,13 +80,8 @@ task.spawn(function()
     end
 end)
 
--- Optimasi Lighting & Rendering
-game:GetService("Lighting").GlobalShadows = false
-settings().Rendering.QualityLevel = 1
-
 Rayfield:Notify({
-   Title = "GURITA-HUB Loaded",
-   Content = "Grafik Polos & Auto Grab Siap!",
-   Duration = 5,
-   Image = 4483362458,
+   Title = "GURITA-HUB AKTIF",
+   Content = "Flat Color & Auto Grab Berhasil Dimuat!",
+   Duration = 5
 })
