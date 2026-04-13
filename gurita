@@ -1,37 +1,36 @@
--- [[ RENZO SUPER SMOOTH - NO TEXTURE ]] --
+-- [[ RENZO ULTIMATE POTATO - NO TEXTURE ]] --
 
--- 1. Paksa Rendering Terendah
-settings().Rendering.QualityLevel = 1
-game:GetService("Lighting").GlobalShadows = false
-
--- 2. Hapus Tekstur Lantai & Objek (Tanpa Hapus Logo)
-for _, v in ipairs(game:GetDescendants()) do
+local function Smooth(v)
     if v:IsA("BasePart") or v:IsA("MeshPart") then
-        v.Material = Enum.Material.SmoothPlastic -- Bikin jadi polos
+        v.Material = Enum.Material.SmoothPlastic
         v.Reflectance = 0
         v.CastShadow = false
-    end
-    
-    -- Hapus Texture khusus (Grid/Lantai) tapi biarkan Decal (Logo)
-    if v:IsA("Texture") then
+    elseif v:IsA("Texture") then
         v:Destroy()
     end
-    
-    -- Matikan partikel biar makin ringan
-    if v:IsA("ParticleEmitter") or v:IsA("Trail") then
-        v.Enabled = false
-    end
 end
 
--- 3. Matikan Terrain (Rumput/Grid Dasar)
-local terrain = workspace:FindFirstChildOfClass("Terrain")
-if terrain then
-    terrain.WaterWaveSize = 0
-    terrain.WaterWaveSpeed = 0
-    sethiddenproperty(terrain, "Decoration", false)
+-- 1. Bersihkan yang sudah ada
+for _, v in ipairs(game:GetDescendants()) do
+    Smooth(v)
 end
 
--- 4. Pencahayaan Flat (Biar warna rata)
-local light = game:GetService("Lighting")
-light.Brightness = 2
-light.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+-- 2. Pantau objek baru (biar tetap semut kalau ada yang spawn)
+game.DescendantAdded:Connect(Smooth)
+
+-- 3. Paksa Lighting jadi Flat (Kunci utama grafik semut)
+local Lighting = game:GetService("Lighting")
+Lighting.GlobalShadows = false
+Lighting.FogEnd = 9e9
+Lighting.Brightness = 2
+Lighting.ColorShift_Bottom = Color3.fromRGB(255, 255, 255)
+Lighting.ColorShift_Top = Color3.fromRGB(255, 255, 255)
+
+-- 4. Matikan Terrain Decoration (Rumput/Grid)
+local Terrain = workspace:FindFirstChildOfClass("Terrain")
+if Terrain then
+    sethiddenproperty(Terrain, "Decoration", false)
+end
+
+-- 5. Rendahkan Rendering Quality via Script
+settings().Rendering.QualityLevel = 1
