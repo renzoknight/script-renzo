@@ -1,36 +1,56 @@
--- [[ RENZO ULTIMATE POTATO - NO TEXTURE ]] --
+-- [[ RENZO GURITA - TRUE PERFORMANCE MODE ]] --
+-- Objetivo: Total Flat Colors (Seperti Foto)
 
-local function Smooth(v)
+local function FinalPotato(v)
+    -- Paksa semua benda jadi material yang paling ringan & polos
     if v:IsA("BasePart") or v:IsA("MeshPart") then
-        v.Material = Enum.Material.SmoothPlastic
+        v.Material = Enum.Material.Plastic -- Material paling dasar
         v.Reflectance = 0
         v.CastShadow = false
-    elseif v:IsA("Texture") then
+    end
+    
+    -- HAPUS SEMUA TEKSTUR & GRID (Kunci Grafik Semut)
+    if v:IsA("Texture") then
         v:Destroy()
+    end
+    
+    -- JANGAN Hapus Decal (Agar Logo/Gambar Item Tetap Ada)
+    -- Tapi kita buat transparansi tekstur di dalam mesh hilang
+    if v:IsA("SpecialMesh") then
+        v.TextureId = "" -- Menghapus tekstur yang nempel di mesh
+    end
+
+    -- Matikan partikel biar FPS naik drastis
+    if v:IsA("ParticleEmitter") or v:IsA("Trail") then
+        v.Enabled = false
     end
 end
 
--- 1. Bersihkan yang sudah ada
+-- 1. Bersihkan semua yang ada sekarang
 for _, v in ipairs(game:GetDescendants()) do
-    Smooth(v)
+    FinalPotato(v)
 end
 
--- 2. Pantau objek baru (biar tetap semut kalau ada yang spawn)
-game.DescendantAdded:Connect(Smooth)
+-- 2. Pantau objek baru agar tetap polos
+game.DescendantAdded:Connect(FinalPotato)
 
--- 3. Paksa Lighting jadi Flat (Kunci utama grafik semut)
+-- 3. MATIKAN CAHAYA & BAYANGAN (Penting untuk warna flat)
 local Lighting = game:GetService("Lighting")
 Lighting.GlobalShadows = false
 Lighting.FogEnd = 9e9
 Lighting.Brightness = 2
-Lighting.ColorShift_Bottom = Color3.fromRGB(255, 255, 255)
-Lighting.ColorShift_Top = Color3.fromRGB(255, 255, 255)
+Lighting.EnvironmentDiffuseScale = 0
+Lighting.EnvironmentSpecularScale = 0
 
--- 4. Matikan Terrain Decoration (Rumput/Grid)
-local Terrain = workspace:FindFirstChildOfClass("Terrain")
-if Terrain then
-    sethiddenproperty(Terrain, "Decoration", false)
+-- 4. PAKSA RENDER ENGINE TERENDAH
+settings().Rendering.QualityLevel = 1
+settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level0
+
+-- 5. Matikan Rumput & Dekorasi Terrain
+local terrain = workspace:FindFirstChildOfClass("Terrain")
+if terrain then
+    sethiddenproperty(terrain, "Decoration", false)
+    terrain.WaterWaveSize = 0
 end
 
--- 5. Rendahkan Rendering Quality via Script
-settings().Rendering.QualityLevel = 1
+print("Renzo Mode: TRUE FLAT COLOR ACTIVE")
