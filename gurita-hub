@@ -1,26 +1,30 @@
--- [[ RENZO GURITA - XRAY GURITA V3 (GREEN GRASS FIX) ]] --
+-- [[ RENZO GURITA - XRAY GURITA V3 (GREEN GRASS EDITION) ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- 1. AUTO FLAT COLOR (LOCK WARNA ALAM)
+-- 1. AUTO FLAT COLOR (KHUSUS BANGUNAN - RUMPUT TETEP IJO)
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
             local name = v.Name:lower()
-            -- KUNCI: Jangan sentuh kalau namanya ada unsur alam atau warnanya dominan ijo
-            local isNature = name:find("grass") or name:find("leaf") or name:find("tree") or name:find("bush") or name:find("terrain") or name:find("floor_grass")
+            -- Kunci: Cek apakah ini rumput/tanah berdasarkan nama atau warna ijo
+            local isNature = name:find("grass") or name:find("leaf") or name:find("tree") or name:find("bush") or name:find("terrain")
+            local isGreen = (v.Color.G > v.Color.R and v.Color.G > v.Color.B) -- Deteksi warna ijo rumput
             
-            if not isNature then
+            if not (isNature or isGreen) then
                 v.Material = Enum.Material.Plastic
                 v.Reflectance = 0
                 v.CastShadow = false
-                if v:IsA("MeshPart") then 
-                    v.TextureID = "" 
-                end
+                if v:IsA("MeshPart") then v.TextureID = "" end
             end
+        end
+        -- Jangan hapus tekstur rumput
+        if v:IsA("Texture") or v:IsA("Decal") then
+            local pName = v.Parent and v.Parent.Name:lower() or ""
+            if not pName:find("grass") then v:Destroy() end
         end
     end)
 end
@@ -29,35 +33,30 @@ task.spawn(function()
     local d = workspace:GetDescendants()
     for i = 1, #d do
         ApplyFlat(d[i])
-        if i % 300 == 0 then task.wait() end -- Lebih santai biar gak lag
+        if i % 300 == 0 then task.wait() end
     end
 end)
 workspace.DescendantAdded:Connect(ApplyFlat)
 
--- 2. LOGIKA X-RAY (FIXED: HANYA BASE & DINDING)
+-- 2. X-RAY BASE (FIXED: CUMA BASE, RUMPUT GAK BOLEH TEMBUS)
 _G.XrayActive = false
 local function DoXray()
     task.spawn(function()
         for _, v in ipairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
                 local name = v.Name:lower()
-                
-                -- FILTER KETAT: Cuma sikat objek bangunan
-                local isBuilding = name:find("wall") or name:find("base") or name:find("floor") or name:find("door") or name:find("roof") or name:find("ceiling")
-                local isNature = name:find("grass") or name:find("leaf") or name:find("tree") or name:find("bush") or name:find("terrain")
+                -- Filter ketat: Hanya bangunan base
+                local isBuilding = name:find("wall") or name:find("base") or name:find("floor") or name:find("door") or name:find("roof")
+                local isNature = name:find("grass") or name:find("leaf") or name:find("tree") or name:find("terrain")
 
                 if isBuilding and not isNature then
                     if _G.XrayActive then
                         if not v:FindFirstChild("OriginalTrans") then
-                            local val = Instance.new("NumberValue", v)
-                            val.Name = "OriginalTrans"
-                            val.Value = v.Transparency
+                            local val = Instance.new("NumberValue", v); val.Name = "OriginalTrans"; val.Value = v.Transparency
                         end
                         v.Transparency = 0.5
                     else
-                        if v:FindFirstChild("OriginalTrans") then
-                            v.Transparency = v.OriginalTrans.Value
-                        end
+                        if v:FindFirstChild("OriginalTrans") then v.Transparency = v.OriginalTrans.Value end
                     end
                 end
             end
@@ -65,12 +64,11 @@ local function DoXray()
     end)
 end
 
--- 3. SMART ESP (NAMA DINAMIS & TRACER)
+-- 3. SMART ESP (NAMA DINAMIS - GAK BIKIN LAG)
 _G.ESPActive = false
 local function CreateSmartESP(plr)
     local Line = Drawing.new("Line")
     Line.Visible = false; Line.Color = Color3.fromRGB(0, 160, 255); Line.Thickness = 1
-    
     local function Update()
         game:GetService("RunService").RenderStepped:Connect(function()
             if _G.ESPActive and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
@@ -89,11 +87,11 @@ local function CreateSmartESP(plr)
             end
         end)
     end
-    -- Setup Tag (BillboardGui) di sini...
+    -- Setup Tag (BillboardGui) tetap sama...
     task.spawn(Update)
 end
 
--- 4. UI MENU (LIS BIRU NEON)
+-- 4. UI MENU (LIS BIRU NEON - XRAY GURITA V3)
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 130); Main.Position = UDim2.new(0.5, -100, 0.1, 0)
 Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Main.BorderSizePixel = 0; Main.Active = true; Main.Draggable = true
