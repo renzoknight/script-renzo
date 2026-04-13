@@ -1,6 +1,6 @@
--- [[ GURITA-HUB: GOST STEAL V2 - INSTANT BYPASS ]] --
+-- [[ GURITA-HUB: GOST STEAL V2 - FIX STEAL REAL ]] --
 
--- 1. FLAT COLOR (INSTAN TANPA FREEZE)
+-- 1. FLAT COLOR (INSTAN & TANPA LAG)
 local function SetFlat(v)
     pcall(function()
         if v:IsA("BasePart") then
@@ -12,11 +12,9 @@ local function SetFlat(v)
         end
     end)
 end
-
 task.spawn(function()
     for _, v in ipairs(workspace:GetDescendants()) do SetFlat(v) end
 end)
-workspace.DescendantAdded:Connect(SetFlat)
 
 -- 2. CUSTOM MENU (PERSIS FOTO: GOST STEAL v2)
 local SG = Instance.new("ScreenGui", game.CoreGui)
@@ -24,9 +22,9 @@ local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 180, 0, 110)
 Main.Position = UDim2.new(0.5, -90, 0.4, 0)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
 Main.Active = true
 Main.Draggable = true
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
 
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 30)
@@ -36,11 +34,6 @@ Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 16
 
-local BlueBar = Instance.new("Frame", Main)
-BlueBar.Size = UDim2.new(0.9, 0, 0, 4)
-BlueBar.Position = UDim2.new(0.05, 0, 0, 35)
-BlueBar.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-
 local ActionBtn = Instance.new("TextButton", Main)
 ActionBtn.Size = UDim2.new(0, 160, 0, 35)
 ActionBtn.Position = UDim2.new(0.05, 0, 1, -40)
@@ -48,44 +41,35 @@ ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
 ActionBtn.Text = "START"
 ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ActionBtn.Font = Enum.Font.SourceSansBold
-ActionBtn.TextSize = 18
 Instance.new("UICorner", ActionBtn).CornerRadius = UDim.new(0, 8)
 
--- 3. LOGIKA STEAL (INSTANT BYPASS MODE)
+-- 3. LOGIKA STEAL (FORCE INTERACTION)
 _G.StealActive = false
 
 ActionBtn.MouseButton1Click:Connect(function()
     _G.StealActive = not _G.StealActive
     ActionBtn.Text = _G.StealActive and "STOP" or "START"
-    ActionBtn.BackgroundColor3 = _G.StealActive and Color3.fromRGB(200, 0, 0) or Color3.fromRGB(0, 150, 255)
+    ActionBtn.BackgroundColor3 = _G.StealActive and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 150, 255)
 end)
 
 task.spawn(function()
     local lp = game.Players.LocalPlayer
-    while task.wait(0.1) do -- 0.1s sudah cukup cepat agar tidak lag
+    while task.wait(0.01) do -- Speed sangat cepat
         if _G.StealActive then
             pcall(function()
-                local char = lp.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                if not root then return end
-
-                -- Scan area 50 studs (Cukup jauh buat nyolong dari luar base)
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("ProximityPrompt") then
-                        local dist = (v.Parent:GetPivot().Position - root.Position).Magnitude
-                        if dist < 50 then
-                            -- BYPASS UTAMA:
-                            v.HoldDuration = 0 -- Gak pake loading bar
-                            v.RequiresLineOfSight = false -- Bisa nyolong tembus tembok
-                            fireproximityprompt(v)
-                        end
-                    elseif v:IsA("TouchTransmitter") then
-                        local part = v.Parent
-                        if (part.Position - root.Position).Magnitude < 40 then
-                            -- Paksa sentuh berulang kali
-                            firetouchinterest(root, part, 0)
-                            firetouchinterest(root, part, 1)
-                        end
+                local root = lp.Character.HumanoidRootPart
+                -- Radius dipersempit (10 stud) supaya fokus ke barang di depan muka
+                local parts = workspace:GetPartBoundsInRadius(root.Position, 10)
+                
+                for _, p in ipairs(parts) do
+                    local prompt = p:FindFirstChildOfClass("ProximityPrompt") or p.Parent:FindFirstChildOfClass("ProximityPrompt")
+                    if prompt then
+                        -- BYPASS: Paksa ambil instan
+                        prompt.HoldDuration = 0
+                        prompt.RequiresLineOfSight = false
+                        
+                        -- Simulasi pencetan (Trigger)
+                        fireproximityprompt(prompt)
                     end
                 end
             end)
