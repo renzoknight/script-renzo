@@ -1,30 +1,22 @@
--- [[ RENZO GURITA - XRAY GURITA V3 (GREEN GRASS EDITION) ]] --
+-- [[ RENZO GURITA - XRAY GURITA V3 FINAL FIX ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- 1. AUTO FLAT COLOR (KHUSUS BANGUNAN - RUMPUT TETEP IJO)
+-- 1. AUTO FLAT COLOR (VERSI ANTI-BOTAK)
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
             local name = v.Name:lower()
-            -- Kunci: Cek apakah ini rumput/tanah berdasarkan nama atau warna ijo
-            local isNature = name:find("grass") or name:find("leaf") or name:find("tree") or name:find("bush") or name:find("terrain")
-            local isGreen = (v.Color.G > v.Color.R and v.Color.G > v.Color.B) -- Deteksi warna ijo rumput
-            
-            if not (isNature or isGreen) then
+            -- Daftar hitam: Jangan sentuh objek ini (Rumput, Tanah, Daun)
+            if not (name:find("grass") or name:find("tree") or name:find("leaf") or name:find("terrain") or name:find("bush")) then
                 v.Material = Enum.Material.Plastic
                 v.Reflectance = 0
                 v.CastShadow = false
                 if v:IsA("MeshPart") then v.TextureID = "" end
             end
-        end
-        -- Jangan hapus tekstur rumput
-        if v:IsA("Texture") or v:IsA("Decal") then
-            local pName = v.Parent and v.Parent.Name:lower() or ""
-            if not pName:find("grass") then v:Destroy() end
         end
     end)
 end
@@ -38,18 +30,15 @@ task.spawn(function()
 end)
 workspace.DescendantAdded:Connect(ApplyFlat)
 
--- 2. X-RAY BASE (FIXED: CUMA BASE, RUMPUT GAK BOLEH TEMBUS)
+-- 2. X-RAY BASE (KHUSUS DINDING BASE)
 _G.XrayActive = false
 local function DoXray()
     task.spawn(function()
         for _, v in ipairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
                 local name = v.Name:lower()
-                -- Filter ketat: Hanya bangunan base
-                local isBuilding = name:find("wall") or name:find("base") or name:find("floor") or name:find("door") or name:find("roof")
-                local isNature = name:find("grass") or name:find("leaf") or name:find("tree") or name:find("terrain")
-
-                if isBuilding and not isNature then
+                -- Filter: Cuma Base dan Dinding yang jadi transparan
+                if name:find("wall") or name:find("base") or name:find("door") or name:find("roof") then
                     if _G.XrayActive then
                         if not v:FindFirstChild("OriginalTrans") then
                             local val = Instance.new("NumberValue", v); val.Name = "OriginalTrans"; val.Value = v.Transparency
@@ -64,11 +53,12 @@ local function DoXray()
     end)
 end
 
--- 3. SMART ESP (NAMA DINAMIS - GAK BIKIN LAG)
+-- 3. SMART ESP (RINGAN & DINAMIS)
 _G.ESPActive = false
 local function CreateSmartESP(plr)
     local Line = Drawing.new("Line")
     Line.Visible = false; Line.Color = Color3.fromRGB(0, 160, 255); Line.Thickness = 1
+    
     local function Update()
         game:GetService("RunService").RenderStepped:Connect(function()
             if _G.ESPActive and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
@@ -87,11 +77,19 @@ local function CreateSmartESP(plr)
             end
         end)
     end
-    -- Setup Tag (BillboardGui) tetap sama...
-    task.spawn(Update)
+    -- Setup Tag (BillboardGui)
+    local function SetupTag()
+        local char = plr.Character or plr.CharacterAdded:Wait()
+        local root = char:WaitForChild("HumanoidRootPart", 10)
+        local bbg = Instance.new("BillboardGui", root); bbg.Name = "SmartTag"; bbg.AlwaysOnTop = true
+        bbg.Size = UDim2.new(0, 80, 0, 20); bbg.ExtentsOffset = Vector3.new(0, 3, 0)
+        local tag = Instance.new("TextLabel", bbg); tag.Name = "Tag"; tag.Size = UDim2.new(1, 0, 1, 0); tag.BackgroundTransparency = 1
+        tag.Text = plr.Name; tag.TextColor3 = Color3.new(1, 1, 0); tag.Font = Enum.Font.GothamBold; tag.TextStrokeTransparency = 0.5
+    end
+    task.spawn(Update); SetupTag(); plr.CharacterAdded:Connect(SetupTag)
 end
 
--- 4. UI MENU (LIS BIRU NEON - XRAY GURITA V3)
+-- 4. UI MENU (LIS BIRU NEON)
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 130); Main.Position = UDim2.new(0.5, -100, 0.1, 0)
 Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Main.BorderSizePixel = 0; Main.Active = true; Main.Draggable = true
@@ -109,3 +107,6 @@ end)
 CreateBtn("XRAY BASE: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b) 
     _G.XrayActive = not _G.XrayActive; b.Text = _G.XrayActive and "XRAY BASE: ON" or "XRAY BASE: OFF"; DoXray() 
 end)
+
+for _, p in ipairs(Players:GetPlayers()) do if p ~= lp then CreateSmartESP(p) end end
+Players.PlayerAdded:Connect(CreateSmartESP)
