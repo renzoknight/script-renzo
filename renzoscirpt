@@ -1,125 +1,110 @@
--- [[ GURITA HUB - STANDALONE ESP BRAINROT ]] --
+-- [[ GURITA ESP V5.0 - FIXED & BOLD ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
-_G.ESP_Active = true
+_G.ESP_Ezra = true
 
--- 1. FUNGSI UNTUK MEMBUAT VISUAL ESP
-local function CreateVisuals(part, brainrotName, permsValue)
-    -- Hapus ESP lama biar gak numpuk
-    for _, old in pairs(part:GetChildren()) do
-        if old.Name == "EzraESP" then old:Destroy() end
+-- Fungsi buat bersihin ESP lama
+local function ClearOldESP()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v.Name == "GuritaLabel" or v.Name == "GuritaLine" then
+            v:Destroy()
+        end
     end
+end
 
-    -- [ LABEL NAMA & PERMS ]
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "EzraESP"
-    billboard.AlwaysOnTop = true
-    billboard.Size = UDim2.new(0, 250, 0, 120) -- Box label
-    billboard.Adornee = part
-    billboard.MaxDistance = 10000 -- Biar kelihatan dari jauh banget
-    billboard.Parent = part
+-- Fungsi Utama ESP
+local function ApplyESP(part, nameText, incomeText)
+    -- 1. Buat Label Nama & Perm/s (BOLD & GEDE)
+    local bgui = Instance.new("BillboardGui")
+    bgui.Name = "GuritaLabel"
+    bgui.AlwaysOnTop = true
+    bgui.ExtentsOffset = Vector3.new(0, 3, 0)
+    bgui.Size = UDim2.new(0, 200, 0, 50)
+    bgui.Adornee = part
+    bgui.Parent = part
 
-    local label = Instance.new("TextLabel", billboard)
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.Text = brainrotName .. "\n" .. permsValue
-    label.TextColor3 = Color3.fromRGB(255, 255, 0) -- Kuning
-    label.TextStrokeTransparency = 0 -- Outline hitam biar kebaca
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 22 -- Ukuran "Agak Besar tapi Normal" sesuai request
-    label.TextYAlignment = Enum.TextYAlignment.Center
+    local tl = Instance.new("TextLabel", bgui)
+    tl.BackgroundTransparency = 1
+    tl.Size = UDim2.new(1, 0, 1, 0)
+    tl.Text = nameText .. "\n" .. incomeText
+    tl.Font = Enum.Font.GothamBold
+    tl.TextSize = 25 -- Ukuran Mantap sesuai request
+    tl.TextColor3 = Color3.fromRGB(255, 255, 0) -- Kuning
+    tl.TextStrokeTransparency = 0
+    tl.TextStrokeColor3 = Color3.new(0,0,0)
 
-    -- [ TALI / TRACER ]
+    -- 2. Buat Tali (Tracer)
     local line = Instance.new("LineHandleAdornment")
-    line.Name = "EzraTracer"
-    line.Length = 0
-    line.Thickness = 2.5
-    line.Color3 = Color3.fromRGB(0, 255, 255) -- Cyan (Biru Muda)
+    line.Name = "GuritaLine"
     line.AlwaysOnTop = true
+    line.Color3 = Color3.fromRGB(0, 255, 255) -- Cyan
+    line.Thickness = 3
     line.ZIndex = 10
     line.Parent = part
 
-    -- Loop update posisi tali
     task.spawn(function()
-        while part and part.Parent and _G.ESP_Active do
-            local char = lp.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local origin = char.HumanoidRootPart.Position
-                local target = part.Position
-                local dist = (target - origin).Magnitude
-                
-                line.Length = dist
-                line.CFrame = CFrame.new(origin, target)
+        while part and part.Parent and _G.ESP_Ezra do
+            if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                local pos1 = lp.Character.HumanoidRootPart.Position
+                local pos2 = part.Position
+                line.CFrame = CFrame.new(pos1, pos2)
+                line.Length = (pos1 - pos2).Magnitude
             end
             task.wait()
         end
+        bgui:Destroy()
         line:Destroy()
-        billboard:Destroy()
     end)
 end
 
--- 2. SCANNER (Cari Brainrot Paling Bagus di Server)
-local function RefreshESP()
-    if not _G.ESP_Active then return end
-    
-    local bestPart = nil
-    local bestVal = 0
-    local bestPermsText = ""
-    local finalName = "TARGET"
+-- Fungsi Scan Ulang
+local function StartScanning()
+    ClearOldESP()
+    if not _G.ESP_Ezra then return end
 
-    -- Scan semua objek yang ada teks penghasilannya
     for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("TextLabel") and v.Parent and v.Parent:IsA("BasePart") then
-            local rawText = v.Text:upper():gsub(",", "")
-            local numStr = rawText:match("%d+%.?%d*")
-            local num = tonumber(numStr)
-            
-            if num then
-                -- Konversi ke angka murni untuk perbandingan
-                local currentVal = num
-                if rawText:find("B") then currentVal = num * 1000 end -- Billion lebih berat
-                
-                if currentVal > bestVal then
-                    bestVal = currentVal
-                    bestPart = v.Parent
-                    bestPermsText = v.Text -- Ngambil tulisan asli (misal: "500M/s")
+        -- Cari TextLabel yang isinya "Perm/s" atau "M/s" atau "B/s"
+        if v:IsA("TextLabel") and (v.Text:find("/") or v.Text:find("M") or v.Text:find("B")) then
+            local parentPart = v.Parent
+            if parentPart:IsA("BasePart") or parentPart:IsA("Model") then
+                local target = parentPart:IsA("Model") and (parentPart.PrimaryPart or parentPart:FindFirstChildWhichIsA("BasePart")) or parentPart
+                if target then
+                    ApplyESP(target, "BRAINROT", v.Text)
                 end
             end
         end
     end
-
-    if bestPart then
-        CreateVisuals(bestPart, "BEST BRAINROT", bestPermsText)
-    end
 end
 
--- 3. UI SIMPLE UNTUK KONTROL
-local SG = Instance.new("ScreenGui", game:GetService("CoreGui"))
-local Btn = Instance.new("TextButton", SG)
-Btn.Size = UDim2.new(0, 150, 0, 40)
-Btn.Position = UDim2.new(0, 15, 0.6, 0)
-Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-Btn.Text = "ESP: ON"
-Btn.TextColor3 = Color3.new(1, 1, 1)
-Btn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", Btn)
-local Stroke = Instance.new("UIStroke", Btn); Stroke.Thickness = 2; Stroke.Color = Color3.new(0,1,1)
+-- UI Tombol Gede di Kiri
+local sg = Instance.new("ScreenGui", game:GetService("CoreGui"))
+local btn = Instance.new("TextButton", sg)
+btn.Size = UDim2.new(0, 150, 0, 50)
+btn.Position = UDim2.new(0, 20, 0.5, 0)
+btn.Text = "REFRESH ESP"
+btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+btn.TextColor3 = Color3.new(1,1,1)
+btn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", btn)
+local str = Instance.new("UIStroke", btn); str.Color = Color3.new(0,1,1); str.Thickness = 2
 
-Btn.MouseButton1Click:Connect(function()
-    _G.ESP_Active = not _G.ESP_Active
-    Btn.Text = _G.ESP_Active and "ESP: ON" or "ESP: OFF"
-    if _G.ESP_Active then RefreshESP() end
+btn.MouseButton1Click:Connect(function()
+    _G.ESP_Ezra = true
+    StartScanning()
+    btn.Text = "SCANNING..."
+    task.wait(1)
+    btn.Text = "REFRESH ESP"
 end)
 
--- Auto Refresh setiap 10 detik kalau ada barang baru dideploy player lain
-task.spawn(function()
-    while true do
-        if _G.ESP_Active then RefreshESP() end
-        task.wait(10)
+-- Auto scan tiap kali ada objek baru masuk map
+workspace.DescendantAdded:Connect(function()
+    if _G.ESP_Ezra then
+        task.wait(2)
+        StartScanning()
     end
 end)
 
-RefreshESP() -- Jalankan pertama kali
+StartScanning()
