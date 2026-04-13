@@ -1,4 +1,4 @@
--- [[ GURITA ESP V5.1 - ANTI-LAG & SUPER LIGHT ]] --
+-- [[ GURITA HUB V5.2 - NAMELESS STYLE (NO LAG) ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -6,87 +6,58 @@ local RunService = game:GetService("RunService")
 
 _G.ESP_Ezra = true
 
--- Bersihin semua sisa-sisa tali biar gak lag
+-- Fungsi hapus sisa ESP biar bersih
 local function Cleanup()
     for _, v in pairs(workspace:GetDescendants()) do
-        if v.Name == "EzraLabel" or v.Name == "EzraLine" then
+        if v.Name == "EzraBox" or v.Name == "EzraTag" then
             v:Destroy()
         end
     end
 end
 
--- Fungsi buat pasang ESP (Hanya di 1 target terbaik)
-local function ApplyESP(part, txt)
-    Cleanup()
+-- Fungsi pasang Box & Label (Mirip Nameless)
+local function CreateESP(part, txt)
+    -- Label Nama & Perm/s
+    local billboard = Instance.new("BillboardGui", part)
+    billboard.Name = "EzraTag"
+    billboard.AlwaysOnTop = true
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.ExtentsOffset = Vector3.new(0, 3, 0)
     
-    local bgui = Instance.new("BillboardGui", part)
-    bgui.Name = "EzraLabel"
-    bgui.AlwaysOnTop = true
-    bgui.ExtentsOffset = Vector3.new(0, 3, 0)
-    bgui.Size = UDim2.new(0, 200, 0, 50)
-    
-    local tl = Instance.new("TextLabel", bgui)
-    tl.BackgroundTransparency = 1
-    tl.Size = UDim2.new(1, 0, 1, 0)
-    tl.Text = "TARGET TERBAIK\n" .. txt
-    tl.Font = Enum.Font.GothamBold
-    tl.TextSize = 25 -- Tetap Gede
-    tl.TextColor3 = Color3.fromRGB(255, 255, 0)
-    tl.TextStrokeTransparency = 0
+    local label = Instance.new("TextLabel", billboard)
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Text = "★ " .. txt .. " ★"
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 22 -- Ukuran pas sesuai request
+    label.TextColor3 = Color3.fromRGB(255, 255, 0)
+    label.TextStrokeTransparency = 0
 
-    local line = Instance.new("LineHandleAdornment", part)
-    line.Name = "EzraLine"
-    line.AlwaysOnTop = true
-    line.Color3 = Color3.fromRGB(0, 255, 255)
-    line.Thickness = 3
-    line.ZIndex = 10
-
-    task.spawn(function()
-        while part and part.Parent and _G.ESP_Ezra do
-            if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                local p1 = lp.Character.HumanoidRootPart.Position
-                local p2 = part.Position
-                line.CFrame = CFrame.new(p1, p2)
-                line.Length = (p1 - p2).Magnitude
-            else
-                task.wait(1)
-            end
-            RunService.Heartbeat:Wait()
-        end
-        Cleanup()
-    end)
+    -- Box Highlight (Biar barangnya kelihatan)
+    local box = Instance.new("BoxHandleAdornment", part)
+    box.Name = "EzraBox"
+    box.AlwaysOnTop = true
+    box.Size = part.Size + Vector3.new(0.5, 0.5, 0.5)
+    box.Color3 = Color3.fromRGB(0, 255, 255)
+    box.Transparency = 0.5
+    box.ZIndex = 5
 end
 
--- Scan cari 1 yang paling GG di server
+-- Scanner Pintar (Hanya scan yang penting)
 local function ScanSultan()
-    if not _G.ESP_Ezra then Cleanup() return end
+    Cleanup()
+    if not _G.ESP_Ezra then return end
     
-    local bestVal = 0
-    local bestPart = nil
-    local bestTxt = ""
-
     for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("TextLabel") then
-            local t = v.Text:upper():gsub(",", "")
-            local n = tonumber(t:match("%d+%.?%d*"))
-            if n then
-                local power = n
-                if t:find("B") then power = n * 1000 end
-                
-                if power > bestVal then
-                    bestVal = power
-                    bestPart = v.Parent
-                    bestTxt = v.Text
+        if v:IsA("TextLabel") and v.Parent and v.Parent:IsA("BasePart") then
+            local t = v.Text:upper()
+            -- Scan hanya yang punya income Million atau Billion
+            if t:find("M") or t:find("B") then
+                local num = tonumber(t:match("%d+%.?%d*"))
+                if num and num >= 15 then -- Sesuai target Abang (15M+)
+                    CreateESP(v.Parent, v.Text)
                 end
             end
-        end
-    end
-
-    if bestPart then
-        if bestPart:IsA("BasePart") then
-            ApplyESP(bestPart, bestTxt)
-        elseif bestPart:IsA("Model") and bestPart.PrimaryPart then
-            ApplyESP(bestPart.PrimaryPart, bestTxt)
         end
     end
 end
@@ -94,25 +65,25 @@ end
 -- UI Tombol Simple
 local sg = Instance.new("ScreenGui", game:GetService("CoreGui"))
 local btn = Instance.new("TextButton", sg)
-btn.Size = UDim2.new(0, 120, 0, 40)
-btn.Position = UDim2.new(0, 20, 0.45, 0)
-btn.Text = "ESP: ON"
-btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-btn.TextColor3 = Color3.new(1,1,1)
-btn.Font = Enum.Font.SourceSansBold
+btn.Size = UDim2.new(0, 130, 0, 40)
+btn.Position = UDim2.new(0, 15, 0.5, 0)
+btn.Text = "ESP BOX: ON"
+btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+btn.TextColor3 = Color3.new(1, 1, 1)
+btn.Font = Enum.Font.GothamBold
 Instance.new("UICorner", btn)
 
 btn.MouseButton1Click:Connect(function()
     _G.ESP_Ezra = not _G.ESP_Ezra
-    btn.Text = _G.ESP_Ezra and "ESP: ON" or "ESP: OFF"
+    btn.Text = _G.ESP_Ezra and "ESP BOX: ON" or "ESP BOX: OFF"
     if _G.ESP_Ezra then ScanSultan() else Cleanup() end
 end)
 
--- Scan tiap 10 detik biar gak berat
+-- Auto refresh setiap 15 detik biar gak berat
 task.spawn(function()
     while true do
         if _G.ESP_Ezra then ScanSultan() end
-        task.wait(10)
+        task.wait(15)
     end
 end)
 
