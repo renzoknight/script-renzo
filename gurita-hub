@@ -1,58 +1,53 @@
--- [[ GURITA-HUB: TOTAL PERFORMANCE OVERDRIVE ]] --
+-- [[ GURITA-HUB: PURE FLAT COLOR MODE ]] --
 
-local lp = game.Players.LocalPlayer
-local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
+local Terrain = workspace:FindFirstChildOfClass("Terrain")
 
--- 1. KILL THE LAG (EKSEKUSI PALING PERTAMA)
-local function KillLag()
-    settings().Rendering.QualityLevel = 1
-    Lighting.GlobalShadows = false
-    Lighting.FogEnd = 9e9
-    Lighting.Brightness = 2
-    
-    -- Bantai tekstur map biar jadi Flat Color (Sesuai foto)
-    for _, v in ipairs(workspace:GetDescendants()) do
-        pcall(function()
-            if v:IsA("BasePart") or v:IsA("MeshPart") then
-                -- Biarkan folder Brainrot/Traits aman biar gak error
-                if not v:IsDescendantOf(workspace:FindFirstChild("RenderedMovingAnimal")) then
-                    v.Material = Enum.Material.SmoothPlastic
-                    v.Reflectance = 0
-                    v.CastShadow = false
-                    if v:IsA("MeshPart") then v.TextureID = "" end
-                end
-            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("Atmosphere") or v:IsA("Clouds") then
-                v:Destroy()
-            end
-        end)
+-- 1. OPTIMASI ENGINE (DETIK KE-0)
+settings().Rendering.QualityLevel = 1
+Lighting.GlobalShadows = false
+Lighting.FogEnd = 9e9
+Lighting.Brightness = 2
+
+-- 2. Bantai Efek Cuaca & Langit
+for _, v in ipairs(Lighting:GetChildren()) do
+    if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("Sky") then
+        v:Destroy()
     end
 end
-KillLag()
 
--- 2. INSTANT ITEM & PLAYER ESP (RAKSASA)
-local function CreateESP(plr)
-    local function Setup()
-        local char = plr.Character or plr.CharacterAdded:Wait()
-        local root = char:WaitForChild("HumanoidRootPart", 10)
-        
-        local bbg = root:FindFirstChild("GuritaESP") or Instance.new("BillboardGui", root)
-        bbg.Name = "GuritaESP"
-        bbg.AlwaysOnTop = true
-        bbg.Size = UDim2.new(0, 450, 0, 160)
-        bbg.ExtentsOffset = Vector3.new(0, 8, 0)
-        bbg.Enabled = true
+-- 3. Bantai Tekstur Map (Biar jadi Flat Color kayak foto)
+local function MakeFlat(obj)
+    if obj:IsA("BasePart") or obj:IsA("MeshPart") then
+        -- Jangan ganggu folder Brainrot biar gak error gamenya
+        if not obj:IsDescendantOf(workspace:FindFirstChild("RenderedMovingAnimal")) then
+            obj.Material = Enum.Material.SmoothPlastic
+            obj.Reflectance = 0
+            obj.CastShadow = false
+            if obj:IsA("MeshPart") then
+                obj.TextureID = "" -- Ini yang bikin jadi warna blok solid
+            end
+        end
+    elseif obj:IsA("Decal") or obj:IsA("Texture") then
+        obj:Destroy()
+    end
+end
 
-        -- Nama Player (Kuning)
-        local nTag = bbg:FindFirstChild("NTag") or Instance.new("TextLabel", bbg)
-        nTag.Name = "NTag"
-        nTag.Size = UDim2.new(1, 0, 0.5, 0)
-        nTag.BackgroundTransparency = 1
-        nTag.Text = plr.Name
-        nTag.TextColor3 = Color3.new(1, 1, 0)
-        nTag.TextScaled = true
-        nTag.Font = Enum.Font.SourceSansBold
-        nTag.TextStrokeTransparency = 0
+-- Eksekusi ke seluruh map sekarang juga
+for _, v in ipairs(workspace:GetDescendants()) do
+    pcall(MakeFlat, v)
+end
 
-        -- Item Detector (Bawah Nama)
-        local iTag = bbg:FindFirstChild("IT
+-- Pantau kalau ada map baru yang ke-load
+workspace.DescendantAdded:Connect(function(v)
+    pcall(MakeFlat, v)
+end)
+
+if Terrain then
+    Terrain.WaterWaveSize = 0
+    Terrain.WaterWaveSpeed = 0
+    Terrain.WaterReflectance = 0
+    Terrain.WaterTransparency = 0
+end
+
+print("GURITA HUB: FLAT COLOR ACTIVE - NO LAG")
