@@ -1,46 +1,52 @@
--- [[ RENZO GURITA - XRAY GURITA V4.5 STABLE ]] --
+-- [[ RENZO GURITA - XRAY GURITA V5.0 AUTO-RUN ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 
--- Toggles
-_G.TracerActive = false
-_G.XrayActive = false
-
--- 1. FUNGSI X-RAY & FLAT (CUMA TEMBOK - LANTAI AMAN)
-local function RefreshXray()
+-- 1. FUNGSI VISUAL OTOMATIS (Lantai & Tembok Langsung Berubah)
+local function ApplyAutoVisual()
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
             local name = v.Name:lower()
-            -- WHY: Biar gak pelangi kaya di foto, kita CUMA sikat yang namanya Wall/Dinding
-            local isWall = name:find("wall") or name:find("dinding")
-            local isNature = name:find("grass") or name:find("floor") or name:find("lantai") or name:find("terrain")
             
-            if isWall and not isNature then
-                if _G.XrayActive then
+            -- Proteksi Avatar Player (Biar Ezra gak abu-abu)
+            local isPlayer = v:FindFirstAncestorOfClass("Model") and v:FindFirstAncestorOfClass("Model"):FindFirstChild("Humanoid")
+            
+            if not isPlayer then
+                -- EFEK LANTAI (Visual kaya di Foto)
+                if name:find("floor") or name:find("lantai") or name:find("ground") then
+                    v.Material = Enum.Material.Glass -- Efek mengkilap kaya foto
+                    v.Color = Color3.fromRGB(0, 255, 150) -- Hijau Neon / RGB Base
+                end
+                
+                -- XRAY TEMBOK OTOMATIS
+                if name:find("wall") or name:find("base") or name:find("dinding") or name:find("roof") then
                     v.Transparency = 0.5
                     v.Material = Enum.Material.Plastic
-                    v.Color = Color3.fromRGB(150, 150, 150) -- Flat Abu Standar
-                else
-                    v.Transparency = 0
-                    v.Material = Enum.Material.SmoothPlastic
+                    v.CastShadow = false
+                end
+                
+                -- HAPUS ELEMEN PENGGANGGU (Biar enteng kaya di foto)
+                if name:find("grass") or name:find("leaf") or name:find("bush") then
+                    v.Transparency = 1
+                    v.CanCollide = true
                 end
             end
         end
     end
 end
 
--- 2. TRACER BIRU NEON (RINGAN)
+-- 2. TRACER BIRU (STABIL)
 local function AddTracer(plr)
     local Line = Drawing.new("Line")
-    Line.Visible = false
+    Line.Visible = true -- Langsung ON
     Line.Color = Color3.fromRGB(0, 160, 255)
-    Line.Thickness = 1
+    Line.Thickness = 1.5
     
     RunService.RenderStepped:Connect(function()
-        if _G.TracerActive and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             local root = plr.Character.HumanoidRootPart
             local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
             if onScreen then
@@ -52,28 +58,24 @@ local function AddTracer(plr)
     end)
 end
 
--- 3. UI MENU (LIS BIRU)
+-- 3. UI SIMPLE (HANYA UNTUK MONITOR)
 local SG = Instance.new("ScreenGui", game.CoreGui)
-local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 180, 0, 120); Main.Position = UDim2.new(0.5, -90, 0.2, 0)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 15); Main.Active = true; Main.Draggable = true; Instance.new("UICorner", Main)
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 180, 0, 40); Main.Position = UDim2.new(0.5, -90, 0.05, 0)
+Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Instance.new("UICorner", Main)
 local Border = Instance.new("Frame", Main); Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2); Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0; Instance.new("UICorner", Border)
+local Title = Instance.new("TextLabel", Main); Title.Size = UDim2.new(1, 0, 1, 0); Title.BackgroundTransparency = 1; Title.Text = "GURITA V5: ACTIVE"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBold; Title.TextSize = 12
 
-local function CreateBtn(txt, pos, cb)
-    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(0, 160, 255); b.BackgroundTransparency = 0.8; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; b.Text = txt; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function() cb(b) end) return b
-end
-
-CreateBtn("TRACER BIRU: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b) 
-    _G.TracerActive = not _G.TracerActive
-    b.Text = _G.TracerActive and "TRACER: ON" or "TRACER BIRU: OFF" 
-end)
-
-CreateBtn("XRAY TEMBOK: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b) 
-    _G.XrayActive = not _G.XrayActive
-    b.Text = _G.XrayActive and "XRAY: ON" or "XRAY TEMBOK: OFF"
-    RefreshXray() 
-end)
-
--- Init
+-- [[ EKSEKUSI LANGSUNG ]] --
+ApplyAutoVisual()
 for _, p in pairs(Players:GetPlayers()) do if p ~= lp then AddTracer(p) end end
 Players.PlayerAdded:Connect(AddTracer)
+workspace.DescendantAdded:Connect(function(v)
+    task.wait(0.1) -- Tunggu part load sempurna
+    if v:IsA("BasePart") then
+        local name = v.Name:lower()
+        if name:find("wall") or name:find("floor") then
+            v.Transparency = name:find("wall") and 0.5 or 0
+            v.Material = Enum.Material.Plastic
+        end
+    end
+end)
