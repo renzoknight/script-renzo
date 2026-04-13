@@ -1,44 +1,43 @@
--- [[ GURITA-HUB: MAP FLAT COLOR ONLY - ZERO LAG ]] --
+-- [[ GURITA-HUB: PURE FLAT MAP - ANTI LAG VERSION ]] --
 
 local Lighting = game:GetService("Lighting")
-local World = workspace -- Fokus ke Workspace biar gak nyisir sistem lain
 
 -- 1. ENGINE OPTIMIZATION (INSTANT)
 settings().Rendering.QualityLevel = 1
 Lighting.GlobalShadows = false
-Lighting.Brightness = 2
+Lighting.FogEnd = 9e9
 
--- 2. FUNGSI PENYIKAT MAP (Bikin Plastik Polos)
-local function MakeMapFlat(v)
+-- 2. FUNGSI PENYIKAT MAP (Bikin Polos Kayak Foto)
+local function SikatMap(v)
     if v:IsA("BasePart") or v:IsA("MeshPart") then
         v.Material = Enum.Material.SmoothPlastic
         v.Reflectance = 0
         v.CastShadow = false
+        -- Ini yang bikin warna jadi blok solid (Flat)
         if v:IsA("MeshPart") then
-            v.TextureID = "" -- Hapus tekstur gambar map
+            v.TextureID = "" 
         end
     elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("Sky") then
         v:Destroy()
     end
 end
 
--- 3. EKSEKUSI BERTAHAP (ANTI-FREEZE/LAG)
+-- 3. EKSEKUSI BERTAHAP (INI KUNCI GAK LAG)
 task.spawn(function()
-    local descendants = World:GetDescendants()
-    for i, obj in ipairs(descendants) do
-        pcall(MakeMapFlat, obj)
+    local all = workspace:GetDescendants()
+    for i, obj in ipairs(all) do
+        pcall(SikatMap, obj)
         
-        -- Istirahat setiap 150 objek biar executor gak macet
-        if i % 150 == 0 then
+        -- Berhenti sejenak setiap 50 objek biar executor gak freeze
+        if i % 50 == 0 then
             task.wait() 
         end
     end
 end)
 
--- 4. CEGAT MAP BARU (REAL-TIME)
-World.DescendantAdded:Connect(function(new)
-    task.wait() 
-    pcall(MakeMapFlat, new)
+-- 4. CEGAT OBJEK BARU (Biar tetep Flat terus)
+workspace.DescendantAdded:Connect(function(new)
+    pcall(SikatMap, new)
 end)
 
-print("GURITA HUB: MAP FLAT COLOR ACTIVE")
+print("GURITA HUB: FLAT MAP ACTIVE - NO LAG")
