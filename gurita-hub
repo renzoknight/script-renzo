@@ -1,75 +1,107 @@
--- [[ GURITA-HUB: GOD SPEED AUTO-GRAB (0.1ms) ]] --
+-- [[ GURITA-HUB: OPTIMIZED ESP & FLAT COLOR ]] --
 
 local lp = game.Players.LocalPlayer
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
 
-_G.GodModeSteal = false
+_G.FlatColor = false
+_G.ESPActive = false
 
--- 1. UI SIMPLE (BIAR GAK LAG SAMA SEKALI)
-local SG = Instance.new("ScreenGui", game.CoreGui)
-local MainBtn = Instance.new("TextButton", SG)
-MainBtn.Size = UDim2.new(0, 150, 0, 40)
-MainBtn.Position = UDim2.new(0.5, -75, 0, 10)
-MainBtn.Text = "GOD STEAL: OFF"
-MainBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainBtn.TextColor3 = Color3.new(1, 1, 1)
-Instance.new("UICorner", MainBtn)
-
-MainBtn.MouseButton1Click:Connect(function()
-    _G.GodModeSteal = not _G.GodModeSteal
-    MainBtn.Text = _G.GodModeSteal and "GOD STEAL: ON" or "GOD STEAL: OFF"
-    MainBtn.BackgroundColor3 = _G.GodModeSteal and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(150, 0, 0)
-end)
-
--- 2. THE STEALTH HOOK (Nyontek Kunci Otomatis)
-local savedRemote = nil
-local savedArgs = nil
-
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local args = {...}
-    local method = getnamecallmethod()
-    
-    if not checkcaller() and method == "FireServer" and #self.Name > 20 then
-        savedRemote = self
-        savedArgs = args
+-- 1. FUNGSI FLAT COLOR (ANTI LAG)
+local function ApplyFlatColor()
+    Lighting.GlobalShadows = false
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") or v:IsA("MeshPart") then
+            v.Material = Enum.Material.SmoothPlastic
+            v.CastShadow = false
+        elseif v:IsA("Decal") or v:IsA("Texture") then
+            v:Destroy()
+        end
     end
-    return oldNamecall(self, ...)
-end)
+end
 
--- 3. SPEED ENGINE (0.1ms via Heartbeat)
-RunService.Heartbeat:Connect(function()
-    if _G.GodModeSteal then
-        pcall(function()
-            local root = lp.Character.HumanoidRootPart
-            local spawnFolder = workspace:FindFirstChild("RenderedMovingAnimal")
+-- 2. FUNGSI ESP (NAMA BESAR & TEMBUS PANDANG)
+local function CreateESP(plr)
+    local function UpdateESP()
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and _G.ESPActive then
+            local char = plr.Character
+            local root = char.HumanoidRootPart
             
-            if spawnFolder then
-                for _, animal in ipairs(spawnFolder:GetChildren()) do
-                    -- Cek apakah ini beneran item (punya ProximityPrompt)
-                    local prompt = animal:FindFirstChildOfClass("ProximityPrompt") or animal:FindFirstChildWhichIsA("ProximityPrompt", true)
-                    
-                    if prompt then
-                        -- Bypass Jarak & Line of Sight
-                        prompt.HoldDuration = 0
-                        prompt.MaxActivationDistance = 50 -- Sedot dari jauh
-                        prompt.RequiresLineOfSight = false
-                        
-                        -- Jarak aman biar gak ke-kick (15-20 stud)
-                        if (animal:GetPivot().Position - root.Position).Magnitude < 20 then
-                            
-                            -- Kirim Paket Data secepat kilat
-                            if savedRemote and savedArgs then
-                                savedRemote:FireServer(unpack(savedArgs))
-                            end
-                            
-                            -- Trigger Tombol
-                            fireproximityprompt(prompt)
-                        end
-                    end
-                end
+            -- Buat BillboardGui (Nama di atas kepala)
+            local bbg = root:FindFirstChild("GuritaESP") or Instance.new("BillboardGui", root)
+            bbg.Name = "GuritaESP"
+            bbg.AlwaysOnTop = true
+            bbg.Size = UDim2.new(0, 200, 0, 50)
+            bbg.Adornee = root
+            bbg.ExtentsOffset = Vector3.new(0, 3, 0)
+
+            local txt = bbg:FindFirstChild("NameTag") or Instance.new("TextLabel", bbg)
+            txt.Name = "NameTag"
+            txt.BackgroundTransparency = 1
+            txt.Size = UDim2.new(1, 0, 1, 0)
+            txt.Text = plr.Name
+            txt.TextColor3 = Color3.fromRGB(255, 255, 255)
+            txt.TextScaled = true -- Bikin nama jadi besar banget
+            txt.Font = Enum.Font.SourceSansBold
+            txt.TextStrokeTransparency = 0 -- Biar ada garis tepi hitam
+        elseif plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and not _G.ESPActive then
+            if plr.Character.HumanoidRootPart:FindFirstChild("GuritaESP") then
+                plr.Character.HumanoidRootPart.GuritaESP:Destroy()
             end
-        end)
+        end
     end
+    RunService.RenderStepped:Connect(UpdateESP)
+end
+
+-- Jalankan ESP buat player yang sudah ada & yang baru masuk
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= lp then CreateESP(p) end
+end
+Players.PlayerAdded:Connect(function(p) CreateESP(p) end)
+
+-- 3. UI MENU (GURITA HUB)
+local SG = Instance.new("ScreenGui", game.CoreGui)
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 200, 0, 150)
+Main.Position = UDim2.new(0.1, 0, 0.4, 0)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Main.Active = true
+Main.Draggable = true
+Instance.new("UICorner", Main)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "GURITA HUB v3"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.SourceSansBold
+
+-- Tombol Flat Color
+local BtnFlat = Instance.new("TextButton", Main)
+BtnFlat.Size = UDim2.new(0.9, 0, 0, 40)
+BtnFlat.Position = UDim2.new(0.05, 0, 0.3, 0)
+BtnFlat.Text = "ACTIVATE FLAT COLOR"
+BtnFlat.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+BtnFlat.TextColor3 = Color3.new(1,1,1)
+
+BtnFlat.MouseButton1Click:Connect(function()
+    _G.FlatColor = true
+    ApplyFlatColor()
+    BtnFlat.Text = "FLAT COLOR: ACTIVE"
+    BtnFlat.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+end)
+
+-- Tombol ESP Player
+local BtnESP = Instance.new("TextButton", Main)
+BtnESP.Size = UDim2.new(0.9, 0, 0, 40)
+BtnESP.Position = UDim2.new(0.05, 0, 0.65, 0)
+BtnESP.Text = "ESP PLAYER: OFF"
+BtnESP.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+BtnESP.TextColor3 = Color3.new(1,1,1)
+
+BtnESP.MouseButton1Click:Connect(function()
+    _G.ESPActive = not _G.ESPActive
+    BtnESP.Text = _G.ESPActive and "ESP PLAYER: ON" or "ESP PLAYER: OFF"
+    BtnESP.BackgroundColor3 = _G.ESPActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
 end)
