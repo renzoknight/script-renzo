@@ -1,4 +1,4 @@
--- [[ RENZO GURITA - XRAY GURITA V3.6 FULL FEATURES ]] --
+-- [[ RENZO GURITA - XRAY GURITA V3.7 FIXED LOGIC ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -10,24 +10,26 @@ _G.ESPActive = false
 _G.XrayActive = false
 _G.ItemESPActive = false
 
--- 1. FUNGSI X-RAY (BASE & WALL ONLY)
-local function RefreshXray()
+-- 1. FUNGSI X-RAY (SANGAT KETAT: CUMA TEMBOK)
+local function ToggleXray()
     for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") or v:IsA("MeshPart") then
+        if v:IsA("BasePart") then
             local name = v.Name:lower()
-            -- Filter: Cuma bangunan, jangan tembusin rumput/pohon
-            local isBuilding = name:find("wall") or name:find("base") or name:find("floor") or name:find("door") or name:find("roof")
-            local isNature = name:find("grass") or name:find("leaf") or name:find("tree") or name:find("terrain")
+            -- Cuma sikat yang bener-bener bagian bangunan
+            local isWall = name:find("wall") or name:find("base") or name:find("floor") or name:find("roof") or name:find("door")
+            local isNature = name:find("grass") or name:find("terrain") or name:find("tree") or name:find("leaf")
             
-            if isBuilding and not isNature then
+            if isWall and not isNature then
                 if _G.XrayActive then
-                    if not v:FindFirstChild("OriginalTrans") then
-                        local val = Instance.new("NumberValue", v); val.Name = "OriginalTrans"; val.Value = v.Transparency
+                    if not v:FindFirstChild("OriTrans") then
+                        local val = Instance.new("NumberValue", v); val.Name = "OriTrans"; val.Value = v.Transparency
                     end
                     v.Transparency = 0.5
+                    v.Material = Enum.Material.Plastic -- Flat color cuma pas Xray nyala
                 else
-                    if v:FindFirstChild("OriginalTrans") then
-                        v.Transparency = v.OriginalTrans.Value
+                    if v:FindFirstChild("OriTrans") then
+                        v.Transparency = v.OriTrans.Value
+                        v.Material = Enum.Material.SmoothPlastic
                     end
                 end
             end
@@ -35,47 +37,66 @@ local function RefreshXray()
     end
 end
 
--- 2. TRACER & PLAYER ESP
-local function ManagePlayer(plr)
-    local Line = Drawing.new("Line")
-    Line.Visible = false; Line.Color = Color3.fromRGB(0, 160, 255); Line.Thickness = 1.5
-
-    plr.CharacterAdded:Connect(function(char)
-        local root = char:WaitForChild("HumanoidRootPart", 10)
-        local head = char:WaitForChild("Head", 10)
-        
-        -- Icon di kepala kalau bawa item
-        local hbg = Instance.new("BillboardGui", head); hbg.Name = "HolderIcon"; hbg.AlwaysOnTop = true
-        hbg.Size = UDim2.new(0, 30, 0, 30); hbg.ExtentsOffset = Vector3.new(0, 4, 0)
-        local img = Instance.new("ImageLabel", hbg); img.Size = UDim2.new(1, 0, 1, 0); img.BackgroundTransparency = 1; img.Visible = false
-
-        RunService.RenderStepped:Connect(function()
-            if _G.ESPActive and root then
-                local Pos, OnScreen = Camera:WorldToViewportPoint(root.Position)
-                if OnScreen then
-                    Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y); Line.To = Vector2.new(Pos.X, Pos.Y); Line.Visible = true
-                else Line.Visible = false end
-            else Line.Visible = false end
-            
-            if _G.ItemESPActive and char:FindFirstChildOfClass("Tool") then img.Visible = true else img.Visible = false end
-        end)
-    end)
-end
-
--- 3. BRAINROT ESP (NAMA + JARAK)
-local function CreateBrainrotESP(obj)
-    local bbg = Instance.new("BillboardGui", obj); bbg.AlwaysOnTop = true; bbg.Size = UDim2.new(0, 100, 0, 40); bbg.ExtentsOffset = Vector3.new(0, 2, 0)
-    local txt = Instance.new("TextLabel", bbg); txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1; txt.TextColor3 = Color3.fromRGB(0, 255, 100); txt.Font = Enum.Font.GothamBold; txt.TextSize = 12; txt.TextStrokeTransparency = 0.5
+-- 2. ESP BRAINROT DI BASE & ITEM
+local function CreateObjectESP(obj, isBrainrot)
+    if obj:FindFirstChild("GuritaTag") then return end
+    
+    local bbg = Instance.new("BillboardGui", obj)
+    bbg.Name = "GuritaTag"; bbg.AlwaysOnTop = true; bbg.Size = UDim2.new(0, 100, 0, 40)
+    
+    local txt = Instance.new("TextLabel", bbg)
+    txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1
+    txt.Font = Enum.Font.GothamBold; txt.TextSize = 11; txt.TextStrokeTransparency = 0.5
+    
+    if isBrainrot then
+        txt.TextColor3 = Color3.fromRGB(255, 85, 0) -- Oranye buat Brainrot
+    else
+        txt.TextColor3 = Color3.fromRGB(0, 255, 255) -- Cyan buat Item
+    end
 
     RunService.RenderStepped:Connect(function()
         if _G.ItemESPActive and obj.Parent and lp.Character:FindFirstChild("HumanoidRootPart") then
             local dist = math.floor((lp.Character.HumanoidRootPart.Position - obj.Position).Magnitude)
-            txt.Text = obj.Name .. "\n[" .. dist .. "m]"; bbg.Enabled = true
-        else bbg.Enabled = false end
+            txt.Text = obj.Name .. "\n[" .. dist .. "m]"
+            bbg.Enabled = true
+        else
+            bbg.Enabled = false
+        end
     end)
 end
 
--- 4. UI MENU
+-- 3. SCANNER (Cari Brainrot di Base & Item)
+local function StartScan()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") or v:IsA("MeshPart") then
+            local name = v.Name:lower()
+            if name:find("brainrot") then
+                CreateObjectESP(v, true)
+            elseif name:find("item") or v.Parent:IsA("Tool") then
+                CreateObjectESP(v, false)
+            end
+        end
+    end
+end
+
+-- 4. PLAYER TRACER
+local function AddTracer(plr)
+    local Line = Drawing.new("Line")
+    Line.Visible = false; Line.Color = Color3.fromRGB(0, 160, 255); Line.Thickness = 1.5
+    
+    RunService.RenderStepped:Connect(function()
+        if _G.ESPActive and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local root = plr.Character.HumanoidRootPart
+            local Pos, OnScreen = Camera:WorldToViewportPoint(root.Position)
+            if OnScreen then
+                Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                Line.To = Vector2.new(Pos.X, Pos.Y); Line.Visible = true
+            else Line.Visible = false end
+        else Line.Visible = false end
+    end)
+end
+
+-- 5. UI MENU
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 180); Main.Position = UDim2.new(0.5, -100, 0.2, 0)
 Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Main.Active = true; Main.Draggable = true; Instance.new("UICorner", Main)
@@ -86,12 +107,13 @@ local function CreateBtn(txt, pos, cb)
     b.MouseButton1Click:Connect(function() cb(b) end) return b
 end
 
-CreateBtn("ESP & TRACER: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b) _G.ESPActive = not _G.ESPActive; b.Text = _G.ESPActive and "ESP: ON" or "ESP: OFF" end)
-CreateBtn("XRAY BASE: OFF", UDim2.new(0.05, 0, 0.45, 0), function(b) _G.XrayActive = not _G.XrayActive; b.Text = _G.XrayActive and "XRAY: ON" or "XRAY: OFF"; RefreshXray() end)
-CreateBtn("ITEM/BRAINROT: OFF", UDim2.new(0.05, 0, 0.7, 0), function(b) _G.ItemESPActive = not _G.ItemESPActive; b.Text = _G.ItemESPActive and "ITEM ESP: ON" or "ITEM ESP: OFF" end)
+CreateBtn("PLAYER TRACER: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b) _G.ESPActive = not _G.ESPActive; b.Text = _G.ESPActive and "TRACER: ON" or "TRACER: OFF" end)
+CreateBtn("XRAY BASE: OFF", UDim2.new(0.05, 0, 0.45, 0), function(b) _G.XrayActive = not _G.XrayActive; b.Text = _G.XrayActive and "XRAY: ON" or "XRAY: OFF"; ToggleXray() end)
+CreateBtn("BRAINROT & ITEM: OFF", UDim2.new(0.05, 0, 0.7, 0), function(b) _G.ItemESPActive = not _G.ItemESPActive; b.Text = _G.ItemESPActive and "ESP: ON" or "ESP: OFF"; StartScan() end)
 
--- Initial Execution
-for _, p in pairs(Players:GetPlayers()) do if p ~= lp then ManagePlayer(p) end end
-Players.PlayerAdded:Connect(ManagePlayer)
-workspace.DescendantAdded:Connect(function(v) if v.Name:lower():find("brainrot") or v.Name:lower():find("item") then CreateBrainrotESP(v) end end)
-for _, v in pairs(workspace:GetDescendants()) do if v.Name:lower():find("brainrot") or v.Name:lower():find("item") then CreateBrainrotESP(v) end end
+-- Init
+for _, p in pairs(Players:GetPlayers()) do if p ~= lp then AddTracer(p) end end
+Players.PlayerAdded:Connect(AddTracer)
+workspace.DescendantAdded:Connect(function(v) 
+    if v.Name:lower():find("brainrot") or v.Name:lower():find("item") then CreateObjectESP(v, v.Name:lower():find("brainrot")) end 
+end)
