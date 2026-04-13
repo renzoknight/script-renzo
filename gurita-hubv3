@@ -1,41 +1,40 @@
--- [[ RENZO GURITA - XRAY GURITA V5.1 AUTO-LOAD ]] --
+-- [[ RENZO GURITA - XRAY GURITA V5.2 ORIGINAL FLAT ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 
--- 1. FUNGSI VISUAL (FLAT COLOR & XRAY OTOMATIS)
+-- 1. FUNGSI VISUAL (WARNA ASLI TAPI FLAT)
 local function ApplyVisual(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
-            -- JANGAN sentuh karakter player agar tidak abu-abu
+            -- PROTEKSI: Jangan sentuh karakter Ezra
             if v:IsDescendantOf(lp.Character) or v.Parent:FindFirstChild("Humanoid") then 
                 return 
             end
 
             local name = v.Name:lower()
 
-            -- FLAT COLOR LOGIC
-            v.Material = Enum.Material.Plastic
-            if v:IsA("MeshPart") then v.TextureID = "" end -- Hapus tekstur biar enteng
+            -- A. FLAT COLOR LOGIC (Pakai warna asli objek)
+            v.Material = Enum.Material.Plastic -- Buang tekstur kasar
+            if v:IsA("MeshPart") then v.TextureID = "" end -- Hapus gambar mesh
             v.CastShadow = false
 
-            -- XRAY LOGIC (Tembok & Bangunan)
-            local isBuilding = name:find("wall") or name:find("base") or name:find("dinding") or name:find("roof") or name:find("door")
+            -- B. XRAY LOGIC (Tembok & Base)
+            local isBuilding = name:find("wall") or name:find("base") or name:find("dinding") or name:find("roof")
             
             if isBuilding then
                 v.Transparency = 0.5
-                v.Color = Color3.fromRGB(180, 180, 180) -- Abu-abu solid
             else
-                -- LANTAI & BASE (Visual Hijau Neon seperti di foto)
+                -- LANTAI (Tetap pakai warna aslinya tapi Flat)
                 if name:find("floor") or name:find("lantai") or name:find("ground") then
-                    v.Color = Color3.fromRGB(0, 255, 120)
                     v.Transparency = 0
+                    -- Tidak ganti warna, cuma ganti material biar Flat
                 end
             end
 
-            -- PEMBERSIH (Hapus Rumput/Daun agar pandangan luas)
+            -- C. PEMBERSIH RUMPUT (Biar enteng & pandangan luas)
             if name:find("grass") or name:find("leaf") or name:find("tree") then
                 v.Transparency = 1
                 v.CanCollide = true
@@ -44,7 +43,7 @@ local function ApplyVisual(v)
     end)
 end
 
--- 2. TRACER BIRU (LANGSUNG ON)
+-- 2. TRACER BIRU NEON (AUTO-ON)
 local function AddTracer(plr)
     local Line = Drawing.new("Line")
     Line.Visible = true
@@ -68,7 +67,7 @@ local function AddTracer(plr)
     task.spawn(UpdateTracer)
 end
 
--- 3. EKSEKUSI SEMUA FUNGSI (AUTO)
+-- 3. EKSEKUSI OTOMATIS
 for _, v in pairs(workspace:GetDescendants()) do
     ApplyVisual(v)
 end
@@ -82,6 +81,3 @@ for _, p in pairs(Players:GetPlayers()) do
     if p ~= lp then AddTracer(p) end
 end
 Players.PlayerAdded:Connect(AddTracer)
-
--- NOTIFIKASI LOADED
-print("Gurita V5.1: Visual Auto-Applied!")
