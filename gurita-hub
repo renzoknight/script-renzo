@@ -1,40 +1,44 @@
--- [[ GURITA-HUB: ONLY FLAT COLOR - NO LAG MODE ]] --
+-- [[ GURITA-HUB: MAP FLAT COLOR ONLY - ZERO LAG ]] --
 
 local Lighting = game:GetService("Lighting")
+local World = workspace -- Fokus ke Workspace biar gak nyisir sistem lain
 
--- 1. FORCE PERFORMANCE SETTINGS
+-- 1. ENGINE OPTIMIZATION (INSTANT)
 settings().Rendering.QualityLevel = 1
 Lighting.GlobalShadows = false
 Lighting.Brightness = 2
 
--- 2. FUNGSI TOTAL FLAT COLOR
-local function SikatHabis(v)
-    -- Paksa semua benda jadi warna solid/plastik (Lantai, Dinding, Objek)
+-- 2. FUNGSI PENYIKAT MAP (Bikin Plastik Polos)
+local function MakeMapFlat(v)
     if v:IsA("BasePart") or v:IsA("MeshPart") then
         v.Material = Enum.Material.SmoothPlastic
         v.Reflectance = 0
         v.CastShadow = false
-        -- Hapus tekstur gambar biar jadi blok warna solid
         if v:IsA("MeshPart") then
-            v.TextureID = "" 
+            v.TextureID = "" -- Hapus tekstur gambar map
         end
-    -- Hapus dekorasi, langit, dan efek yang bikin berat
-    elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("Sky") or v:IsA("Atmosphere") then
+    elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("Sky") then
         v:Destroy()
-    -- Matikan partikel cuaca/efek
-    elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
-        v.Enabled = false
     end
 end
 
--- 3. EKSEKUSI LANGSUNG (Tanpa Nunggu)
-for _, obj in ipairs(game:GetDescendants()) do
-    pcall(SikatHabis, obj)
-end
-
--- 4. KUNCI REAL-TIME (Cegat barang baru)
-game.DescendantAdded:Connect(function(new)
-    pcall(SikatHabis, new)
+-- 3. EKSEKUSI BERTAHAP (ANTI-FREEZE/LAG)
+task.spawn(function()
+    local descendants = World:GetDescendants()
+    for i, obj in ipairs(descendants) do
+        pcall(MakeMapFlat, obj)
+        
+        -- Istirahat setiap 150 objek biar executor gak macet
+        if i % 150 == 0 then
+            task.wait() 
+        end
+    end
 end)
 
-print("GURITA HUB: PURE FLAT COLOR ACTIVE")
+-- 4. CEGAT MAP BARU (REAL-TIME)
+World.DescendantAdded:Connect(function(new)
+    task.wait() 
+    pcall(MakeMapFlat, new)
+end)
+
+print("GURITA HUB: MAP FLAT COLOR ACTIVE")
