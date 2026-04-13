@@ -1,66 +1,200 @@
--- [[ GURITA-HUB: DEVELOPER-LEVEL OPTIMIZATION (SUPER SEMUT) ]] --
+-- [[ GURITA-HUB: SOLO OVERDRIVE (ULTRA SMOOTH & ITEM ESP) ]] --
 
+local lp = game.Players.LocalPlayer
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
 
--- 1. THE ULTIMATE SMOOTH ENGINE
-local function MakeItSuperSemut(v)
-    if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
-        v.Enabled = false
-        task.delay(0.1, function() v:Destroy() end) -- Hapus total dari memory
-    elseif v:IsA("Highlight") or v:IsA("SelectionBox") or v:IsA("SelectionSphere") then
-        v:Destroy()
-    elseif v:IsA("BasePart") or v:IsA("MeshPart") then
-        v.Material = Enum.Material.SmoothPlastic
-        v.Reflectance = 0
-        v.CastShadow = false
-        if v:IsA("MeshPart") then
-            v.TextureID = "" -- Buat jadi Flat Color total
+_G.ESPActive = false
+
+-- 1. TOTAL SMOOTH OPTIMIZATION (INSTANT AUTO-RUN)
+local function MakeItSuperSemut()
+    -- Bantai Pencahayaan & Efek
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9e9
+    Lighting.Brightness = 2
+    settings().Rendering.QualityLevel = 1
+    
+    for _, v in ipairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("Sky") then
+            v:Destroy()
+        end
+    end
+
+    -- Bantai Tekstur & Partikel di Seluruh Dunia
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") or v:IsA("MeshPart") then
+            v.Material = Enum.Material.SmoothPlastic
+            v.CastShadow = false
+            v.Reflectance = 0
+            if v:IsA("MeshPart") then v.TextureID = "" end -- Bikin Flat Color Total
+        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+            v:Destroy()
+        end
+    end
+end
+MakeItSuperSemut() -- Eksekusi langsung!
+
+-- Sikat kalau ada objek baru yang muncul (Real-time)
+workspace.DescendantAdded:Connect(function(v)
+    pcall(function()
+        if v:IsA("BasePart") or v:IsA("MeshPart") then
+            v.Material = Enum.Material.SmoothPlastic
+            v.CastShadow = false
+            if v:IsA("MeshPart") then v.TextureID = "" end
+        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") then
+            v:Destroy()
+        end
+    end)
+end)
+
+-- 2. ADVANCED ESP LOGIC (NAME + HELD ITEM)
+local function GetHeldItem(plr)
+    if plr.Character then
+        -- Cek Tool yang sedang di-equip (biasanya ada di dalam Character)
+        local tool = plr.Character:FindFirstChildOfClass("Tool")
+        if tool then
+            return tool.Name
+        end
+        -- Beberapa game nyimpen barang di Folder khusus, tapi Tool paling umum
+    end
+    return "None"
+end
+
+local function CreateAdvancedESP(plr)
+    local function Setup()
+        local char = plr.Character or plr.CharacterAdded:Wait()
+        local root = char:WaitForChild("HumanoidRootPart", 10)
+        if root then
+            -- Buat BillboardGui (Raksasa)
+            local bbg = root:FindFirstChild("GuritaESP") or Instance.new("BillboardGui", root)
+            bbg.Name = "GuritaESP"
+            bbg.AlwaysOnTop = true
+            bbg.Size = UDim2.new(0, 400, 0, 150) -- Ukuran Raksasa
+            bbg.ExtentsOffset = Vector3.new(0, 6, 0) -- Di atas kepala
+            bbg.Enabled = false -- Dimatikan di awal
+
+            -- Label NAMA (Kuning Besar)
+            local nameTxt = bbg:FindFirstChild("NameLabel") or Instance.new("TextLabel", bbg)
+            nameTxt.Name = "NameLabel"
+            nameTxt.Size = UDim2.new(1, 0, 0.6, 0)
+            nameTxt.Position = UDim2.new(0, 0, 0, 0)
+            nameTxt.BackgroundTransparency = 1
+            nameTxt.Text = plr.Name
+            nameTxt.TextColor3 = Color3.fromRGB(255, 255, 0) -- Kuning
+            nameTxt.TextScaled = true
+            nameTxt.Font = Enum.Font.SourceSansBold
+            nameTxt.TextStrokeTransparency = 0
+
+            -- Label ITEM (Hijau Sedang)
+            local itemTxt = bbg:FindFirstChild("ItemLabel") or Instance.new("TextLabel", bbg)
+            itemTxt.Name = "ItemLabel"
+            itemTxt.Size = UDim2.new(1, 0, 0.4, 0)
+            itemTxt.Position = UDim2.new(0, 0, 0.6, 0) -- Di bawah nama
+            itemTxt.BackgroundTransparency = 1
+            itemTxt.Text = "Holding: None" -- Default
+            itemTxt.TextColor3 = Color3.fromRGB(0, 255, 0) -- Hijau
+            itemTxt.TextScaled = true
+            itemTxt.Font = Enum.Font.SourceSansBold
+            itemTxt.TextStrokeTransparency = 0
+            
+            -- Loop buat update Item yang dipegang (Real-time)
+            task.spawn(function()
+                while bbg and bbg.Parent do
+                    if _G.ESPActive then
+                        local heldItem = GetHeldItem(plr)
+                        itemTxt.Text = "Holding: " .. heldItem
+                        -- Kalau pegang item, ganti warna jadi Merah biar kelihatan
+                        if heldItem ~= "None" then
+                            itemTxt.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        else
+                            itemTxt.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        end
+                    end
+                    task.wait(1) -- Update setiap 1 detik
+                end
+            end)
+        end
+    end
+    Setup()
+    plr.CharacterAdded:Connect(Setup)
+end
+
+-- Terapkan ke semua player
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= lp then CreateAdvancedESP(p) end
+end
+Players.PlayerAdded:Connect(CreateAdvancedESP)
+
+-- FUNGSI TOGGLE ESP (Untuk dipanggil tombol menu)
+local function ToggleESP()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local esp = p.Character.HumanoidRootPart:FindFirstChild("GuritaESP")
+            if esp then
+                esp.Enabled = _G.ESPActive
+            end
         end
     end
 end
 
--- 2. AUTO-WIPE (FOLDER RENDEREDMOVINGANIMAL)
--- Ini bagian yang bikin Traits jadi gak ada lag-nya sama sekali
-task.spawn(function()
-    while true do
-        local folder = workspace:FindFirstChild("RenderedMovingAnimal")
-        if folder then
-            for _, item in ipairs(folder:GetDescendants()) do
-                MakeItSuperSemut(item)
-            end
-        end
-        task.wait(1) -- Cek setiap 1 detik biar gak berat ke CPU
-    end
-end)
-
--- Langsung sikat begitu ada barang baru (Real-time)
-workspace.DescendantAdded:Connect(function(descendant)
-    if descendant:IsDescendantOf(workspace:FindFirstChild("RenderedMovingAnimal")) then
-        MakeItSuperSemut(descendant)
-    end
-end)
-
--- 3. GLOBAL PERFORMANCE BOOST
-settings().Rendering.QualityLevel = 1
-game:GetService("Lighting").GlobalShadows = false
-
--- 4. MINI MENU (FLAT COLOR STYLE)
+-- 3. UI MENU GURITA-HUB (GAYA FLAT GOST v2)
 local SG = Instance.new("ScreenGui", game.CoreGui)
-local Frame = Instance.new("Frame", SG)
-Frame.Size = UDim2.new(0, 180, 0, 40)
-Frame.Position = UDim2.new(0.5, -90, 0, 5)
-Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Instance.new("UICorner", Frame)
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 180, 0, 110) -- Ukuran kotak pas
+Main.Position = UDim2.new(0.5, -90, 0.05, 0) -- Di atas tengah layar
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Hitam Pekat Flat
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10) -- Pojokan agak tumpul
+Main.Active = true
+Main.Draggable = true -- Bisa digeser
 
-local Top = Instance.new("Frame", Frame)
-Top.Size = UDim2.new(1, 0, 0, 10)
-Top.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-Instance.new("UICorner", Top)
+-- Baris Judul Merah (Persis foto)
+local TitleBar = Instance.new("Frame", Main)
+TitleBar.Size = UDim2.new(1, 0, 0, 25)
+TitleBar.BackgroundColor3 = Color3.fromRGB(180, 0, 0) -- Merah Kotak
+local CornerTitle = Instance.new("UICorner", TitleBar)
+CornerTitle.CornerRadius = UDim.new(0, 10)
+-- Bikin pojokan bawah jadi tajam biar kelihatan kotak sempurna
+CornerTitle.TopLeft = true
+CornerTitle.TopRight = true
+CornerTitle.BottomLeft = false
+CornerTitle.BottomRight = false
 
-local Label = Instance.new("TextLabel", Frame)
-Label.Size = UDim2.new(1, 0, 1, 0)
-Label.Text = "SUPER DUPER SEMUT: ACTIVE"
-Label.TextColor3 = Color3.fromRGB(0, 255, 0)
-Label.Font = Enum.Font.SourceSansBold
-Label.TextSize = 12
-Label.BackgroundTransparency = 1
+local Title = Instance.new("TextLabel", TitleBar)
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.Text = "GURITA HUB - SOLO"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255) -- Putih
+Title.TextSize = 12 -- Kecil minimalis
+Title.Font = Enum.Font.SourceSansBold
+Title.BackgroundTransparency = 1
+
+-- Tombol ESP Player (Merah-Kotak Persis GOST STEAL v2)
+local BtnESP = Instance.new("TextButton", Main)
+BtnESP.Size = UDim2.new(0, 160, 0, 35) -- Tombol kotak besar
+BtnESP.Position = UDim2.new(0.05, 0, 1, -45) -- Di bagian bawah frame
+BtnESP.BackgroundColor3 = Color3.fromRGB(150, 0, 0) -- Merah Tombol
+BtnESP.Text = "ESP PLAYER: OFF"
+BtnESP.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnESP.TextSize = 14
+BtnESP.Font = Enum.Font.SourceSansBold
+Instance.new("UICorner", BtnESP).CornerRadius = UDim.new(0, 8) -- Pojokan tombol
+
+-- Logika Tombol
+BtnESP.MouseButton1Click:Connect(function()
+    _G.ESPActive = not _G.ESPActive
+    BtnESP.Text = _G.ESPActive and "ESP PLAYER: ON" or "ESP PLAYER: OFF"
+    BtnESP.BackgroundColor3 = _G.ESPActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+    
+    ToggleESP()
+end)
+
+-- Notif Status (Persis aslinya tapi mini)
+local Status = Instance.new("TextLabel", Main)
+Status.Size = UDim2.new(0.9, 0, 0, 20)
+Status.Position = UDim2.new(0.05, 0, 0.4, 0)
+Status.BackgroundTransparency = 1
+Status.Text = "Status: Super Smooth" 
+Status.TextColor3 = Color3.fromRGB(0, 255, 0) -- Hijau
+Status.TextSize = 11
+Status.Font = Enum.Font.SourceSansBold
+Status.TextXAlignment = Enum.TextXAlignment.Center
