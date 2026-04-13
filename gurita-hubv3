@@ -1,19 +1,46 @@
--- [[ RENZO GURITA - XRAY GURITA V3 FINAL FIX ]] --
+-- [[ RENZO GURITA - XRAY GURITA V3.3 AUTO-SAVE & LOGO GH ]] --
 
-local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
--- 1. AUTO FLAT COLOR (VERSI ANTI-BOTAK)
+-- 1. SISTEM AUTO-SAVE (Langsung Simpan Pas Diklik)
+local filename = "GuritaConfig_V3.json"
+_G.Settings = {
+    ESP = false,
+    Xray = false
+}
+
+local function SaveSettings()
+    if writefile then
+        writefile(filename, HttpService:JSONEncode(_G.Settings))
+    end
+end
+
+local function LoadSettings()
+    if isfile and isfile(filename) then
+        local success, data = pcall(function() return HttpService:JSONDecode(readfile(filename)) end)
+        if success then _G.Settings = data end
+    end
+end
+
+LoadSettings() -- Ambil settingan lama pas start
+
+-- 2. FUNGSI PROTEKSI & FLAT COLOR (BAWAAN KODE ABANG)
+local function IsSafe(v)
+    local name = v.Name:lower()
+    if name:find("floor") or name:find("lantai") or name:find("grass") or name:find("terrain") then return true end
+    if v:IsDescendantOf(lp.Character) or v.Parent:FindFirstChild("Humanoid") then return true end
+    return false
+end
+
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
-            local name = v.Name:lower()
-            -- Daftar hitam: Jangan sentuh objek ini (Rumput, Tanah, Daun)
-            if not (name:find("grass") or name:find("tree") or name:find("leaf") or name:find("terrain") or name:find("bush")) then
+            if not IsSafe(v) then
                 v.Material = Enum.Material.Plastic
-                v.Reflectance = 0
                 v.CastShadow = false
                 if v:IsA("MeshPart") then v.TextureID = "" end
             end
@@ -21,92 +48,90 @@ local function ApplyFlat(v)
     end)
 end
 
-task.spawn(function()
-    local d = workspace:GetDescendants()
-    for i = 1, #d do
-        ApplyFlat(d[i])
-        if i % 300 == 0 then task.wait() end
-    end
-end)
-workspace.DescendantAdded:Connect(ApplyFlat)
-
--- 2. X-RAY BASE (KHUSUS DINDING BASE)
-_G.XrayActive = false
 local function DoXray()
-    task.spawn(function()
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
-                local name = v.Name:lower()
-                -- Filter: Cuma Base dan Dinding yang jadi transparan
-                if name:find("wall") or name:find("base") or name:find("door") or name:find("roof") then
-                    if _G.XrayActive then
-                        if not v:FindFirstChild("OriginalTrans") then
-                            local val = Instance.new("NumberValue", v); val.Name = "OriginalTrans"; val.Value = v.Transparency
-                        end
-                        v.Transparency = 0.5
-                    else
-                        if v:FindFirstChild("OriginalTrans") then v.Transparency = v.OriginalTrans.Value end
-                    end
-                end
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not IsSafe(v) then
+            local name = v.Name:lower()
+            if name:find("wall") or name:find("base") or name:find("door") or name:find("roof") then
+                v.Transparency = _G.Settings.Xray and 0.5 or 0
             end
         end
-    end)
+    end
 end
 
--- 3. SMART ESP (RINGAN & DINAMIS)
-_G.ESPActive = false
-local function CreateSmartESP(plr)
-    local Line = Drawing.new("Line")
-    Line.Visible = false; Line.Color = Color3.fromRGB(0, 160, 255); Line.Thickness = 1
-    
-    local function Update()
-        game:GetService("RunService").RenderStepped:Connect(function()
-            if _G.ESPActive and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                local Root = plr.Character.HumanoidRootPart
-                local Pos, OnScreen = Camera:WorldToViewportPoint(Root.Position)
-                local Dist = (Camera.CFrame.Position - Root.Position).Magnitude
-                if OnScreen then
-                    Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y); Line.To = Vector2.new(Pos.X, Pos.Y); Line.Visible = true
-                    local bbg = Root:FindFirstChild("SmartTag")
-                    if bbg then bbg.Enabled = true; bbg.Tag.TextSize = math.clamp(18 - (Dist/35), 8, 15) end
-                else
-                    Line.Visible = false
-                end
-            else
-                Line.Visible = false
-            end
-        end)
-    end
-    -- Setup Tag (BillboardGui)
-    local function SetupTag()
-        local char = plr.Character or plr.CharacterAdded:Wait()
-        local root = char:WaitForChild("HumanoidRootPart", 10)
-        local bbg = Instance.new("BillboardGui", root); bbg.Name = "SmartTag"; bbg.AlwaysOnTop = true
-        bbg.Size = UDim2.new(0, 80, 0, 20); bbg.ExtentsOffset = Vector3.new(0, 3, 0)
-        local tag = Instance.new("TextLabel", bbg); tag.Name = "Tag"; tag.Size = UDim2.new(1, 0, 1, 0); tag.BackgroundTransparency = 1
-        tag.Text = plr.Name; tag.TextColor3 = Color3.new(1, 1, 0); tag.Font = Enum.Font.GothamBold; tag.TextStrokeTransparency = 0.5
-    end
-    task.spawn(Update); SetupTag(); plr.CharacterAdded:Connect(SetupTag)
-end
+-- 3. UI MENU & LOGO GH (POSISI KIRI DEKET SHOP)
+local SG = Instance.new("ScreenGui")
+SG.Name = "GuritaV3AutoSave"
+SG.ResetOnSpawn = false
+local success, _ = pcall(function() SG.Parent = game:GetService("CoreGui") end)
+if not success then SG.Parent = lp:WaitForChild("PlayerGui") end
 
--- 4. UI MENU (LIS BIRU NEON)
-local SG = Instance.new("ScreenGui", game.CoreGui)
-local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 130); Main.Position = UDim2.new(0.5, -100, 0.1, 0)
-Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Main.BorderSizePixel = 0; Main.Active = true; Main.Draggable = true
+-- LOGO GH (Letak di Kiri Deket Shop)
+local Logo = Instance.new("TextButton", SG)
+Logo.Size = UDim2.new(0, 45, 0, 45)
+Logo.Position = UDim2.new(0, 15, 0.45, 0) -- Posisi kiri, sejajar area shop
+Logo.BackgroundColor3 = Color3.fromRGB(0, 160, 255)
+Logo.Text = "GH"
+Logo.TextColor3 = Color3.new(1, 1, 1)
+Logo.Font = Enum.Font.GothamBold
+Logo.TextSize = 18
+Instance.new("UICorner", Logo).CornerRadius = UDim.new(1, 0)
+Logo.Draggable = true -- Tetap bisa digeser kalo ngalangin
+
+-- MAIN FRAME
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 200, 0, 130)
+Main.Position = UDim2.new(0.5, -100, 0.2, 0)
+Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
+Main.Visible = false
+Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main)
 local Border = Instance.new("Frame", Main); Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2); Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0; Instance.new("UICorner", Border)
 
+Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+
 local function CreateBtn(txt, pos, cb)
-    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(0, 160, 255); b.BackgroundTransparency = 0.8; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 11; Instance.new("UICorner", b); b.MouseButton1Click:Connect(function() cb(b) end) return b
+    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(0, 160, 255); b.BackgroundTransparency = 0.8; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 11; Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() cb(b) end) return b
 end
 
-CreateBtn("ESP & TRACER: OFF", UDim2.new(0.05, 0, 0.25, 0), function(b) 
-    _G.ESPActive = not _G.ESPActive; b.Text = _G.ESPActive and "ESP & TRACER: ON" or "ESP & TRACER: OFF" 
+-- TOMBOL DENGAN AUTO-SAVE
+local btnESP = CreateBtn(_G.Settings.ESP and "ESP & TRACER: ON" or "ESP & TRACER: OFF", UDim2.new(0.05, 0, 0.25, 0), function(b) 
+    _G.Settings.ESP = not _G.Settings.ESP
+    b.Text = _G.Settings.ESP and "ESP & TRACER: ON" or "ESP & TRACER: OFF" 
+    SaveSettings() -- Simpan otomatis
 end)
 
-CreateBtn("XRAY BASE: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b) 
-    _G.XrayActive = not _G.XrayActive; b.Text = _G.XrayActive and "XRAY BASE: ON" or "XRAY BASE: OFF"; DoXray() 
+local btnXray = CreateBtn(_G.Settings.Xray and "XRAY BASE: ON" or "XRAY BASE: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b) 
+    _G.Settings.Xray = not _G.Settings.Xray
+    b.Text = _G.Settings.Xray and "XRAY BASE: ON" or "XRAY BASE: OFF"
+    DoXray()
+    SaveSettings() -- Simpan otomatis
 end)
 
+-- 4. TRACER LOGIC
+local function CreateSmartESP(plr)
+    local Line = Drawing.new("Line")
+    Line.Visible = false; Line.Color = Color3.fromRGB(0, 160, 255); Line.Thickness = 1.5
+    RunService.RenderStepped:Connect(function()
+        if _G.Settings.ESP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local Root = plr.Character.HumanoidRootPart
+            local Pos, OnScreen = Camera:WorldToViewportPoint(Root.Position)
+            if OnScreen then
+                Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                Line.To = Vector2.new(Pos.X, Pos.Y); Line.Visible = true
+            else Line.Visible = false end
+        else Line.Visible = false end
+    end)
+end
+
+-- 5. EXECUTION
+task.spawn(function()
+    local d = workspace:GetDescendants()
+    for i = 1, #d do ApplyFlat(d[i]) if i % 250 == 0 then task.wait() end end
+    DoXray() -- Jalankan xray kalo di settingan lama emang ON
+end)
+
+workspace.DescendantAdded:Connect(ApplyFlat)
 for _, p in ipairs(Players:GetPlayers()) do if p ~= lp then CreateSmartESP(p) end end
 Players.PlayerAdded:Connect(CreateSmartESP)
