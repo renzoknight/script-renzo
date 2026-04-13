@@ -1,24 +1,37 @@
--- [[ RENZO PURE POTATO MODE ]] --
--- Only for Graphics / No Farming
+-- [[ RENZO SUPER SMOOTH - NO TEXTURE ]] --
 
+-- 1. Paksa Rendering Terendah
 settings().Rendering.QualityLevel = 1
-game.Lighting.GlobalShadows = false
-game.Lighting.FogEnd = 9e9
+game:GetService("Lighting").GlobalShadows = false
 
+-- 2. Hapus Tekstur Lantai & Objek (Tanpa Hapus Logo)
 for _, v in ipairs(game:GetDescendants()) do
     if v:IsA("BasePart") or v:IsA("MeshPart") then
-        v.Material = Enum.Material.SmoothPlastic
+        v.Material = Enum.Material.SmoothPlastic -- Bikin jadi polos
         v.Reflectance = 0
         v.CastShadow = false
-    elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ImageLabel") then
+    end
+    
+    -- Hapus Texture khusus (Grid/Lantai) tapi biarkan Decal (Logo)
+    if v:IsA("Texture") then
         v:Destroy()
-    elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") then
+    end
+    
+    -- Matikan partikel biar makin ringan
+    if v:IsA("ParticleEmitter") or v:IsA("Trail") then
         v.Enabled = false
     end
 end
 
--- Fix Lighting agar lebih terang dan flat
+-- 3. Matikan Terrain (Rumput/Grid Dasar)
+local terrain = workspace:FindFirstChildOfClass("Terrain")
+if terrain then
+    terrain.WaterWaveSize = 0
+    terrain.WaterWaveSpeed = 0
+    sethiddenproperty(terrain, "Decoration", false)
+end
+
+-- 4. Pencahayaan Flat (Biar warna rata)
 local light = game:GetService("Lighting")
 light.Brightness = 2
-light.ClockTime = 14
 light.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
