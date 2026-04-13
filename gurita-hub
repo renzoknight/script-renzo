@@ -1,7 +1,7 @@
--- [[ GURITA-HUB: LITE & INSTANT STEAL ]] --
+-- [[ GURITA-HUB: GOST STEAL V2 - BYPASS DETECTOR ]] --
 
--- 1. FLAT COLOR (INSTAN & RINGAN)
-local function UltraFlat(v)
+-- 1. FLAT COLOR (OPTIMAL)
+local function SetFlat(v)
     pcall(function()
         if v:IsA("BasePart") then
             v.Material = Enum.Material.Plastic
@@ -11,83 +11,61 @@ local function UltraFlat(v)
         end
     end)
 end
-
--- Sikat objek yang sudah ada dan yang baru muncul
 task.spawn(function()
-    for _, v in ipairs(workspace:GetChildren()) do UltraFlat(v) end
+    for _, v in ipairs(workspace:GetDescendants()) do SetFlat(v) end
 end)
-game.DescendantAdded:Connect(UltraFlat)
 
--- 2. CUSTOM NOTIFY (HITAM-MERAH SESUAI FOTO)
-local function CustomAlert()
-    local sg = Instance.new("ScreenGui", game.CoreGui)
-    local f = Instance.new("Frame", sg)
-    f.Size = UDim2.new(0, 200, 0, 45)
-    f.Position = UDim2.new(0.5, -100, 0.4, 0)
-    f.BackgroundColor3 = Color3.fromRGB(15, 0, 0)
-    f.BorderSizePixel = 0
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
-    
-    local t = Instance.new("TextLabel", f)
-    t.Size = UDim2.new(1, 0, 1, 0)
-    t.Text = "STEAL BRAINROT: ON"
-    t.TextColor3 = Color3.fromRGB(255, 0, 0)
-    t.BackgroundTransparency = 1
-    t.Font = Enum.Font.SourceSansBold
-    t.TextSize = 14
-    
-    task.delay(2, function() sg:Destroy() end)
-end
+-- 2. CUSTOM MENU (GOST STEAL v2)
+local SG = Instance.new("ScreenGui", game.CoreGui)
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 180, 0, 110)
+Main.Position = UDim2.new(0.5, -90, 0.4, 0)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+Main.Active = true
+Main.Draggable = true
 
--- 3. UI LIBRARY (RAYFIELD - LITE MODE)
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local Window = Rayfield:CreateWindow({
-   Name = "GURITA-HUB",
-   LoadingTitle = "Instant Steal",
-   ConfigurationSaving = {Enabled = false}
-})
+local ActionBtn = Instance.new("TextButton", Main)
+ActionBtn.Size = UDim2.new(0, 160, 0, 35)
+ActionBtn.Position = UDim2.new(0.05, 0, 1, -40)
+ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+ActionBtn.Text = "START"
+ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ActionBtn.Font = Enum.Font.SourceSansBold
+Instance.new("UICorner", ActionBtn).CornerRadius = UDim.new(0, 8)
 
-local Tab = Window:CreateTab("Main", 4483362458)
-_G.Steal = false
+-- 3. LOGIKA STEAL (ANTI-LOG BYPASS)
+_G.StealActive = false
 
-Tab:CreateToggle({
-   Name = "Auto Steal Brainrot",
-   CurrentValue = false,
-   Callback = function(Value)
-      _G.Steal = Value
-      if Value then CustomAlert() end
-   end,
-})
+ActionBtn.MouseButton1Click:Connect(function()
+    _G.StealActive = not _G.StealActive
+    ActionBtn.Text = _G.StealActive and "STOP" or "START"
+    ActionBtn.BackgroundColor3 = _G.StealActive and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 150, 255)
+end)
 
--- 4. LOGIKA STEAL (INSTAN 0.1s & RADIUS DEKAT)
 task.spawn(function()
     local lp = game.Players.LocalPlayer
-    while task.wait(0.1) do
-        if _G.Steal then
+    while task.wait(0.3) do -- Jeda 0.3s biar server gak curiga dan muncul teks itu
+        if _G.StealActive then
             pcall(function()
-                local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-                if not root then return end
+                local root = lp.Character.HumanoidRootPart
+                -- Scan area kecil (Radius 12) biar akurat
+                local items = workspace:GetPartBoundsInRadius(root.Position, 12)
                 
-                -- Hanya ambil barang dalam radius 30 meter agar TIDAK LAG
-                local nearby = workspace:GetPartBoundsInRadius(root.Position, 30)
-                
-                for _, part in ipairs(nearby) do
-                    -- Ambil Brainrot (Sistem Sentuh)
-                    if part:FindFirstChildOfClass("TouchTransmitter") then
-                        firetouchinterest(root, part, 0)
-                        firetouchinterest(root, part, 1)
-                    end
-                    -- Ambil Brainrot (Sistem Tombol E / Collect)
-                    local prompt = part:FindFirstChildOfClass("ProximityPrompt") or part.Parent:FindFirstChildOfClass("ProximityPrompt")
+                for _, p in ipairs(items) do
+                    local prompt = p:FindFirstChildOfClass("ProximityPrompt") or p.Parent:FindFirstChildOfClass("ProximityPrompt")
                     if prompt then
+                        -- Set instan tapi kasih napas ke server
+                        prompt.HoldDuration = 0
+                        prompt.RequiresLineOfSight = false
+                        
+                        -- Eksekusi
                         fireproximityprompt(prompt)
+                        -- Tunggu sebentar setelah mencuri satu barang
+                        task.wait(0.1) 
                     end
                 end
             end)
         end
     end
 end)
-
--- Optimasi Performa HP
-settings().Rendering.QualityLevel = 1
-game:GetService("Lighting").GlobalShadows = false
