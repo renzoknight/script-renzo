@@ -1,63 +1,66 @@
--- [[ GURITA-HUB: INSTANT FLAT COLOR & GIANT ESP ]] --
+-- [[ GURITA-HUB: DEVELOPER-LEVEL OPTIMIZATION (SUPER SEMUT) ]] --
 
--- 1. INSTANT PERFORMANCE BOOST (Langsung Jalan Tanpa Menu)
-local Lighting = game:GetService("Lighting")
-local Terrain = workspace:FindFirstChildOfClass("Terrain")
+local RunService = game:GetService("RunService")
 
--- Matiin efek visual berat
-Lighting.GlobalShadows = false
-if Terrain then Terrain.WaterWaveSize = 0; Terrain.WaterWaveSpeed = 0; Terrain.WaterReflectance = 0; Terrain.WaterTransparency = 0 end
-settings().Rendering.QualityLevel = 1
-
-local function InstantFlat()
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") or v:IsA("MeshPart") then
-            v.Material = Enum.Material.SmoothPlastic
-            v.CastShadow = false
-        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") then
-            v:Destroy()
+-- 1. THE ULTIMATE SMOOTH ENGINE
+local function MakeItSuperSemut(v)
+    if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
+        v.Enabled = false
+        task.delay(0.1, function() v:Destroy() end) -- Hapus total dari memory
+    elseif v:IsA("Highlight") or v:IsA("SelectionBox") or v:IsA("SelectionSphere") then
+        v:Destroy()
+    elseif v:IsA("BasePart") or v:IsA("MeshPart") then
+        v.Material = Enum.Material.SmoothPlastic
+        v.Reflectance = 0
+        v.CastShadow = false
+        if v:IsA("MeshPart") then
+            v.TextureID = "" -- Buat jadi Flat Color total
         end
     end
 end
-InstantFlat() -- Eksekusi langsung!
 
--- 2. GIANT ESP PLAYER (Auto-Run)
-local function CreateGiantESP(plr)
-    plr.CharacterAdded:Connect(function(char)
-        local root = char:WaitForChild("HumanoidRootPart", 5)
-        if root then
-            local bbg = Instance.new("BillboardGui", root)
-            bbg.Name = "GuritaESP"
-            bbg.AlwaysOnTop = true
-            bbg.Size = UDim2.new(0, 300, 0, 100) -- Ukuran diperbesar
-            bbg.ExtentsOffset = Vector3.new(0, 5, 0)
-
-            local txt = Instance.new("TextLabel", bbg)
-            txt.Size = UDim2.new(1, 0, 1, 0)
-            txt.BackgroundTransparency = 1
-            txt.Text = plr.Name
-            txt.TextColor3 = Color3.fromRGB(255, 255, 0) -- Kuning biar ngejreng
-            txt.TextScaled = true 
-            txt.Font = Enum.Font.SourceSansBold
-            txt.TextStrokeTransparency = 0
+-- 2. AUTO-WIPE (FOLDER RENDEREDMOVINGANIMAL)
+-- Ini bagian yang bikin Traits jadi gak ada lag-nya sama sekali
+task.spawn(function()
+    while true do
+        local folder = workspace:FindFirstChild("RenderedMovingAnimal")
+        if folder then
+            for _, item in ipairs(folder:GetDescendants()) do
+                MakeItSuperSemut(item)
+            end
         end
-    end)
-end
+        task.wait(1) -- Cek setiap 1 detik biar gak berat ke CPU
+    end
+end)
 
-for _, p in ipairs(game.Players:GetPlayers()) do
-    if p ~= game.Players.LocalPlayer then CreateGiantESP(p) end
-end
-game.Players.PlayerAdded:Connect(CreateGiantESP)
+-- Langsung sikat begitu ada barang baru (Real-time)
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsDescendantOf(workspace:FindFirstChild("RenderedMovingAnimal")) then
+        MakeItSuperSemut(descendant)
+    end
+end)
 
--- 3. MINI UI (Cuma buat cek status)
+-- 3. GLOBAL PERFORMANCE BOOST
+settings().Rendering.QualityLevel = 1
+game:GetService("Lighting").GlobalShadows = false
+
+-- 4. MINI MENU (FLAT COLOR STYLE)
 local SG = Instance.new("ScreenGui", game.CoreGui)
-local Status = Instance.new("TextLabel", SG)
-Status.Size = UDim2.new(0, 200, 0, 30)
-Status.Position = UDim2.new(0.5, -100, 0, 20)
-Status.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-Status.Text = "GURITA HUB: ACTIVE (OPTIMIZED)"
-Status.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", Status)
+local Frame = Instance.new("Frame", SG)
+Frame.Size = UDim2.new(0, 180, 0, 40)
+Frame.Position = UDim2.new(0.5, -90, 0, 5)
+Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Instance.new("UICorner", Frame)
 
-task.wait(3)
-Status:Destroy() -- Notif hilang sendiri biar gak ganggu layar
+local Top = Instance.new("Frame", Frame)
+Top.Size = UDim2.new(1, 0, 0, 10)
+Top.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+Instance.new("UICorner", Top)
+
+local Label = Instance.new("TextLabel", Frame)
+Label.Size = UDim2.new(1, 0, 1, 0)
+Label.Text = "SUPER DUPER SEMUT: ACTIVE"
+Label.TextColor3 = Color3.fromRGB(0, 255, 0)
+Label.Font = Enum.Font.SourceSansBold
+Label.TextSize = 12
+Label.BackgroundTransparency = 1
