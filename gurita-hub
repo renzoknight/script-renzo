@@ -1,55 +1,49 @@
--- [[ RENZO GURITA - ULTRA FLAT WORLD ]] --
+-- [[ RENZO GURITA - ULTRA LIGHTWEIGHT FLAT ]] --
 
-local function ApplyFast(v)
+-- Fungsi inti buat bikin polosan
+local function SikatRingan(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
-            v.Material = Enum.Material.Plastic -- Paling enteng
+            v.Material = Enum.Material.Plastic
             v.Reflectance = 0
             v.CastShadow = false
-            -- Hapus tekstur MeshPart biar jadi warna blok solid
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
-        end
-        -- Bantai semua gambar tempelan & tekstur tanah
-        if v:IsA("Texture") or v:IsA("Decal") then
+        elseif v:IsA("SpecialMesh") then
+            v.TextureId = ""
+        elseif v:IsA("Texture") or v:IsA("Decal") then
             v:Destroy()
-        end
-        -- Bantai tekstur SpecialMesh (Ini kunci map polos)
-        if v:IsA("SpecialMesh") then
-            v.TextureId = "" 
         end
     end)
 end
 
--- 1. PROSES BERTAHAP (Gak bakal freeze pas klik Execute)
+-- 1. PROSES SUPER SANTAI (Biar Gak Lag Sama Sekali)
 task.spawn(function()
-    local descendants = workspace:GetDescendants() -- Fokus ke Workspace biar map kena semua
-    for i = 1, #descendants do
-        ApplyFast(descendants[i])
-        -- Setiap 150 objek, kasih jeda biar executor gak panas
-        if i % 150 == 0 then 
+    local objs = workspace:GetDescendants()
+    for i = 1, #objs do
+        SikatRingan(objs[i])
+        -- Tiap 20 objek, kasih jeda (ini yang bikin enteng banget)
+        if i % 20 == 0 then 
             task.wait() 
         end
     end
 end)
 
--- 2. PANTAU OBJEK BARU (Real-time)
-workspace.DescendantAdded:Connect(ApplyFast)
+-- 2. PANTAU OBJEK BARU
+workspace.DescendantAdded:Connect(function(v)
+    task.delay(0.1, function() SikatRingan(v) end)
+end)
 
--- 3. INSTANT LIGHTING OVERRIDE
-local Lighting = game:GetService("Lighting")
-Lighting.GlobalShadows = false
-Lighting.Brightness = 2
-Lighting.EnvironmentDiffuseScale = 0
-Lighting.EnvironmentSpecularScale = 0
--- Bantai langit biar makin enteng
-for _, v in ipairs(Lighting:GetChildren()) do
-    if v:IsA("Sky") or v:IsA("Atmosphere") then v:Destroy() end
-end
+-- 3. LIGHTING RINGAN
+local L = game:GetService("Lighting")
+L.GlobalShadows = false
+L.Brightness = 2
+L.EnvironmentDiffuseScale = 0
+L.EnvironmentSpecularScale = 0
 
--- 4. INSTANT RENDERING OVERRIDE
+-- 4. RENDERING PALING RENDAH
 settings().Rendering.QualityLevel = 1
 settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level0
 
-print("Renzo: Map Flat Color Active!")
+print("Renzo: Ultra Light Active!")
