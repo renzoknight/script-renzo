@@ -1,88 +1,135 @@
--- [[ RENZO GURITA - XRAY GURITA V3.2 REBORN ]] --
+-- [[ RENZO GURITA - XRAY GURITA V3.3 ULTRA STABLE ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- Global Toggle
+-- 1. PAKSA MENU KELUAR DULUAN
+local SG = Instance.new("ScreenGui")
+SG.Name = "GuritaMenu"
+SG.ResetOnSpawn = false
+SG.DisplayOrder = 999
+SG.Parent = game:GetService("CoreGui")
+
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 200, 0, 175)
+Main.Position = UDim2.new(0.5, -100, 0.2, 0)
+Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+Instance.new("UICorner", Main)
+
+local Border = Instance.new("Frame", Main)
+Border.Size = UDim2.new(1, 4, 1, 4)
+Border.Position = UDim2.new(0, -2, 0, -2)
+Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255)
+Border.ZIndex = 0
+Instance.new("UICorner", Border)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "XRAY GURITA V3.3"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 13
+
+-- Toggles
 _G.ESPActive = false
 _G.XrayActive = false
 _G.HolderActive = false
 
--- 1. UI MENU (Ditaruh paling atas biar pasti muncul)
-local SG = Instance.new("ScreenGui", game.CoreGui)
-local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 175); Main.Position = UDim2.new(0.5, -100, 0.2, 0)
-Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Main.BorderSizePixel = 0; Main.Active = true; Main.Draggable = true
-Instance.new("UICorner", Main)
-local Border = Instance.new("Frame", Main); Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2); Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0; Instance.new("UICorner", Border)
-local Title = Instance.new("TextLabel", Main); Title.Size = UDim2.new(1, 0, 0, 30); Title.BackgroundTransparency = 1; Title.Text = "XRAY GURITA V3.2"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBold; Title.TextSize = 13
-
+-- 2. FUNGSI TOMBOL
 local function CreateBtn(txt, pos, cb)
-    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(0, 160, 255); b.BackgroundTransparency = 0.8; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function() cb(b) end) return b
+    local b = Instance.new("TextButton", Main)
+    b.Size = UDim2.new(0.9, 0, 0, 35)
+    b.Position = pos
+    b.BackgroundColor3 = Color3.fromRGB(0, 160, 255)
+    b.BackgroundTransparency = 0.8
+    b.Text = txt
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 10
+    Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() cb(b) end)
+    return b
 end
 
--- 2. FLAT COLOR & XRAY LOGIC
-local function ProcessPart(v)
-    if v:IsA("BasePart") or v:IsA("MeshPart") then
-        local name = v.Name:lower()
-        -- Proteksi Alam (Rumput dkk)
-        local isNature = name:find("grass") or name:find("tree") or name:find("leaf") or name:find("bush") or name:find("terrain")
-        
-        if not isNature then
-            -- Flat Color
-            v.Material = Enum.Material.Plastic
-            if v:IsA("MeshPart") then v.TextureID = "" end
+-- 3. LOGIKA FLAT COLOR & XRAY (GAK BOLEH GANGGU UI)
+local function ProcessObject(v)
+    pcall(function()
+        if v:IsA("BasePart") or v:IsA("MeshPart") then
+            -- Lewati Avatar Player (Biar ava gak abu-abu)
+            if v:IsDescendantOf(game.Players.LocalPlayer.Character) or v.Parent:FindFirstChild("Humanoid") then 
+                return 
+            end
+
+            local name = v.Name:lower()
+            local isNature = name:find("grass") or name:find("tree") or name:find("leaf") or name:find("terrain")
             
-            -- Xray Logic (Hanya Tembok/Base)
-            local isBuilding = name:find("wall") or name:find("base") or name:find("door") or name:find("roof") or name:find("floor")
-            if isBuilding and _G.XrayActive then
-                v.Transparency = 0.5
-            elseif isBuilding and not _G.XrayActive then
-                v.Transparency = 0
+            if not isNature then
+                -- Flat Color
+                v.Material = Enum.Material.Plastic
+                if v:IsA("MeshPart") then v.TextureID = "" end
+                
+                -- Xray
+                local isBuilding = name:find("wall") or name:find("base") or name:find("door") or name:find("roof")
+                if isBuilding then
+                    v.Transparency = _G.XrayActive and 0.5 or 0
+                end
             end
         end
-    end
+    end)
 end
 
--- 3. MASTER ESP SYSTEM
-local function CreateESP(plr)
-    local function Setup()
-        local char = plr.Character or plr.CharacterAdded:Wait()
-        local root = char:WaitForChild("HumanoidRootPart", 5)
-        local head = char:WaitForChild("Head", 5)
-        if not root or not head then return end
+-- 4. PASANG TOMBOL
+CreateBtn("ESP: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b)
+    _G.ESPActive = not _G.ESPActive
+    b.Text = _G.ESPActive and "ESP: ON" or "ESP: OFF"
+end)
 
-        local bbg = Instance.new("BillboardGui", root); bbg.AlwaysOnTop = true; bbg.Size = UDim2.new(0, 100, 0, 20); bbg.ExtentsOffset = Vector3.new(0, 3, 0)
-        local tag = Instance.new("TextLabel", bbg); tag.Size = UDim2.new(1, 0, 1, 0); tag.BackgroundTransparency = 1; tag.TextColor3 = Color3.new(1, 1, 0); tag.Font = Enum.Font.GothamBold; tag.TextSize = 12; tag.Text = plr.Name
-        
-        local hbg = Instance.new("BillboardGui", head); hbg.AlwaysOnTop = true; hbg.Size = UDim2.new(0, 100, 0, 20); hbg.ExtentsOffset = Vector3.new(0, 5, 0)
-        local htag = Instance.new("TextLabel", hbg); htag.Size = UDim2.new(1, 0, 1, 0); htag.BackgroundTransparency = 1; htag.TextColor3 = Color3.new(0, 1, 1); htag.Font = Enum.Font.GothamBold; htag.TextSize = 11; htag.Text = "[ ITEM ]"; htag.Visible = false
+CreateBtn("XRAY: OFF", UDim2.new(0.05, 0, 0.45, 0), function(b)
+    _G.XrayActive = not _G.XrayActive
+    b.Text = _G.XrayActive and "XRAY: ON" or "XRAY: OFF"
+    for _, v in pairs(workspace:GetDescendants()) do ProcessObject(v) end
+end)
+
+CreateBtn("HOLDER: OFF", UDim2.new(0.05, 0, 0.7, 0), function(b)
+    _G.HolderActive = not _G.HolderActive
+    b.Text = _G.HolderActive and "HOLDER: ON" or "HOLDER: OFF"
+end)
+
+-- 5. ESP SYSTEM (STABLE)
+local function AddESP(plr)
+    plr.CharacterAdded:Connect(function(char)
+        local head = char:WaitForChild("Head", 10)
+        local hbg = Instance.new("BillboardGui", head)
+        hbg.AlwaysOnTop = true; hbg.Size = UDim2.new(0, 100, 0, 20); hbg.ExtentsOffset = Vector3.new(0, 4, 0)
+        local htag = Instance.new("TextLabel", hbg)
+        htag.Size = UDim2.new(1, 0, 1, 0); htag.BackgroundTransparency = 1; htag.TextColor3 = Color3.new(0, 1, 1)
+        htag.Text = "[ ITEM ]"; htag.Visible = false
 
         game:GetService("RunService").RenderStepped:Connect(function()
-            bbg.Enabled = _G.ESPActive
-            if _G.HolderActive and char:FindFirstChildOfClass("Tool") then htag.Visible = true else htag.Visible = false end
+            if _G.HolderActive and char:FindFirstChildOfClass("Tool") then
+                htag.Visible = true
+            else
+                htag.Visible = false
+            end
         end)
-    end
-    task.spawn(Setup); plr.CharacterAdded:Connect(Setup)
+    end)
 end
 
--- 4. BUTTONS CONFIG
-CreateBtn("ESP & TRACER: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b) 
-    _G.ESPActive = not _G.ESPActive; b.Text = _G.ESPActive and "ESP: ON" or "ESP: OFF" 
+-- EKSEKUSI TERAKHIR (BIAR GAK LAG)
+task.spawn(function()
+    for _, p in pairs(Players:GetPlayers()) do if p ~= lp then AddESP(p) end end
+    Players.PlayerAdded:Connect(AddESP)
+    
+    local all = workspace:GetDescendants()
+    for i = 1, #all do
+        ProcessObject(all[i])
+        if i % 500 == 0 then task.wait() end -- Kasih napas biar menu muncul
+    end
 end)
 
-CreateBtn("XRAY BASE: OFF", UDim2.new(0.05, 0, 0.45, 0), function(b) 
-    _G.XrayActive = not _G.XrayActive; b.Text = _G.XrayActive and "XRAY: ON" or "XRAY: OFF"
-    for _, v in pairs(workspace:GetDescendants()) do ProcessPart(v) end
-end)
-
-CreateBtn("HOLDER ESP: OFF", UDim2.new(0.05, 0, 0.7, 0), function(b) 
-    _G.HolderActive = not _G.HolderActive; b.Text = _G.HolderActive and "HOLDER: ON" or "HOLDER: OFF" 
-end)
-
--- Initial Run
-for _, v in pairs(workspace:GetDescendants()) do ProcessPart(v) end
-for _, p in pairs(Players:GetPlayers()) do if p ~= lp then CreateESP(p) end end
-Players.PlayerAdded:Connect(CreateESP)
-workspace.DescendantAdded:Connect(ProcessPart)
+workspace.DescendantAdded:Connect(ProcessObject)
