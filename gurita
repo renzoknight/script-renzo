@@ -1,6 +1,6 @@
--- [[ GURITA-HUB: GOST STEAL V2 - ULTIMATE FIX ]] --
+-- [[ GURITA-HUB: GOST STEAL V2 - INSTANT BYPASS ]] --
 
--- 1. FLAT COLOR (INSTAN & OPTIMIZED)
+-- 1. FLAT COLOR (INSTAN TANPA FREEZE)
 local function SetFlat(v)
     pcall(function()
         if v:IsA("BasePart") then
@@ -13,13 +13,12 @@ local function SetFlat(v)
     end)
 end
 
--- Langsung sikat tanpa loading lama
 task.spawn(function()
     for _, v in ipairs(workspace:GetDescendants()) do SetFlat(v) end
 end)
 workspace.DescendantAdded:Connect(SetFlat)
 
--- 2. CUSTOM MENU (GOST STEAL v2 STYLE)
+-- 2. CUSTOM MENU (PERSIS FOTO: GOST STEAL v2)
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 180, 0, 110)
@@ -52,7 +51,7 @@ ActionBtn.Font = Enum.Font.SourceSansBold
 ActionBtn.TextSize = 18
 Instance.new("UICorner", ActionBtn).CornerRadius = UDim.new(0, 8)
 
--- 3. LOGIKA REAL STEAL (PROXIMITY & TOUCH BYPASS)
+-- 3. LOGIKA STEAL (INSTANT BYPASS MODE)
 _G.StealActive = false
 
 ActionBtn.MouseButton1Click:Connect(function()
@@ -63,38 +62,33 @@ end)
 
 task.spawn(function()
     local lp = game.Players.LocalPlayer
-    while task.wait(0.01) do -- Speed gila (0.01s) biar instan
+    while task.wait(0.1) do -- 0.1s sudah cukup cepat agar tidak lag
         if _G.StealActive then
             pcall(function()
                 local char = lp.Character
                 local root = char and char:FindFirstChild("HumanoidRootPart")
                 if not root then return end
 
-                -- Gunakan GetPartBoundsInRadius agar radiusnya AKURAT (40 meter)
-                local parts = workspace:GetPartBoundsInRadius(root.Position, 40)
-                
-                for _, p in ipairs(parts) do
-                    -- 1. BYPASS PROXIMITY (Tombol E Collect/Steal)
-                    -- Ini yang bikin dia gak cuma 'klik' tapi benar-benar ngambil
-                    local prompt = p:FindFirstChildOfClass("ProximityPrompt") or p.Parent:FindFirstChildOfClass("ProximityPrompt")
-                    if prompt then
-                        -- Set HoldDuration jadi 0 biar instan tanpa loading bar
-                        prompt.HoldDuration = 0
-                        fireproximityprompt(prompt)
-                    end
-                    
-                    -- 2. FORCE TOUCH (Item yang melayang/jatuh)
-                    -- Kita tembak langsung ke TouchInterest-nya
-                    if p:FindFirstChildOfClass("TouchTransmitter") then
-                        firetouchinterest(root, p, 0)
-                        firetouchinterest(root, p, 1)
+                -- Scan area 50 studs (Cukup jauh buat nyolong dari luar base)
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then
+                        local dist = (v.Parent:GetPivot().Position - root.Position).Magnitude
+                        if dist < 50 then
+                            -- BYPASS UTAMA:
+                            v.HoldDuration = 0 -- Gak pake loading bar
+                            v.RequiresLineOfSight = false -- Bisa nyolong tembus tembok
+                            fireproximityprompt(v)
+                        end
+                    elseif v:IsA("TouchTransmitter") then
+                        local part = v.Parent
+                        if (part.Position - root.Position).Magnitude < 40 then
+                            -- Paksa sentuh berulang kali
+                            firetouchinterest(root, part, 0)
+                            firetouchinterest(root, part, 1)
+                        end
                     end
                 end
             end)
         end
     end
 end)
-
--- Optimasi Render
-game:GetService("Lighting").GlobalShadows = false
-settings().Rendering.QualityLevel = 1
