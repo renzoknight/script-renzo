@@ -1,10 +1,10 @@
--- [[ RENZO GURITA - FLAT MAP WITH TOGGLE ]] --
+-- [[ RENZO GURITA - HIGH SPEED FLAT COLOR ]] --
 
 local Lighting = game:GetService("Lighting")
 _G.FlatActive = false
 
--- FUNGSI INTI (FLAT COLOR)
-local function SikatRingan(v)
+-- FUNGSI INTI RENZO (DIPERBAIKI BIAR MAP TEMBUS)
+local function ApplyFast(v)
     if not _G.FlatActive then return end
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
@@ -12,81 +12,98 @@ local function SikatRingan(v)
             v.Reflectance = 0
             v.CastShadow = false
             if v:IsA("MeshPart") then v.TextureID = "" end
-        elseif v:IsA("SpecialMesh") then
-            v.TextureId = ""
-        elseif v:IsA("Texture") or v:IsA("Decal") then
+        end
+        if v:IsA("Texture") or v:IsA("Decal") then
             v:Destroy()
         end
-    end)
-end
-
-local function ActivateFlat()
-    -- Lighting & Render (Instant)
-    Lighting.GlobalShadows = false
-    settings().Rendering.QualityLevel = 1
-    
-    -- Proses Map (Bertahap biar gak lag)
-    task.spawn(function()
-        local objs = workspace:GetDescendants()
-        for i = 1, #objs do
-            if not _G.FlatActive then break end
-            SikatRingan(objs[i])
-            if i % 20 == 0 then task.wait() end
+        if v:IsA("SpecialMesh") then
+            v.TextureId = "" 
         end
     end)
 end
 
--- UI MENU DENGAN PINGGIRAN BIRU
+-- FUNGSI AKTIVASI BERTAHAP (ANTI LAG)
+local function StartFlat()
+    -- 1. Lighting & Rendering (Instan)
+    Lighting.GlobalShadows = false
+    Lighting.Brightness = 2
+    Lighting.EnvironmentDiffuseScale = 0
+    Lighting.EnvironmentSpecularScale = 0
+    settings().Rendering.QualityLevel = 1
+    
+    -- 2. Proses Map (Bertahap biar tidak freeze)
+    task.spawn(function()
+        local descendants = workspace:GetDescendants()
+        for i = 1, #descendants do
+            if not _G.FlatActive then break end
+            ApplyFast(descendants[i])
+            if i % 150 == 0 then task.wait() end -- Jeda tiap 150 objek
+        end
+    end)
+end
+
+-- [[ UI DESIGN: HULK SCRIPT STYLE ]] --
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 160, 0, 80)
-Main.Position = UDim2.new(0.5, -80, 0.05, 0)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Main.BorderSizePixel = 2
-Main.BorderColor3 = Color3.fromRGB(0, 150, 255) -- Warna Biru di pinggir
+Main.Size = UDim2.new(0, 220, 0, 100)
+Main.Position = UDim2.new(0.5, -110, 0.2, 0)
+Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20) -- Gelap Biru
+Main.BorderSizePixel = 0
 Main.Active = true
 Main.Draggable = true
 
-local Corner = Instance.new("UICorner", Main)
-Corner.CornerRadius = UDim.new(0, 8)
+-- Lis Biru Menyala (Neon Border)
+local Border = Instance.new("Frame", Main)
+Border.Size = UDim2.new(1, 4, 1, 4)
+Border.Position = UDim2.new(0, -2, 0, -2)
+Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255)
+Border.ZIndex = 0
+Instance.new("UICorner", Border).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 25)
+Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundTransparency = 1
-Title.Text = "GURITA FLAT"
+Title.Text = "RENZO GURITA V3"
 Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Font = Enum.Font.SourceSansBold
+Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
 
-local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0.85, 0, 0, 35)
-Btn.Position = UDim2.new(0.075, 0, 0.45, 0)
-Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Btn.Text = "OFF"
-Btn.TextColor3 = Color3.new(1, 0, 0) -- Merah (Mati)
-Btn.Font = Enum.Font.SourceSansBold
-Btn.TextSize = 16
+-- Button Container (Biru Transparan)
+local BtnFrame = Instance.new("Frame", Main)
+BtnFrame.Size = UDim2.new(0.9, 0, 0, 45)
+BtnFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+BtnFrame.BackgroundColor3 = Color3.fromRGB(0, 160, 255)
+BtnFrame.BackgroundTransparency = 0.8
+BtnFrame.BorderSizePixel = 1
+BtnFrame.BorderColor3 = Color3.fromRGB(0, 160, 255)
+Instance.new("UICorner", BtnFrame).CornerRadius = UDim.new(0, 6)
 
-local BtnCorner = Instance.new("UICorner", Btn)
+local Btn = Instance.new("TextButton", BtnFrame)
+Btn.Size = UDim2.new(1, 0, 1, 0)
+Btn.BackgroundTransparency = 1
+Btn.Text = "FLAT COLOR: OFF"
+Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+Btn.Font = Enum.Font.GothamBold
+Btn.TextSize = 13
 
--- LOGIKA ON/OFF
+-- LOGIKA KLIK
 Btn.MouseButton1Click:Connect(function()
     _G.FlatActive = not _G.FlatActive
     
     if _G.FlatActive then
-        Btn.Text = "ON"
-        Btn.TextColor3 = Color3.fromRGB(0, 255, 0) -- Hijau
-        ActivateFlat()
+        Btn.Text = "FLAT COLOR: ON"
+        Btn.TextColor3 = Color3.fromRGB(0, 255, 255) -- Cyan cerah
+        BtnFrame.BackgroundTransparency = 0.6
+        StartFlat()
     else
-        Btn.Text = "OFF"
-        Btn.TextColor3 = Color3.fromRGB(255, 0, 0) -- Merah
-        -- Catatan: Untuk balikin map ke awal harus Rejoin
+        Btn.Text = "FLAT COLOR: OFF"
+        Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        BtnFrame.BackgroundTransparency = 0.8
     end
 end)
 
--- Cegat objek baru pas ON
-workspace.DescendantAdded:Connect(function(v)
-    if _G.FlatActive then
-        task.delay(0.1, function() SikatRingan(v) end)
-    end
-end)
+-- Pantau objek baru
+workspace.DescendantAdded:Connect(ApplyFast)
+
+print("Renzo: Hulk Menu Loaded!")
