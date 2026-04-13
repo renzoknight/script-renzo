@@ -1,4 +1,4 @@
--- [[ GURITA HUB V3.6 - FLAT COLOR & RAINBOW STABLE ]] --
+-- [[ GURITA HUB V3.7 - PERFECT FLAT COLOR & RAINBOW ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -6,8 +6,8 @@ local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- 1. SISTEM CONFIG
-local filename = "GuritaEzra_V36.json"
+-- 1. CONFIG SYSTEM
+local filename = "GuritaEzra_V37.json"
 _G.Settings = { ESP = false, Xray = false }
 
 local function SaveSettings()
@@ -24,36 +24,39 @@ local function LoadSettings()
 end
 LoadSettings()
 
--- 2. PROTEKSI LANTAI (ANTI ABU-ABU)
-local function IsSafe(v)
-    if not v:IsA("BasePart") then return true end
-    local name = v.Name:lower()
-    -- Cek nama objek agar warna asli lantai tidak berubah
-    if name:find("floor") or name:find("lantai") or name:find("grass") or name:find("terrain") or name:find("ground") then
-        return true
-    end
+-- 2. PROTEKSI CHARACTER (Biar Ezra gak jadi Flat/Polos)
+local function IsPlayer(v)
     if v:IsDescendantOf(lp.Character) or (v.Parent and v.Parent:FindFirstChild("Humanoid")) then
         return true
     end
     return false
 end
 
--- 3. FITUR FLAT COLOR (DIBALIKIN LAGI)
+-- 3. FITUR FLAT COLOR (PAKSA SEMUA JADI FLAT TAPI WARNA ASLI)
 local function ApplyFlat(v)
     pcall(function()
-        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsSafe(v) then
-            v.Material = Enum.Material.Plastic -- Jadi polosan (Flat)
+        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsPlayer(v) then
+            -- Ganti Material biar Flat
+            v.Material = Enum.Material.Plastic
             v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end -- Hapus tekstur mesh
+            
+            -- Hapus Tekstur (Ini yang bikin Skin/Lantai gak polos)
+            if v:IsA("MeshPart") then v.TextureID = "" end
+            for _, tex in pairs(v:GetChildren()) do
+                if tex:IsA("Texture") or tex:IsA("Decal") then
+                    tex:Destroy() -- Hapus skin/gambar di lantai
+                end
+            end
+            -- CATATAN: Warna (.Color) tidak diganti supaya tidak jadi abu-abu!
         end
     end)
 end
 
--- 4. XRAY & ESP LOGIC
+-- 4. XRAY & ESP
 local function RefreshXray()
     task.spawn(function()
         for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not IsSafe(v) then
+            if v:IsA("BasePart") and not IsPlayer(v) then
                 local n = v.Name:lower()
                 if n:find("wall") or n:find("base") or n:find("door") or n:find("roof") then
                     v.Transparency = _G.Settings.Xray and 0.5 or 0
@@ -72,20 +75,19 @@ local function CreateTracer(plr)
             if onScreen then
                 Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
                 Line.To = Vector2.new(pos.X, pos.Y); Line.Visible = true
-                Line.Color = Color3.fromHSV(tick() % 5 / 5, 0.8, 1) -- Tracer Pelangi
+                Line.Color = Color3.fromHSV(tick() % 5 / 5, 0.8, 1)
             else Line.Visible = false end
         else Line.Visible = false end
     end)
 end
 
--- 5. UI: RAINBOW LOGO & MENU
+-- 5. UI RAINBOW
 local SG = Instance.new("ScreenGui")
-SG.Name = "GuritaV36"
+SG.Name = "GuritaV37"
 SG.ResetOnSpawn = false
 local guiParent = pcall(function() return game:GetService("CoreGui") end) and game:GetService("CoreGui") or lp:WaitForChild("PlayerGui")
 SG.Parent = guiParent
 
--- Logo GH Rainbow
 local LogoFrame = Instance.new("Frame", SG)
 LogoFrame.Size = UDim2.new(0, 50, 0, 50); LogoFrame.Position = UDim2.new(0, 15, 0.45, 0)
 LogoFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20); LogoFrame.Active = true; LogoFrame.Draggable = true
@@ -97,7 +99,6 @@ LogoBtn.Size = UDim2.new(1, 0, 1, 0); LogoBtn.BackgroundTransparency = 1
 LogoBtn.Text = "GH"; LogoBtn.TextColor3 = Color3.new(1, 1, 1)
 LogoBtn.Font = Enum.Font.GothamBold; LogoBtn.TextSize = 20
 
--- Main Menu
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 220, 0, 150); Main.Position = UDim2.new(0, 80, 0.45, -75)
 Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true
@@ -111,23 +112,21 @@ local function CreateBtn(txt, pos, cb)
     b.MouseButton1Click:Connect(function() cb(b) end) return b
 end
 
-local btnESP = CreateBtn(_G.Settings.ESP and "ESP: ON" or "ESP: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b)
+CreateBtn(_G.Settings.ESP and "ESP: ON" or "ESP: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b)
     _G.Settings.ESP = not _G.Settings.ESP
-    b.Text = _G.Settings.ESP and "ESP: ON" or "ESP: OFF"
-    SaveSettings()
+    b.Text = _G.Settings.ESP and "ESP: ON" or "ESP: OFF"; SaveSettings()
 end)
 
-local btnXray = CreateBtn(_G.Settings.Xray and "XRAY: ON" or "XRAY: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b)
+CreateBtn(_G.Settings.Xray and "XRAY: ON" or "XRAY: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b)
     _G.Settings.Xray = not _G.Settings.Xray
     b.Text = _G.Settings.Xray and "XRAY: ON" or "XRAY: OFF"
     RefreshXray(); SaveSettings()
 end)
 
--- 6. ANIMASI RAINBOW & RUNNER
+-- 6. RAINBOW & RUNNER
 RunService.RenderStepped:Connect(function()
     local color = Color3.fromHSV(tick() % 5 / 5, 0.9, 1)
-    LogoStroke.Color = color
-    MainStroke.Color = color
+    LogoStroke.Color = color; MainStroke.Color = color
 end)
 
 task.spawn(function()
@@ -140,5 +139,5 @@ task.spawn(function()
 end)
 
 workspace.DescendantAdded:Connect(ApplyFlat)
-for _, p in ipairs(Players:GetPlayers()) do if p ~= lp then CreateTracer(p) end end
+for _, p in pairs(Players:GetPlayers()) do if p ~= lp then CreateTracer(p) end end
 Players.PlayerAdded:Connect(CreateTracer)
