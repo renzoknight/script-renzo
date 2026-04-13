@@ -1,20 +1,20 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 local Window = Library.Lib:CreateWindow("Renzo Hub V2", "Potato Edition")
 
--- Variabel Utama
+ Variabel Utama
 local Player = game.Players.LocalPlayer
 local Char = Player.Character or Player.CharacterAdded:Wait()
 local Root = Char:WaitForChild("HumanoidRootPart")
 
--- TAB 1: VISUAL (INI UNTUK GRAFIK KAYA DI GAMBAR)
+ TAB 1: VISUAL (INI UNTUK GRAFIK KAYA DI GAMBAR)
 local Tab1 = Window:NewTab("Visuals")
 local GrafisSec = Tab1:NewSection("Performance Booster")
 
 GrafisSec:NewButton("Aktifkan Potato Mode (Kaya di Gambar)", "Hapus semua tekstur dan lag!", function()
-    -- Mematikan Rendering Utama
+     Mematikan Rendering Utama
     settings().Rendering.QualityLevel = 1
     
-    -- Mematikan Pencahayaan dan Bayangan
+     Mematikan Pencahayaan dan Bayangan
     game.Lighting.GlobalShadows = false
     game.Lighting.FogEnd = 9e9
     
