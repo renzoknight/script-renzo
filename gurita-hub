@@ -1,173 +1,58 @@
--- [[ GURITA-HUB: ULTRA FLAT WORLD & ITEM ESP ]] --
+-- [[ GURITA-HUB: TOTAL PERFORMANCE OVERDRIVE ]] --
 
 local lp = game.Players.LocalPlayer
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
-local Terrain = workspace:FindFirstChildOfClass("Terrain")
 
--- 1. TOTAL FLAT WORLD ENGINE (INSTANT RUN)
-local function TotalFlatWorld()
-    -- Bantai Pencahayaan & Efek Visual
+-- 1. KILL THE LAG (EKSEKUSI PALING PERTAMA)
+local function KillLag()
+    settings().Rendering.QualityLevel = 1
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
     Lighting.Brightness = 2
-    settings().Rendering.QualityLevel = 1
     
-    for _, v in ipairs(Lighting:GetChildren()) do
-        if v:IsA("Sky") or v:IsA("PostEffect") or v:IsA("Clouds") or v:IsA("Atmosphere") then
-            v:Destroy()
-        end
-    end
-
-    -- Bantai Terrain (Air & Tanah)
-    if Terrain then
-        Terrain.WaterWaveSize = 0
-        Terrain.WaterWaveSpeed = 0
-        Terrain.WaterReflectance = 0
-        Terrain.WaterTransparency = 0
-    end
-
-    -- Bantai Semua Objek di Workspace (TOTAL WIPEOUT)
+    -- Bantai tekstur map biar jadi Flat Color (Sesuai foto)
     for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("Part") then
-            v.Material = Enum.Material.SmoothPlastic
-            v.Reflectance = 0
-            v.CastShadow = false
-        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
-            v:Destroy()
-        elseif v:IsA("SpecialMesh") then
-            v.TextureId = "" -- Hilangkan tekstur mesh (pohon, karakter, dll)
-        end
+        pcall(function()
+            if v:IsA("BasePart") or v:IsA("MeshPart") then
+                -- Biarkan folder Brainrot/Traits aman biar gak error
+                if not v:IsDescendantOf(workspace:FindFirstChild("RenderedMovingAnimal")) then
+                    v.Material = Enum.Material.SmoothPlastic
+                    v.Reflectance = 0
+                    v.CastShadow = false
+                    if v:IsA("MeshPart") then v.TextureID = "" end
+                end
+            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("Atmosphere") or v:IsA("Clouds") then
+                v:Destroy()
+            end
+        end)
     end
 end
-TotalFlatWorld() -- Eksekusi langsung!
+KillLag()
 
--- 2. ADVANCED ITEM ESP LOGIC (NAME + HELD ITEM)
-_G.ESPActive = false
-
--- Fungsi Intip Barang
-local function GetHeldItem(plr)
-    if plr.Character then
-        local tool = plr.Character:FindFirstChildOfClass("Tool")
-        if tool then
-            return tool.Name
-        end
-    end
-    return "None"
-end
-
--- Fungsi Buat ESP
-local function CreateAdvancedESP(plr)
+-- 2. INSTANT ITEM & PLAYER ESP (RAKSASA)
+local function CreateESP(plr)
     local function Setup()
         local char = plr.Character or plr.CharacterAdded:Wait()
         local root = char:WaitForChild("HumanoidRootPart", 10)
-        if root then
-            -- BillboardGui (Raksasa)
-            local bbg = root:FindFirstChild("GuritaESP") or Instance.new("BillboardGui", root)
-            bbg.Name = "GuritaESP"
-            bbg.AlwaysOnTop = true
-            bbg.Size = UDim2.new(0, 450, 0, 150) -- RAKSASA
-            bbg.ExtentsOffset = Vector3.new(0, 6, 0) -- Di atas kepala
-            bbg.Enabled = false -- Mati di awal
+        
+        local bbg = root:FindFirstChild("GuritaESP") or Instance.new("BillboardGui", root)
+        bbg.Name = "GuritaESP"
+        bbg.AlwaysOnTop = true
+        bbg.Size = UDim2.new(0, 450, 0, 160)
+        bbg.ExtentsOffset = Vector3.new(0, 8, 0)
+        bbg.Enabled = true
 
-            -- Label NAMA (Kuning Besar)
-            local nameTxt = bbg:FindFirstChild("NameLabel") or Instance.new("TextLabel", bbg)
-            nameTxt.Name = "NameLabel"
-            nameTxt.Size = UDim2.new(1, 0, 0.6, 0)
-            nameTxt.BackgroundTransparency = 1
-            nameTxt.Text = plr.Name
-            nameTxt.TextColor3 = Color3.fromRGB(255, 255, 0) -- Kuning
-            nameTxt.TextScaled = true
-            nameTxt.Font = Enum.Font.SourceSansBold
-            nameTxt.TextStrokeTransparency = 0
+        -- Nama Player (Kuning)
+        local nTag = bbg:FindFirstChild("NTag") or Instance.new("TextLabel", bbg)
+        nTag.Name = "NTag"
+        nTag.Size = UDim2.new(1, 0, 0.5, 0)
+        nTag.BackgroundTransparency = 1
+        nTag.Text = plr.Name
+        nTag.TextColor3 = Color3.new(1, 1, 0)
+        nTag.TextScaled = true
+        nTag.Font = Enum.Font.SourceSansBold
+        nTag.TextStrokeTransparency = 0
 
-            -- Label ITEM (Hijau Sedang)
-            local itemTxt = bbg:FindFirstChild("ItemLabel") or Instance.new("TextLabel", bbg)
-            itemTxt.Name = "ItemLabel"
-            itemTxt.Size = UDim2.new(1, 0, 0.4, 0)
-            itemTxt.Position = UDim2.new(0, 0, 0.6, 0) -- Bawah nama
-            itemTxt.BackgroundTransparency = 1
-            itemTxt.Text = "Holding: None" -- Default
-            itemTxt.TextColor3 = Color3.fromRGB(0, 255, 0) -- Hijau
-            itemTxt.TextScaled = true
-            itemTxt.Font = Enum.Font.SourceSansBold
-            itemTxt.TextStrokeTransparency = 0
-            
-            -- Loop Update Barang (Real-time)
-            task.spawn(function()
-                while bbg and bbg.Parent do
-                    if _G.ESPActive then
-                        local heldItem = GetHeldItem(plr)
-                        itemTxt.Text = "Holding: " .. heldItem
-                        if heldItem ~= "None" then
-                            itemTxt.TextColor3 = Color3.fromRGB(255, 0, 0) -- Merah kalau bawa barang
-                        else
-                            itemTxt.TextColor3 = Color3.fromRGB(0, 255, 0) -- Hijau kalau kosong
-                        end
-                    end
-                    task.wait(1) -- Cek tiap 1 detik
-                end
-            end)
-        end
-    end
-    Setup()
-    plr.CharacterAdded:Connect(Setup)
-end
-
--- Terapkan ke semua player
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= lp then CreateAdvancedESP(p) end
-end
-Players.PlayerAdded:Connect(CreateAdvancedESP)
-
--- FUNGSI TOGGLE ESP (Untuk dipanggil tombol menu)
-local function ToggleESP()
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local esp = p.Character.HumanoidRootPart:FindFirstChild("GuritaESP")
-            if esp then esp.Enabled = _G.ESPActive end
-        end
-    end
-end
-
--- 3. MINIMALIST FLAT MENU (MERAH-HITAM)
-local SG = Instance.new("ScreenGui", game.CoreGui)
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 180, 0, 110) -- Ukuran pas
-Main.Position = UDim2.new(0.5, -90, 0.05, 0) -- Atas tengah
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Hitam Pekat
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
-Main.Active = true; Main.Draggable = true -- Bisa digeser
-
--- Baris Judul Merah
-local TitleBar = Instance.new("Frame", Main)
-TitleBar.Size = UDim2.new(1, 0, 0, 25)
-TitleBar.BackgroundColor3 = Color3.fromRGB(180, 0, 0) -- Merah Kotak
-local tc = Instance.new("UICorner", TitleBar); tc.CornerRadius = UDim.new(0, 10)
-tc.BottomLeft = false; tc.BottomRight = false
-
-local Title = Instance.new("TextLabel", TitleBar)
-Title.Size = UDim2.new(1, 0, 1, 0)
-Title.Text = "GURITA HUB - OVERDRIVE"
-Title.TextColor3 = Color3.new(1,1,1) -- Putih
-Title.Font = Enum.Font.SourceSansBold; Title.TextSize = 12
-Title.BackgroundTransparency = 1
-
--- Notif Status (Hijau)
-local Status = Instance.new("TextLabel", Main)
-Status.Size = UDim2.new(1, 0, 0, 20)
-Status.Position = UDim2.new(0, 0, 0.4, 0)
-Status.Text = "Status: Super Smooth (Solo)"
-Status.TextColor3 = Color3.fromRGB(0, 255, 0) -- Hijau
-Status.Font = Enum.Font.SourceSansBold; Status.TextSize = 11
-Status.BackgroundTransparency = 1
-
--- Tombol ESP Player (Merah-Kotak)
-local BtnESP = Instance.new("TextButton", Main)
-BtnESP.Size = UDim2.new(0, 160, 0, 35) -- Kotak besar
-BtnESP.Position = UDim2.new(0.05, 0, 1, -45) -- Bawah frame
-BtnESP.BackgroundColor3 = Color3.fromRGB(150, 0, 0) -- Merah Tombol
-BtnESP.Text = "ESP PLAYER: OFF"
-BtnESP.TextColor3 = Color3.new(1,1,1) -- Putih
-BtnESP.Font = Enum.Font.SourceSansBold; BtnESP.TextSize = 14
-Instance.new("UICor
+        -- Item Detector (Bawah Nama)
+        local iTag = bbg:FindFirstChild("IT
