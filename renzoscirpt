@@ -1,0 +1,73 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.Lib:CreateWindow("Renzo Hub V2", "Potato Edition")
+
+-- Variabel Utama
+local Player = game.Players.LocalPlayer
+local Char = Player.Character or Player.CharacterAdded:Wait()
+local Root = Char:WaitForChild("HumanoidRootPart")
+
+-- TAB 1: VISUAL (INI UNTUK GRAFIK KAYA DI GAMBAR)
+local Tab1 = Window:NewTab("Visuals")
+local GrafisSec = Tab1:NewSection("Performance Booster")
+
+GrafisSec:NewButton("Aktifkan Potato Mode (Kaya di Gambar)", "Hapus semua tekstur dan lag!", function()
+    -- Mematikan Rendering Utama
+    settings().Rendering.QualityLevel = 1
+    
+    -- Mematikan Pencahayaan dan Bayangan
+    game.Lighting.GlobalShadows = false
+    game.Lighting.FogEnd = 9e9
+    
+    -- Mengubah Semua Objek Jadi Polos dan Tanpa Gambar
+    for _, v in ipairs(game:GetDescendants()) do
+        if v:IsA("BasePart") or v:IsA("MeshPart") then
+            -- Ubah Material jadi Polos (kaya plastik)
+            v.Material = Enum.Material.SmoothPlastic
+            -- Matikan pantulan cahaya
+            v.Reflectance = 0
+            v.CastShadow = false
+        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ImageLabel") then
+            -- Hapus Gambar Tembus Pandang dan Ikon
+            v:Destroy()
+        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+            -- Hapus Efek Partikel
+            v.Enabled = false
+        end
+    end
+end)
+
+-- TAB 2: FARMING
+local Tab2 = Window:NewTab("Auto Farm")
+local FarmSec = Tab2:NewSection("Main Farming")
+
+FarmSec:NewToggle("Auto Steal & Collect", "Loop ringan", function(state)
+    _G.Farm = state
+    task.spawn(function()
+        while _G.Farm do
+            pcall(function()
+                for _, v in ipairs(game.Workspace.Items:GetChildren()) do
+                    if v:IsA("BasePart") and _G.Farm then
+                        Root.CFrame = v.CFrame
+                        firetouchinterest(Root, v, 0)
+                        task.wait()
+                        firetouchinterest(Root, v, 1)
+                    end
+                end
+            end)
+            task.wait(0.1)
+        end
+    end)
+end)
+
+-- TAB 3: MISC
+local Tab3 = Window:NewTab("Misc")
+local MiscSec = Tab3:NewSection("Karakter")
+
+MiscSec:NewSlider("WalkSpeed", "Kecepatan", 500, 16, function(s)
+    Char.Humanoid.WalkSpeed = s
+end)
+
+MiscSec:NewButton("Server Hop", "Cari Min Gen Baru", function()
+    local ts = game:GetService("TeleportService")
+    ts:Teleport(game.PlaceId, Player)
+end)
