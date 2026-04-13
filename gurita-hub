@@ -1,6 +1,6 @@
--- [[ GURITA-HUB: FAST & LIGHT VERSION ]] --
+-- [[ GURITA-HUB: FINAL FIX & CUSTOM NOTIFY ]] --
 
--- 1. FLAT COLOR (BACKGROUND TASK)
+-- [[ 1. FLAT COLOR (Prioritas Pertama) ]] --
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
@@ -13,34 +13,103 @@ local function ApplyFlat(v)
     end)
 end
 
-task.spawn(function()
-    local d = game:GetDescendants()
-    for i = 1, #d do
-        ApplyFlat(d[i])
-        if i % 300 == 0 then task.wait() end -- Biar tidak freeze saat execute
-    end
-end)
+-- Langsung sikat tanpa loading lama
+for _, v in ipairs(game:GetDescendants()) do ApplyFlat(v) end
 game.DescendantAdded:Connect(ApplyFlat)
+game:GetService("Lighting").GlobalShadows = false
+settings().Rendering.QualityLevel = 1
 
--- 2. LOAD MENU (RAYFIELD)
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local Window = Rayfield:CreateWindow({
+-- [[ 2. CUSTOM NOTIFICATION GUI (Kaya di Foto) ]] --
+local NotificationGui = Instance.new("ScreenGui")
+NotificationGui.Name = "GuritaNotify"
+NotificationGui.Parent = game.CoreGui or game.Players.LocalPlayer:WaitForChild("PlayerGui")
+NotificationGui.Enabled = false
+
+local NotificationFrame = Instance.new("Frame")
+NotificationFrame.Size = UDim2.new(0, 250, 0, 45) -- Ukuran notifikasi
+NotificationFrame.Position = UDim2.new(0.5, -125, 0.5, -22) -- Posisikan di tengah
+NotificationFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Hitam
+NotificationFrame.BorderSizePixel = 0
+NotificationFrame.Parent = NotificationGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 10) -- Biar membulat
+Corner.Parent = NotificationFrame
+
+local TextLabel = Instance.new("TextLabel")
+TextLabel.Size = UDim2.new(1, -10, 0.5, -10) -- Sisakan ruang untuk progress bar
+TextLabel.Position = UDim2.new(0, 5, 0, 5)
+TextLabel.BackgroundTransparency = 1
+TextLabel.Font = Enum.Font.SourceSansBold
+TextLabel.Text = "AUTO GRAB: AKTIF"
+TextLabel.TextColor3 = Color3.fromRGB(255, 0, 0) -- Merah
+TextLabel.TextSize = 18
+TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+TextLabel.Parent = NotificationFrame
+
+local ProgressBarFrame = Instance.new("Frame")
+ProgressBarFrame.Size = UDim2.new(1, -10, 0, 15) -- Ruang untuk progress bar
+ProgressBarFrame.Position = UDim2.new(0, 5, 1, -20) -- Di bawah teks
+ProgressBarFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- Hitam gelap (background bar)
+ProgressBarFrame.BorderSizePixel = 0
+ProgressBarFrame.Parent = NotificationFrame
+
+local ProgressBarFiller = Instance.new("Frame")
+ProgressBarFiller.Size = UDim2.new(0, 0, 1, 0) -- Progress awal 0%
+ProgressBarFiller.Position = UDim2.new(0, 0, 0, 0)
+ProgressBarFiller.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Merah (isi bar)
+ProgressBarFiller.BorderSizePixel = 0
+ProgressBarFiller.Parent = ProgressBarFrame
+
+local function ShowCustomNotify(duration)
+    NotificationGui.Enabled = true
+    TextLabel.Text = "GURITA-HUB: AUTO GRAB AKTIF"
+    -- Animasi Progress Bar
+    local TweenService = game:GetService("TweenService")
+    ProgressBarFiller.Size = UDim2.new(0, 0, 1, 0) -- Reset bar ke 0
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(ProgressBarFiller, tweenInfo, {Size = UDim2.new(1, 0, 1, 0)})
+    tween:Play()
+    tween.Completed:Connect(function()
+        NotificationGui.Enabled = false
+    end)
+end
+
+-- [[ 3. GLOBAL AUTO GRAB (GLOBAL & NO LAG) ]] --
+_G.AutoGrab = false
+
+-- GANTI: Ini logikanya sekarang mencari folders "Conveyors" atau "Dispensers" di setiap base
+local function GrabGlobalItems(rootPart)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        -- Saring objek, cari yang namanya "Brainrot" di base player
+        if obj.Name:lower():find("brainrot") and obj:IsA("BasePart") then
+             -- Pastikan objek itu punya TouchTransmitter (bisa disentuh)
+             if obj:FindFirstChildOfClass("TouchTransmitter") then
+                 firetouchinterest(rootPart, obj, 0)
+                 firetouchinterest(rootPart, obj, 1)
+             end
+        end
+    end
+end
+
+-- [[ 4. LOAD MENU & TOGGLE ]] --
+local Library = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = Library:CreateWindow({
    Name = "GURITA-HUB",
-   LoadingTitle = "Steal a Brainrot",
-   LoadingSubtitle = "by Renzo",
+   LoadingTitle = "Real Global Grab",
    ConfigurationSaving = { Enabled = false }
 })
 
-local Tab = Window:CreateTab("Main Farming", 4483362458)
-
--- 3. LOGIKA AUTO GRAB (INSTAN RADIUS DEKAT)
-_G.AutoGrab = false
+local Tab = Window:CreateTab("Main", 4483362458)
 
 Tab:CreateToggle({
-   Name = "Instant Auto Grab (0.1s)",
+   Name = "AUTO GRAB GLOBAL (0.1s)",
    CurrentValue = false,
    Callback = function(Value)
       _G.AutoGrab = Value
+      if Value then
+          ShowCustomNotify(3) -- Tampilkan notifikasi selama 3 detik
+      end
    end,
 })
 
@@ -50,29 +119,10 @@ task.spawn(function()
             pcall(function()
                 local lp = game.Players.LocalPlayer
                 local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-                if not root then return end
-
-                -- Hanya scan objek di sekitar karakter (Radius 20 meter)
-                -- Ini cara paling kencang dan anti-lag
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("ProximityPrompt") then
-                        local pos = v.Parent:IsA("Model") and v.Parent:GetPivot().Position or v.Parent.Position
-                        if (pos - root.Position).Magnitude < 20 then
-                            fireproximityprompt(v)
-                        end
-                    elseif v:IsA("TouchTransmitter") then
-                        local parent = v.Parent
-                        if (parent.Position - root.Position).Magnitude < 15 then
-                            firetouchinterest(root, parent, 0)
-                            firetouchinterest(root, parent, 1)
-                        end
-                    end
+                if root then
+                    GrabGlobalItems(root)
                 end
             end)
         end
     end
 end)
-
--- 4. OPTIMASI RENDER
-game:GetService("Lighting").GlobalShadows = false
-settings().Rendering.QualityLevel = 1
