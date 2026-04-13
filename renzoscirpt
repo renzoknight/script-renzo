@@ -1,136 +1,125 @@
--- [[ GURITA HUB V4.8 - THE BILLIONAIRE HUNTER ]] --
+-- [[ GURITA HUB - STANDALONE ESP BRAINROT ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
-local TPS = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 
--- 1. CONFIG TARGET ANGKA (15M Sampai 100B)
-local MIN_M = 15          -- Minimal 15 Juta
-local MAX_B = 100         -- Maksimal 100 Miliar (Billion)
+_G.ESP_Active = true
 
-local filename = "GuritaEzra_Billion.json"
-_G.Settings = { ESP = false, Xray = false, AutoHop = false }
-
-local function SaveSettings()
-    if writefile then pcall(function() writefile(filename, HttpService:JSONEncode(_G.Settings)) end) end
-end
-
-local function LoadSettings()
-    if isfile and isfile(filename) then
-        local success, data = pcall(function() return HttpService:JSONDecode(readfile(filename)) end)
-        if success and data then _G.Settings = data end
+-- 1. FUNGSI UNTUK MEMBUAT VISUAL ESP
+local function CreateVisuals(part, brainrotName, permsValue)
+    -- Hapus ESP lama biar gak numpuk
+    for _, old in pairs(part:GetChildren()) do
+        if old.Name == "EzraESP" then old:Destroy() end
     end
-end
-LoadSettings()
 
--- 2. LOGIKA SCANNER ANGKA PINTAR (M & B)
-local function ScanNumbers()
-    local found = false
+    -- [ LABEL NAMA & PERMS ]
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "EzraESP"
+    billboard.AlwaysOnTop = true
+    billboard.Size = UDim2.new(0, 250, 0, 120) -- Box label
+    billboard.Adornee = part
+    billboard.MaxDistance = 10000 -- Biar kelihatan dari jauh banget
+    billboard.Parent = part
+
+    local label = Instance.new("TextLabel", billboard)
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Text = brainrotName .. "\n" .. permsValue
+    label.TextColor3 = Color3.fromRGB(255, 255, 0) -- Kuning
+    label.TextStrokeTransparency = 0 -- Outline hitam biar kebaca
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 22 -- Ukuran "Agak Besar tapi Normal" sesuai request
+    label.TextYAlignment = Enum.TextYAlignment.Center
+
+    -- [ TALI / TRACER ]
+    local line = Instance.new("LineHandleAdornment")
+    line.Name = "EzraTracer"
+    line.Length = 0
+    line.Thickness = 2.5
+    line.Color3 = Color3.fromRGB(0, 255, 255) -- Cyan (Biru Muda)
+    line.AlwaysOnTop = true
+    line.ZIndex = 10
+    line.Parent = part
+
+    -- Loop update posisi tali
+    task.spawn(function()
+        while part and part.Parent and _G.ESP_Active do
+            local char = lp.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local origin = char.HumanoidRootPart.Position
+                local target = part.Position
+                local dist = (target - origin).Magnitude
+                
+                line.Length = dist
+                line.CFrame = CFrame.new(origin, target)
+            end
+            task.wait()
+        end
+        line:Destroy()
+        billboard:Destroy()
+    end)
+end
+
+-- 2. SCANNER (Cari Brainrot Paling Bagus di Server)
+local function RefreshESP()
+    if not _G.ESP_Active then return end
+    
+    local bestPart = nil
+    local bestVal = 0
+    local bestPermsText = ""
+    local finalName = "TARGET"
+
+    -- Scan semua objek yang ada teks penghasilannya
     for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("TextLabel") then
-            local txt = v.Text:upper():gsub(",", "")
-            
-            -- Ambil angkanya saja
-            local numStr = txt:match("%d+%.?%d*")
+        if v:IsA("TextLabel") and v.Parent and v.Parent:IsA("BasePart") then
+            local rawText = v.Text:upper():gsub(",", "")
+            local numStr = rawText:match("%d+%.?%d*")
             local num = tonumber(numStr)
             
             if num then
-                -- DETEKSI BILLION (B)
-                if txt:find("B") then
-                    if num >= 1 and num <= MAX_B then
-                        found = true
-                        warn("TARGET BILLION DITEMUKAN: " .. num .. "B/s")
-                        break
-                    end
-                -- DETEKSI MILLION (M)
-                elseif txt:find("M") then
-                    if num >= MIN_M then
-                        found = true
-                        warn("TARGET MILLION DITEMUKAN: " .. num .. "M/s")
-                        break
-                    end
+                -- Konversi ke angka murni untuk perbandingan
+                local currentVal = num
+                if rawText:find("B") then currentVal = num * 1000 end -- Billion lebih berat
+                
+                if currentVal > bestVal then
+                    bestVal = currentVal
+                    bestPart = v.Parent
+                    bestPermsText = v.Text -- Ngambil tulisan asli (misal: "500M/s")
                 end
             end
         end
     end
-    return found
-end
 
--- 3. SERVER HOPPER
-local function DoServerHop()
-    local ID = game.PlaceId
-    local success, Servers = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..ID.."/servers/Public?sortOrder=Asc&limit=100"))
-    end)
-    if success then
-        for _, s in pairs(Servers.data) do
-            if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                TPS:TeleportToPlaceInstance(ID, s.id, lp)
-                break
-            end
-        end
+    if bestPart then
+        CreateVisuals(bestPart, "BEST BRAINROT", bestPermsText)
     end
 end
 
--- 4. VISUAL & FLAT COLOR (BAWAAN EZRA)
-local function ApplyFlat(v)
-    pcall(function()
-        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not v:IsDescendantOf(lp.Character) then
-            v.Material = Enum.Material.Plastic
-            v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, t in pairs(v:GetChildren()) do
-                if t:IsA("Texture") or t:IsA("Decal") then t:Destroy() end
-            end
-        end
-    end)
-end
+-- 3. UI SIMPLE UNTUK KONTROL
+local SG = Instance.new("ScreenGui", game:GetService("CoreGui"))
+local Btn = Instance.new("TextButton", SG)
+Btn.Size = UDim2.new(0, 150, 0, 40)
+Btn.Position = UDim2.new(0, 15, 0.6, 0)
+Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+Btn.Text = "ESP: ON"
+Btn.TextColor3 = Color3.new(1, 1, 1)
+Btn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", Btn)
+local Stroke = Instance.new("UIStroke", Btn); Stroke.Thickness = 2; Stroke.Color = Color3.new(0,1,1)
 
--- 5. UI GURITA HUB
-local SG = Instance.new("ScreenGui", pcall(function() return game:GetService("CoreGui") end) and game:GetService("CoreGui") or lp.PlayerGui)
-SG.Name = "GuritaBillionV48"
-
-local Logo = Instance.new("Frame", SG); Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0, 15, 0.45, 0); Logo.BackgroundColor3 = Color3.fromRGB(15, 15, 20); Logo.Active = true; Logo.Draggable = true
-Instance.new("UICorner", Logo).CornerRadius = UDim.new(1, 0)
-local LogoStroke = Instance.new("UIStroke", Logo); LogoStroke.Thickness = 3
-local LogoBtn = Instance.new("TextButton", Logo); LogoBtn.Size = UDim2.new(1, 0, 1, 0); LogoBtn.BackgroundTransparency = 1; LogoBtn.Text = "GH"; LogoBtn.TextColor3 = Color3.new(1, 1, 1); LogoBtn.Font = Enum.Font.GothamBold; LogoBtn.TextSize = 20
-
-local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 220, 0, 180); Main.Position = UDim2.new(0, 80, 0.45, -90); Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true
-Instance.new("UICorner", Main); local MainStroke = Instance.new("UIStroke", Main); MainStroke.Thickness = 3
-
-LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
-
-local function CreateBtn(txt, pos, cb)
-    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(25, 25, 35); b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function() cb(b) end) return b
-end
-
-local huntBtn = CreateBtn(_G.Settings.AutoHop and "HUNT 15M-100B: ON" or "HUNT 15M-100B: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b)
-    _G.Settings.AutoHop = not _G.Settings.AutoHop; b.Text = _G.Settings.AutoHop and "HUNT 15M-100B: ON" or "HUNT 15M-100B: OFF"; SaveSettings()
+Btn.MouseButton1Click:Connect(function()
+    _G.ESP_Active = not _G.ESP_Active
+    Btn.Text = _G.ESP_Active and "ESP: ON" or "ESP: OFF"
+    if _G.ESP_Active then RefreshESP() end
 end)
 
-CreateBtn("MANUAL SERVER HOP", UDim2.new(0.05, 0, 0.55, 0), function() DoServerHop() end)
-
--- 6. RUNNER
-RunService.RenderStepped:Connect(function()
-    local color = Color3.fromHSV(tick() % 5 / 5, 0.9, 1)
-    LogoStroke.Color = color; MainStroke.Color = color
-end)
-
+-- Auto Refresh setiap 10 detik kalau ada barang baru dideploy player lain
 task.spawn(function()
-    for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
-    workspace.DescendantAdded:Connect(ApplyFlat)
-    
-    task.wait(10)
-    if _G.Settings.AutoHop then
-        if ScanNumbers() then
-            _G.Settings.AutoHop = false
-            SaveSettings()
-            huntBtn.Text = "TARGET FOUND!"
-        else
-            DoServerHop()
-        end
+    while true do
+        if _G.ESP_Active then RefreshESP() end
+        task.wait(10)
     end
 end)
+
+RefreshESP() -- Jalankan pertama kali
