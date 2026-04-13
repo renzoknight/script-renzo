@@ -1,0 +1,61 @@
+-- [[ RENZO GURITA - STANDALONE NO CLIP ]] --
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local lp = Players.LocalPlayer
+
+_G.NoClipActive = false
+
+-- Logika Utama No Clip
+local function ToggleNoClip()
+    task.spawn(function()
+        while _G.NoClipActive do
+            if lp.Character then
+                for _, v in pairs(lp.Character:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        v.CanCollide = false
+                    end
+                end
+            end
+            RunService.Stepped:Wait()
+        end
+        -- Kembalikan Collide saat OFF
+        if lp.Character then
+            for _, v in pairs(lp.Character:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    v.CanCollide = true
+                end
+            end
+        end
+    end)
+end
+
+-- UI Kecil buat No Clip
+local SG = Instance.new("ScreenGui", game.CoreGui)
+local Btn = Instance.new("TextButton", SG)
+
+Btn.Size = UDim2.new(0, 120, 0, 40)
+Btn.Position = UDim2.new(0.5, -60, 0.8, 0) -- Posisi di bawah tengah
+Btn.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
+Btn.Text = "NO CLIP: OFF"
+Btn.TextColor3 = Color3.new(1, 1, 1)
+Btn.Font = Enum.Font.GothamBold
+Btn.BorderSizePixel = 0
+Btn.ZIndex = 10
+
+local Border = Instance.new("Frame", Btn)
+Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2)
+Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0
+
+Instance.new("UICorner", Btn)
+Instance.new("UICorner", Border)
+
+Btn.MouseButton1Click:Connect(function()
+    _G.NoClipActive = not _G.NoClipActive
+    Btn.Text = _G.NoClipActive and "NO CLIP: ON" or "NO CLIP: OFF"
+    Btn.TextColor3 = _G.NoClipActive and Color3.new(0, 1, 1) or Color3.new(1, 1, 1)
+    
+    if _G.NoClipActive then
+        ToggleNoClip()
+    end
+end)
