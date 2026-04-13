@@ -1,6 +1,6 @@
--- [[ GURITA-HUB - FINAL FIXED VERSION ]] --
+-- [[ GURITA-HUB: FAST & LIGHT VERSION ]] --
 
--- 1. FITUR FLAT COLOR (DIJALANKAN PALING AWAL)
+-- 1. FLAT COLOR (BACKGROUND TASK)
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
@@ -8,70 +8,63 @@ local function ApplyFlat(v)
             v.Reflectance = 0
             v.CastShadow = false
         end
-        if v:IsA("Texture") or v:IsA("Decal") then 
-            v:Destroy() 
-        end
-        if v:IsA("SpecialMesh") or v:IsA("MeshPart") then 
-            v.TextureID = "" 
-        end
+        if v:IsA("Texture") or v:IsA("Decal") then v:Destroy() end
+        if v:IsA("SpecialMesh") then v.TextureId = "" end
     end)
 end
 
--- Langsung hajar grafik begitu script jalan
-for _, v in ipairs(game:GetDescendants()) do
-    ApplyFlat(v)
-end
+task.spawn(function()
+    local d = game:GetDescendants()
+    for i = 1, #d do
+        ApplyFlat(d[i])
+        if i % 300 == 0 then task.wait() end -- Biar tidak freeze saat execute
+    end
+end)
 game.DescendantAdded:Connect(ApplyFlat)
-
--- Optimasi Lighting Instan
-local L = game:GetService("Lighting")
-L.GlobalShadows = false
-L.Brightness = 2
-L.EnvironmentDiffuseScale = 0
-settings().Rendering.QualityLevel = 1
 
 -- 2. LOAD MENU (RAYFIELD)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
 local Window = Rayfield:CreateWindow({
    Name = "GURITA-HUB",
-   LoadingTitle = "Steal a Brainrot Edition",
+   LoadingTitle = "Steal a Brainrot",
    LoadingSubtitle = "by Renzo",
    ConfigurationSaving = { Enabled = false }
 })
 
 local Tab = Window:CreateTab("Main Farming", 4483362458)
 
--- 3. VARIABLE & TOGGLE AUTO GRAB
+-- 3. LOGIKA AUTO GRAB (INSTAN RADIUS DEKAT)
 _G.AutoGrab = false
 
 Tab:CreateToggle({
-   Name = "Auto Grab Brainrot Only",
+   Name = "Instant Auto Grab (0.1s)",
    CurrentValue = false,
    Callback = function(Value)
       _G.AutoGrab = Value
    end,
 })
 
--- 4. LOGIKA AUTO GRAB YANG DISARING (HANYA ITEM)
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoGrab then
             pcall(function()
-                local Root = game.Players.LocalPlayer.Character.HumanoidRootPart
-                -- Fokus ke folder Items atau objek yang punya nama Brainrot
+                local lp = game.Players.LocalPlayer
+                local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+
+                -- Hanya scan objek di sekitar karakter (Radius 20 meter)
+                -- Ini cara paling kencang dan anti-lag
                 for _, v in ipairs(workspace:GetDescendants()) do
                     if v:IsA("ProximityPrompt") then
-                        -- Hanya ambil jika tombolnya untuk Steal/Ambil
-                        if v.ActionText:lower():find("steal") or v.ObjectText:lower():find("brainrot") then
+                        local pos = v.Parent:IsA("Model") and v.Parent:GetPivot().Position or v.Parent.Position
+                        if (pos - root.Position).Magnitude < 20 then
                             fireproximityprompt(v)
                         end
                     elseif v:IsA("TouchTransmitter") then
-                        -- Hanya ambil jika objeknya adalah Brainrot/Item
-                        local pName = v.Parent.Name:lower()
-                        if pName:find("brainrot") or pName:find("item") then
-                            firetouchinterest(Root, v.Parent, 0)
-                            firetouchinterest(Root, v.Parent, 1)
+                        local parent = v.Parent
+                        if (parent.Position - root.Position).Magnitude < 15 then
+                            firetouchinterest(root, parent, 0)
+                            firetouchinterest(root, parent, 1)
                         end
                     end
                 end
@@ -80,8 +73,6 @@ task.spawn(function()
     end
 end)
 
-Rayfield:Notify({
-   Title = "GURITA-HUB AKTIF",
-   Content = "Flat Color & Auto Grab Berhasil Dimuat!",
-   Duration = 5
-})
+-- 4. OPTIMASI RENDER
+game:GetService("Lighting").GlobalShadows = false
+settings().Rendering.QualityLevel = 1
