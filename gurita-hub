@@ -1,128 +1,93 @@
--- [[ GURITA-HUB: FINAL FIX & CUSTOM NOTIFY ]] --
+-- [[ GURITA-HUB: LITE & INSTANT STEAL ]] --
 
--- [[ 1. FLAT COLOR (Prioritas Pertama) ]] --
-local function ApplyFlat(v)
+-- 1. FLAT COLOR (INSTAN & RINGAN)
+local function UltraFlat(v)
     pcall(function()
-        if v:IsA("BasePart") or v:IsA("MeshPart") then
+        if v:IsA("BasePart") then
             v.Material = Enum.Material.Plastic
             v.Reflectance = 0
-            v.CastShadow = false
+        elseif v:IsA("Texture") or v:IsA("Decal") then
+            v:Destroy()
         end
-        if v:IsA("Texture") or v:IsA("Decal") then v:Destroy() end
-        if v:IsA("SpecialMesh") then v.TextureId = "" end
     end)
 end
 
--- Langsung sikat tanpa loading lama
-for _, v in ipairs(game:GetDescendants()) do ApplyFlat(v) end
-game.DescendantAdded:Connect(ApplyFlat)
-game:GetService("Lighting").GlobalShadows = false
-settings().Rendering.QualityLevel = 1
+-- Sikat objek yang sudah ada dan yang baru muncul
+task.spawn(function()
+    for _, v in ipairs(workspace:GetChildren()) do UltraFlat(v) end
+end)
+game.DescendantAdded:Connect(UltraFlat)
 
--- [[ 2. CUSTOM NOTIFICATION GUI (Kaya di Foto) ]] --
-local NotificationGui = Instance.new("ScreenGui")
-NotificationGui.Name = "GuritaNotify"
-NotificationGui.Parent = game.CoreGui or game.Players.LocalPlayer:WaitForChild("PlayerGui")
-NotificationGui.Enabled = false
-
-local NotificationFrame = Instance.new("Frame")
-NotificationFrame.Size = UDim2.new(0, 250, 0, 45) -- Ukuran notifikasi
-NotificationFrame.Position = UDim2.new(0.5, -125, 0.5, -22) -- Posisikan di tengah
-NotificationFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Hitam
-NotificationFrame.BorderSizePixel = 0
-NotificationFrame.Parent = NotificationGui
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 10) -- Biar membulat
-Corner.Parent = NotificationFrame
-
-local TextLabel = Instance.new("TextLabel")
-TextLabel.Size = UDim2.new(1, -10, 0.5, -10) -- Sisakan ruang untuk progress bar
-TextLabel.Position = UDim2.new(0, 5, 0, 5)
-TextLabel.BackgroundTransparency = 1
-TextLabel.Font = Enum.Font.SourceSansBold
-TextLabel.Text = "AUTO GRAB: AKTIF"
-TextLabel.TextColor3 = Color3.fromRGB(255, 0, 0) -- Merah
-TextLabel.TextSize = 18
-TextLabel.TextXAlignment = Enum.TextXAlignment.Left
-TextLabel.Parent = NotificationFrame
-
-local ProgressBarFrame = Instance.new("Frame")
-ProgressBarFrame.Size = UDim2.new(1, -10, 0, 15) -- Ruang untuk progress bar
-ProgressBarFrame.Position = UDim2.new(0, 5, 1, -20) -- Di bawah teks
-ProgressBarFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- Hitam gelap (background bar)
-ProgressBarFrame.BorderSizePixel = 0
-ProgressBarFrame.Parent = NotificationFrame
-
-local ProgressBarFiller = Instance.new("Frame")
-ProgressBarFiller.Size = UDim2.new(0, 0, 1, 0) -- Progress awal 0%
-ProgressBarFiller.Position = UDim2.new(0, 0, 0, 0)
-ProgressBarFiller.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Merah (isi bar)
-ProgressBarFiller.BorderSizePixel = 0
-ProgressBarFiller.Parent = ProgressBarFrame
-
-local function ShowCustomNotify(duration)
-    NotificationGui.Enabled = true
-    TextLabel.Text = "GURITA-HUB: AUTO GRAB AKTIF"
-    -- Animasi Progress Bar
-    local TweenService = game:GetService("TweenService")
-    ProgressBarFiller.Size = UDim2.new(0, 0, 1, 0) -- Reset bar ke 0
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(ProgressBarFiller, tweenInfo, {Size = UDim2.new(1, 0, 1, 0)})
-    tween:Play()
-    tween.Completed:Connect(function()
-        NotificationGui.Enabled = false
-    end)
+-- 2. CUSTOM NOTIFY (HITAM-MERAH SESUAI FOTO)
+local function CustomAlert()
+    local sg = Instance.new("ScreenGui", game.CoreGui)
+    local f = Instance.new("Frame", sg)
+    f.Size = UDim2.new(0, 200, 0, 45)
+    f.Position = UDim2.new(0.5, -100, 0.4, 0)
+    f.BackgroundColor3 = Color3.fromRGB(15, 0, 0)
+    f.BorderSizePixel = 0
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
+    
+    local t = Instance.new("TextLabel", f)
+    t.Size = UDim2.new(1, 0, 1, 0)
+    t.Text = "STEAL BRAINROT: ON"
+    t.TextColor3 = Color3.fromRGB(255, 0, 0)
+    t.BackgroundTransparency = 1
+    t.Font = Enum.Font.SourceSansBold
+    t.TextSize = 14
+    
+    task.delay(2, function() sg:Destroy() end)
 end
 
--- [[ 3. GLOBAL AUTO GRAB (GLOBAL & NO LAG) ]] --
-_G.AutoGrab = false
-
--- GANTI: Ini logikanya sekarang mencari folders "Conveyors" atau "Dispensers" di setiap base
-local function GrabGlobalItems(rootPart)
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        -- Saring objek, cari yang namanya "Brainrot" di base player
-        if obj.Name:lower():find("brainrot") and obj:IsA("BasePart") then
-             -- Pastikan objek itu punya TouchTransmitter (bisa disentuh)
-             if obj:FindFirstChildOfClass("TouchTransmitter") then
-                 firetouchinterest(rootPart, obj, 0)
-                 firetouchinterest(rootPart, obj, 1)
-             end
-        end
-    end
-end
-
--- [[ 4. LOAD MENU & TOGGLE ]] --
-local Library = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local Window = Library:CreateWindow({
+-- 3. UI LIBRARY (RAYFIELD - LITE MODE)
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = Rayfield:CreateWindow({
    Name = "GURITA-HUB",
-   LoadingTitle = "Real Global Grab",
-   ConfigurationSaving = { Enabled = false }
+   LoadingTitle = "Instant Steal",
+   ConfigurationSaving = {Enabled = false}
 })
 
 local Tab = Window:CreateTab("Main", 4483362458)
+_G.Steal = false
 
 Tab:CreateToggle({
-   Name = "AUTO GRAB GLOBAL (0.1s)",
+   Name = "Auto Steal Brainrot",
    CurrentValue = false,
    Callback = function(Value)
-      _G.AutoGrab = Value
-      if Value then
-          ShowCustomNotify(3) -- Tampilkan notifikasi selama 3 detik
-      end
+      _G.Steal = Value
+      if Value then CustomAlert() end
    end,
 })
 
+-- 4. LOGIKA STEAL (INSTAN 0.1s & RADIUS DEKAT)
 task.spawn(function()
+    local lp = game.Players.LocalPlayer
     while task.wait(0.1) do
-        if _G.AutoGrab then
+        if _G.Steal then
             pcall(function()
-                local lp = game.Players.LocalPlayer
                 local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-                if root then
-                    GrabGlobalItems(root)
+                if not root then return end
+                
+                -- Hanya ambil barang dalam radius 30 meter agar TIDAK LAG
+                local nearby = workspace:GetPartBoundsInRadius(root.Position, 30)
+                
+                for _, part in ipairs(nearby) do
+                    -- Ambil Brainrot (Sistem Sentuh)
+                    if part:FindFirstChildOfClass("TouchTransmitter") then
+                        firetouchinterest(root, part, 0)
+                        firetouchinterest(root, part, 1)
+                    end
+                    -- Ambil Brainrot (Sistem Tombol E / Collect)
+                    local prompt = part:FindFirstChildOfClass("ProximityPrompt") or part.Parent:FindFirstChildOfClass("ProximityPrompt")
+                    if prompt then
+                        fireproximityprompt(prompt)
+                    end
                 end
             end)
         end
     end
 end)
+
+-- Optimasi Performa HP
+settings().Rendering.QualityLevel = 1
+game:GetService("Lighting").GlobalShadows = false
