@@ -1,11 +1,11 @@
--- [[ RENZO GURITA - SMART ESP & XRAY BASE ]] --
+-- [[ RENZO GURITA - XRAY GURITA V3 ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- 1. AUTO FLAT COLOR (WAJIB & INSTAN)
+-- 1. AUTO FLAT COLOR (PERMANEN & SUPER RINGAN)
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
@@ -25,32 +25,44 @@ task.spawn(function()
     local d = workspace:GetDescendants()
     for i = 1, #d do
         ApplyFlat(d[i])
-        if i % 200 == 0 then task.wait() end
+        if i % 250 == 0 then task.wait() end
     end
 end)
 workspace.DescendantAdded:Connect(ApplyFlat)
 
--- 2. LOGIKA X-RAY BASE
+-- 2. LOGIKA X-RAY BASE FIXED (Menembus Dinding Base)
 _G.XrayActive = false
-local function ApplyXray()
+local function DoXray()
     task.spawn(function()
         for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and (v.Name:lower():find("base") or v.Name:lower():find("wall")) then
-                v.LocalTransparencyModifier = _G.XrayActive and 0.5 or 0
+            if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
+                -- Sikat dinding, lantai base, dan atap
+                if v.Transparency < 1 and v.CanCollide == true then
+                    if _G.XrayActive then
+                        if not v:FindFirstChild("OriginalTrans") then
+                            local val = Instance.new("NumberValue", v)
+                            val.Name = "OriginalTrans"
+                            val.Value = v.Transparency
+                        end
+                        v.Transparency = 0.5 -- Tembus pandang
+                    else
+                        if v:FindFirstChild("OriginalTrans") then
+                            v.Transparency = v.OriginalTrans.Value
+                        end
+                    end
+                end
             end
         end
     end)
 end
 
--- 3. SMART ESP (NAMA MENGECIL SAAT JAUH)
+-- 3. SMART ESP (NAMA DINAMIS - GAK BIKIN LAG)
 _G.ESPActive = false
-
 local function CreateSmartESP(plr)
     local Line = Drawing.new("Line")
     Line.Visible = false
     Line.Color = Color3.fromRGB(0, 160, 255)
     Line.Thickness = 1
-    Line.Transparency = 0.7
 
     local function Update()
         local Connection
@@ -61,18 +73,15 @@ local function CreateSmartESP(plr)
                 local Dist = (Camera.CFrame.Position - Root.Position).Magnitude
 
                 if OnScreen then
-                    -- Tracer
                     Line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                     Line.To = Vector2.new(Pos.X, Pos.Y)
                     Line.Visible = true
                     
-                    -- Nama Dinamis (Billboard)
                     local bbg = Root:FindFirstChild("SmartTag")
                     if bbg then
                         bbg.Enabled = true
-                        -- Ukuran mengecil sesuai jarak
-                        local size = math.clamp(20 - (Dist/20), 10, 18)
-                        bbg.Tag.TextSize = size
+                        -- Nama mengecil saat menjauh (Anti-Lag)
+                        bbg.Tag.TextSize = math.clamp(18 - (Dist/30), 8, 16)
                     end
                 else
                     Line.Visible = false
@@ -89,32 +98,21 @@ local function CreateSmartESP(plr)
         local char = plr.Character or plr.CharacterAdded:Wait()
         local root = char:WaitForChild("HumanoidRootPart", 10)
         local bbg = Instance.new("BillboardGui", root)
-        bbg.Name = "SmartTag"
-        bbg.AlwaysOnTop = true
-        bbg.Size = UDim2.new(0, 100, 0, 30)
-        bbg.ExtentsOffset = Vector3.new(0, 3, 0)
-        
+        bbg.Name = "SmartTag"; bbg.AlwaysOnTop = true
+        bbg.Size = UDim2.new(0, 80, 0, 20); bbg.ExtentsOffset = Vector3.new(0, 3, 0)
         local tag = Instance.new("TextLabel", bbg)
-        tag.Name = "Tag"
-        tag.Size = UDim2.new(1, 0, 1, 0)
-        tag.BackgroundTransparency = 1
-        tag.Text = plr.Name
-        tag.TextColor3 = Color3.new(1, 1, 0)
-        tag.Font = Enum.Font.GothamBold
-        tag.TextStrokeTransparency = 0.5
+        tag.Name = "Tag"; tag.Size = UDim2.new(1, 0, 1, 0); tag.BackgroundTransparency = 1
+        tag.Text = plr.Name; tag.TextColor3 = Color3.new(1, 1, 0)
+        tag.Font = Enum.Font.GothamBold; tag.TextStrokeTransparency = 0.5
     end
-
-    task.spawn(Update); SetupTag()
-    plr.CharacterAdded:Connect(SetupTag)
+    task.spawn(Update); SetupTag(); plr.CharacterAdded:Connect(SetupTag)
 end
 
--- 4. MENU (HULK STYLE - LIS BIRU)
+-- 4. UI MENU (XRAY GURITA V3 - LIS BIRU)
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 140)
-Main.Position = UDim2.new(0.5, -100, 0.1, 0)
-Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20)
-Main.BorderSizePixel = 0
+Main.Size = UDim2.new(0, 200, 0, 130); Main.Position = UDim2.new(0.5, -100, 0.1, 0)
+Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Main.BorderSizePixel = 0
 Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main)
 
@@ -123,25 +121,30 @@ Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2)
 Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0
 Instance.new("UICorner", Border)
 
-local function CreateBtn(name, pos, callback)
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 30); Title.BackgroundTransparency = 1
+Title.Text = "XRAY GURITA V3"; Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBold; Title.TextSize = 13
+
+local function CreateBtn(txt, pos, cb)
     local b = Instance.new("TextButton", Main)
     b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos
     b.BackgroundColor3 = Color3.fromRGB(0, 160, 255); b.BackgroundTransparency = 0.8
-    b.Text = name; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold
-    Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(callback)
+    b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold
+    b.TextSize = 12; Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() cb(b) end)
     return b
 end
 
-local espBtn = CreateBtn("ESP & TRACER: OFF", UDim2.new(0.05, 0, 0.25, 0), function()
+CreateBtn("ESP & TRACER: OFF", UDim2.new(0.05, 0, 0.25, 0), function(b)
     _G.ESPActive = not _G.ESPActive
-    Main.TextButton.Text = _G.ESPActive and "ESP & TRACER: ON" or "ESP & TRACER: OFF"
+    b.Text = _G.ESPActive and "ESP & TRACER: ON" or "ESP & TRACER: OFF"
 end)
 
-CreateBtn("XRAY BASE: OFF", UDim2.new(0.05, 0, 0.6, 0), function(self)
+CreateBtn("XRAY BASE: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b)
     _G.XrayActive = not _G.XrayActive
-    self.Text = _G.XrayActive and "XRAY BASE: ON" or "XRAY BASE: OFF"
-    ApplyXray()
+    b.Text = _G.XrayActive and "XRAY BASE: ON" or "XRAY BASE: OFF"
+    DoXray()
 end)
 
 for _, p in ipairs(Players:GetPlayers()) do if p ~= lp then CreateSmartESP(p) end end
