@@ -1,11 +1,11 @@
--- [[ RENZO GURITA - XRAY GURITA V3 ]] --
+-- [[ RENZO GURITA - XRAY GURITA V3 (BUILDING ONLY) ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- 1. AUTO FLAT COLOR (PERMANEN & SUPER RINGAN)
+-- 1. AUTO FLAT COLOR (WAJIB - NO LAG)
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
@@ -30,21 +30,23 @@ task.spawn(function()
 end)
 workspace.DescendantAdded:Connect(ApplyFlat)
 
--- 2. LOGIKA X-RAY BASE FIXED (Menembus Dinding Base)
+-- 2. LOGIKA X-RAY BASE (Hanya Dinding & Bangunan)
 _G.XrayActive = false
 local function DoXray()
     task.spawn(function()
         for _, v in ipairs(workspace:GetDescendants()) do
+            -- Filter: Hanya BasePart yang bukan karakter player
             if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
-                -- Sikat dinding, lantai base, dan atap
-                if v.Transparency < 1 and v.CanCollide == true then
+                local name = v.Name:lower()
+                -- Cek apakah ini bagian dari bangunan/base (Bukan rumput/tanah)
+                if name:find("wall") or name:find("base") or name:find("floor") or name:find("door") or name:find("roof") then
                     if _G.XrayActive then
                         if not v:FindFirstChild("OriginalTrans") then
                             local val = Instance.new("NumberValue", v)
                             val.Name = "OriginalTrans"
                             val.Value = v.Transparency
                         end
-                        v.Transparency = 0.5 -- Tembus pandang
+                        v.Transparency = 0.5
                     else
                         if v:FindFirstChild("OriginalTrans") then
                             v.Transparency = v.OriginalTrans.Value
@@ -80,7 +82,6 @@ local function CreateSmartESP(plr)
                     local bbg = Root:FindFirstChild("SmartTag")
                     if bbg then
                         bbg.Enabled = true
-                        -- Nama mengecil saat menjauh (Anti-Lag)
                         bbg.Tag.TextSize = math.clamp(18 - (Dist/30), 8, 16)
                     end
                 else
@@ -108,7 +109,7 @@ local function CreateSmartESP(plr)
     task.spawn(Update); SetupTag(); plr.CharacterAdded:Connect(SetupTag)
 end
 
--- 4. UI MENU (XRAY GURITA V3 - LIS BIRU)
+-- 4. UI MENU (LIS BIRU)
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 200, 0, 130); Main.Position = UDim2.new(0.5, -100, 0.1, 0)
