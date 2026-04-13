@@ -1,56 +1,121 @@
--- [[ RENZO GURITA - TRUE PERFORMANCE MODE ]] --
--- Objetivo: Total Flat Colors (Seperti Foto)
+-- [[ GURITA-HUB: CUSTOM GUI & FIXED STEAL ]] --
 
-local function FinalPotato(v)
-    -- Paksa semua benda jadi material yang paling ringan & polos
-    if v:IsA("BasePart") or v:IsA("MeshPart") then
-        v.Material = Enum.Material.Plastic -- Material paling dasar
-        v.Reflectance = 0
-        v.CastShadow = false
-    end
-    
-    -- HAPUS SEMUA TEKSTUR & GRID (Kunci Grafik Semut)
-    if v:IsA("Texture") then
-        v:Destroy()
-    end
-    
-    -- JANGAN Hapus Decal (Agar Logo/Gambar Item Tetap Ada)
-    -- Tapi kita buat transparansi tekstur di dalam mesh hilang
-    if v:IsA("SpecialMesh") then
-        v.TextureId = "" -- Menghapus tekstur yang nempel di mesh
-    end
-
-    -- Matikan partikel biar FPS naik drastis
-    if v:IsA("ParticleEmitter") or v:IsA("Trail") then
-        v.Enabled = false
-    end
+-- [[ 1. FLAT COLOR (WAJIB JALAN PERTAMA & INSTAN) ]] --
+local function ApplyFlat(v)
+    pcall(function()
+        if v:IsA("BasePart") then
+            v.Material = Enum.Material.Plastic
+            v.Reflectance = 0
+            v.CastShadow = false
+        elseif v:IsA("Texture") or v:IsA("Decal") then
+            v:Destroy()
+        end
+    end)
 end
 
--- 1. Bersihkan semua yang ada sekarang
-for _, v in ipairs(game:GetDescendants()) do
-    FinalPotato(v)
-end
+-- Langsung sikat semua objek di map (Cepat & Ringan)
+for _, v in ipairs(workspace:GetDescendants()) do ApplyFlat(v) end
+workspace.DescendantAdded:Connect(ApplyFlat)
 
--- 2. Pantau objek baru agar tetap polos
-game.DescendantAdded:Connect(FinalPotato)
-
--- 3. MATIKAN CAHAYA & BAYANGAN (Penting untuk warna flat)
-local Lighting = game:GetService("Lighting")
-Lighting.GlobalShadows = false
-Lighting.FogEnd = 9e9
-Lighting.Brightness = 2
-Lighting.EnvironmentDiffuseScale = 0
-Lighting.EnvironmentSpecularScale = 0
-
--- 4. PAKSA RENDER ENGINE TERENDAH
+-- Optimasi Render (HP ADEM)
+game:GetService("Lighting").GlobalShadows = false
 settings().Rendering.QualityLevel = 1
-settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level0
 
--- 5. Matikan Rumput & Dekorasi Terrain
-local terrain = workspace:FindFirstChildOfClass("Terrain")
-if terrain then
-    sethiddenproperty(terrain, "Decoration", false)
-    terrain.WaterWaveSize = 0
-end
+-- [[ 2. MEMBUAT CUSTOM MENU (PERSIS KAYAK DI FOTO) ]] --
+local SG = Instance.new("ScreenGui", game.CoreGui)
+SG.Name = "GostSteal_V2"
 
-print("Renzo Mode: TRUE FLAT COLOR ACTIVE")
+-- Frame Utama (Kotak Hitam)
+local MainFrame = Instance.new("Frame", SG)
+MainFrame.Size = UDim2.new(0, 180, 0, 110) -- Ukuran kira-kira sesuai foto
+MainFrame.Position = UDim2.new(0.5, -90, 0.4, 0) -- Di tengah layar
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Hitam Pekat
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- Bisa digeser sesuka hati
+
+local MainCorner = Instance.new("UICorner", MainFrame)
+MainCorner.CornerRadius = UDim.new(0, 10) -- Membulat seperti di foto
+
+-- Judul "GOST STEAL v2" (Teks Biru)
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Position = UDim2.new(0, 0, 0, 5)
+Title.BackgroundTransparency = 1
+Title.Text = "GOST STEAL v2"
+Title.TextColor3 = Color3.fromRGB(0, 200, 255) -- Biru Muda
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 16
+
+-- Bar Biru Di Bawah Judul
+local BlueBar = Instance.new("Frame", MainFrame)
+BlueBar.Size = UDim2.new(0.9, 0, 0, 5)
+BlueBar.Position = UDim2.new(0.05, 0, 0, 35)
+BlueBar.BackgroundColor3 = Color3.fromRGB(0, 200, 255) -- Biru
+BlueBar.BorderSizePixel = 0
+Instance.new("UICorner", BlueBar).CornerRadius = UDim.new(1, 0)
+
+-- Teks "Status : " & Status (Hanya dekorasi)
+local StatusLabel = Instance.new("TextLabel", MainFrame)
+StatusLabel.Size = UDim2.new(1, 0, 0, 20)
+StatusLabel.Position = UDim2.new(0, 0, 0, 45)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Status : OK!"
+StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusLabel.Font = Enum.Font.SourceSans
+StatusLabel.TextSize = 12
+
+-- Tombol Utama (Tombol Biru dengan tulisan STOP/START)
+local ActionBtn = Instance.new("TextButton", MainFrame)
+ActionBtn.Size = UDim2.new(0.9, 0, 0, 30)
+ActionBtn.Position = UDim2.new(0.05, 0, 1, -35) -- Di bagian bawah frame
+ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255) -- Biru Tombol
+ActionBtn.BorderSizePixel = 0
+ActionBtn.Text = "START" -- Default teks awal
+ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ActionBtn.Font = Enum.Font.SourceSansBold
+ActionBtn.TextSize = 16
+
+local BtnCorner = Instance.new("UICorner", ActionBtn)
+BtnCorner.CornerRadius = UDim.new(0, 8)
+
+-- [[ 3. LOGIKA STEAL BRAINROT (FIXED & LITE) ]] --
+_G.StealActive = false
+
+ActionBtn.MouseButton1Click:Connect(function()
+    _G.StealActive = not _G.StealActive
+    if _G.StealActive then
+        ActionBtn.Text = "STOP" -- Ganti teks saat ON (sesuai foto)
+        ActionBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Ganti jadi Merah biar jelas
+    else
+        ActionBtn.Text = "START"
+        ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255) -- Ganti jadi Biru lagi
+    end
+end)
+
+task.spawn(function()
+    local lp = game.Players.LocalPlayer
+    while task.wait(0.1) do
+        if _G.StealActive then
+            pcall(function()
+                local root = lp.Character.HumanoidRootPart
+                -- Hanya scan objek dalam radius 35 stud di sekitar kamu agar TIDAK LAG
+                local region = workspace:GetPartBoundsInRadius(root.Position, 35)
+                
+                for _, part in ipairs(region) do
+                    -- Strategi: Ambil semua yang bisa disentuh (Anomali/Brainrot/Dropped Item)
+                    if part:FindFirstChildOfClass("TouchTransmitter") then
+                        firetouchinterest(root, part, 0)
+                        firetouchinterest(root, part, 1)
+                    end
+                    
+                    -- Tekan tombol E otomatis (Collect)
+                    local prompt = part:FindFirstChildOfClass("ProximityPrompt") or part.Parent:FindFirstChildOfClass("ProximityPrompt")
+                    if prompt then
+                        fireproximityprompt(prompt)
+                    end
+                end
+            end)
+        end
+    end
+end)
