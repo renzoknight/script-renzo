@@ -1,4 +1,4 @@
--- [[ RENZO GURITA - XRAY GURITA V3.3 AUTO-SAVE & LOGO GH ]] --
+-- [[ GURITA HUB V3.5 - RGB RAINBOW EDITION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -6,8 +6,8 @@ local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- 1. SISTEM AUTO-SAVE (Langsung Simpan Pas Diklik)
-local filename = "GuritaConfig_V3.json"
+-- 1. SISTEM CONFIG (Auto-Load & Auto-Save)
+local filename = "GuritaRGB_Config.json"
 _G.Settings = {
     ESP = false,
     Xray = false
@@ -15,123 +15,174 @@ _G.Settings = {
 
 local function SaveSettings()
     if writefile then
-        writefile(filename, HttpService:JSONEncode(_G.Settings))
+        pcall(function()
+            writefile(filename, HttpService:JSONEncode(_G.Settings))
+        end)
     end
 end
 
 local function LoadSettings()
     if isfile and isfile(filename) then
-        local success, data = pcall(function() return HttpService:JSONDecode(readfile(filename)) end)
-        if success then _G.Settings = data end
+        local success, data = pcall(function() 
+            return HttpService:JSONDecode(readfile(filename)) 
+        end)
+        if success and data then _G.Settings = data end
     end
 end
 
-LoadSettings() -- Ambil settingan lama pas start
+LoadSettings() -- Langsung load pas di-inject
 
--- 2. FUNGSI PROTEKSI & FLAT COLOR (BAWAAN KODE ABANG)
+-- 2. PROTEKSI LANTAI (Bawaan V3.4 - Gak Abu-abu)
 local function IsSafe(v)
+    if not v:IsA("BasePart") then return true end
     local name = v.Name:lower()
-    if name:find("floor") or name:find("lantai") or name:find("grass") or name:find("terrain") then return true end
-    if v:IsDescendantOf(lp.Character) or v.Parent:FindFirstChild("Humanoid") then return true end
+    if name:find("floor") or name:find("lantai") or name:find("grass") or name:find("terrain") or name:find("ground") then
+        return true
+    end
+    if v:IsDescendantOf(lp.Character) or (v.Parent and v.Parent:FindFirstChild("Humanoid")) then
+        return true
+    end
     return false
 end
 
+-- 3. VISUAL LOGIC (Bawaan V3.4 - Lancar)
 local function ApplyFlat(v)
     pcall(function()
-        if v:IsA("BasePart") or v:IsA("MeshPart") then
-            if not IsSafe(v) then
-                v.Material = Enum.Material.Plastic
-                v.CastShadow = false
-                if v:IsA("MeshPart") then v.TextureID = "" end
+        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsSafe(v) then
+            v.Material = Enum.Material.Plastic
+            v.CastShadow = false
+            if v:IsA("MeshPart") then v.TextureID = "" end
+        end
+    end)
+end
+
+local function RefreshXray()
+    task.spawn(function()
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and not IsSafe(v) then
+                local n = v.Name:lower()
+                if n:find("wall") or n:find("base") or n:find("door") or n:find("roof") then
+                    v.Transparency = _G.Settings.Xray and 0.5 or 0
+                end
             end
         end
     end)
 end
 
-local function DoXray()
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and not IsSafe(v) then
-            local name = v.Name:lower()
-            if name:find("wall") or name:find("base") or name:find("door") or name:find("roof") then
-                v.Transparency = _G.Settings.Xray and 0.5 or 0
-            end
-        end
-    end
-end
-
--- 3. UI MENU & LOGO GH (POSISI KIRI DEKET SHOP)
-local SG = Instance.new("ScreenGui")
-SG.Name = "GuritaV3AutoSave"
-SG.ResetOnSpawn = false
-local success, _ = pcall(function() SG.Parent = game:GetService("CoreGui") end)
-if not success then SG.Parent = lp:WaitForChild("PlayerGui") end
-
--- LOGO GH (Letak di Kiri Deket Shop)
-local Logo = Instance.new("TextButton", SG)
-Logo.Size = UDim2.new(0, 45, 0, 45)
-Logo.Position = UDim2.new(0, 15, 0.45, 0) -- Posisi kiri, sejajar area shop
-Logo.BackgroundColor3 = Color3.fromRGB(0, 160, 255)
-Logo.Text = "GH"
-Logo.TextColor3 = Color3.new(1, 1, 1)
-Logo.Font = Enum.Font.GothamBold
-Logo.TextSize = 18
-Instance.new("UICorner", Logo).CornerRadius = UDim.new(1, 0)
-Logo.Draggable = true -- Tetap bisa digeser kalo ngalangin
-
--- MAIN FRAME
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 130)
-Main.Position = UDim2.new(0.5, -100, 0.2, 0)
-Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
-Main.Visible = false
-Main.Active = true; Main.Draggable = true
-Instance.new("UICorner", Main)
-local Border = Instance.new("Frame", Main); Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2); Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0; Instance.new("UICorner", Border)
-
-Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
-
-local function CreateBtn(txt, pos, cb)
-    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(0, 160, 255); b.BackgroundTransparency = 0.8; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 11; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function() cb(b) end) return b
-end
-
--- TOMBOL DENGAN AUTO-SAVE
-local btnESP = CreateBtn(_G.Settings.ESP and "ESP & TRACER: ON" or "ESP & TRACER: OFF", UDim2.new(0.05, 0, 0.25, 0), function(b) 
-    _G.Settings.ESP = not _G.Settings.ESP
-    b.Text = _G.Settings.ESP and "ESP & TRACER: ON" or "ESP & TRACER: OFF" 
-    SaveSettings() -- Simpan otomatis
-end)
-
-local btnXray = CreateBtn(_G.Settings.Xray and "XRAY BASE: ON" or "XRAY BASE: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b) 
-    _G.Settings.Xray = not _G.Settings.Xray
-    b.Text = _G.Settings.Xray and "XRAY BASE: ON" or "XRAY BASE: OFF"
-    DoXray()
-    SaveSettings() -- Simpan otomatis
-end)
-
--- 4. TRACER LOGIC
-local function CreateSmartESP(plr)
+local function CreateTracer(plr)
     local Line = Drawing.new("Line")
-    Line.Visible = false; Line.Color = Color3.fromRGB(0, 160, 255); Line.Thickness = 1.5
+    Line.Visible = false
+    Line.Color = Color3.fromRGB(255, 255, 255) -- Warna dasar tracer
+    Line.Thickness = 1.5
+    
     RunService.RenderStepped:Connect(function()
         if _G.Settings.ESP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local Root = plr.Character.HumanoidRootPart
-            local Pos, OnScreen = Camera:WorldToViewportPoint(Root.Position)
-            if OnScreen then
+            local pos, onScreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+            if onScreen then
                 Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                Line.To = Vector2.new(Pos.X, Pos.Y); Line.Visible = true
+                Line.To = Vector2.new(pos.X, pos.Y)
+                Line.Visible = true
+                
+                -- BIKIN TRACER JADI PELANGI JUGA
+                local h = tick() % 3 / 3
+                Line.Color = Color3.fromHSV(h, 0.8, 1)
             else Line.Visible = false end
         else Line.Visible = false end
     end)
 end
 
--- 5. EXECUTION
+-- 4. UI: MODERN DARK PREMIUM + RAINBOW
+local SG = Instance.new("ScreenGui")
+SG.Name = "GuritaRGB"
+SG.ResetOnSpawn = false
+local guiParent = pcall(function() return game:GetService("CoreGui") end) and game:GetService("CoreGui") or lp:WaitForChild("PlayerGui")
+SG.Parent = guiParent
+
+-- LOGO GH MODERN (Kiri deket Shop)
+local LogoContainer = Instance.new("Frame", SG)
+LogoContainer.Size = UDim2.new(0, 50, 0, 50)
+LogoContainer.Position = UDim2.new(0, 15, 0.45, 0)
+LogoContainer.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+LogoContainer.Active = true; LogoContainer.Draggable = true
+Instance.new("UICorner", LogoContainer).CornerRadius = UDim.new(1, 0)
+
+-- Rainbow Border Logo
+local LogoBorder = Instance.new("UIStroke", LogoContainer)
+LogoBorder.Thickness = 3; LogoBorder.Color = Color3.fromRGB(255, 0, 0)
+
+local LogoBtn = Instance.new("TextButton", LogoContainer)
+LogoBtn.Size = UDim2.new(0.9, 0, 0.9, 0)
+LogoBtn.Position = UDim2.new(0.05, 0, 0.05, 0)
+LogoBtn.BackgroundTransparency = 1
+LogoBtn.Text = "GH"; LogoBtn.TextColor3 = Color3.new(1, 1, 1)
+LogoBtn.Font = Enum.Font.GothamBold; LogoBtn.TextSize = 20
+
+-- MENU FRAME
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 220, 0, 160)
+Main.Position = UDim2.new(0, 80, 0.45, -55) -- Muncul di samping Logo
+Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+Main.Visible = false; Main.Active = true; Main.Draggable = true
+Instance.new("UICorner", Main)
+
+-- Rainbow Border Menu
+local MenuBorder = Instance.new("UIStroke", Main)
+MenuBorder.Thickness = 4; MenuBorder.Color = Color3.fromRGB(255, 0, 0)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Text = "GURITA HUB V3.5"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBold; Title.TextSize = 14
+Title.BackgroundTransparency = 1; Title.Size = UDim2.new(1, 0, 0, 30)
+
+local TitleRainbow = Instance.new("UIStroke", Title)
+TitleRainbow.Thickness = 0.5; TitleRainbow.Color = Color3.new(1,1,1)
+
+LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+
+local function CreateBtn(txt, pos, cb)
+    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 40); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(25, 25, 35); b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 11; Instance.new("UICorner", b)
+    local stroke = Instance.new("UIStroke", b); stroke.Thickness = 1.5; stroke.Color = Color3.fromRGB(50, 50, 70)
+    b.MouseButton1Click:Connect(function() cb(b) end) return b
+end
+
+-- Update tampilan tombol sesuai config
+local btnESP = CreateBtn(_G.Settings.ESP and "TRACER: ON" or "TRACER: OFF", UDim2.new(0.05, 0, 0.25, 0), function(b)
+    _G.Settings.ESP = not _G.Settings.ESP
+    b.Text = _G.Settings.ESP and "TRACER: ON" or "TRACER: OFF"
+    b.BackgroundColor3 = _G.Settings.ESP and Color3.fromRGB(40, 40, 60) or Color3.fromRGB(25, 25, 35)
+    SaveSettings()
+end)
+
+local btnXray = CreateBtn(_G.Settings.Xray and "XRAY: ON" or "XRAY: OFF", UDim2.new(0.05, 0, 0.60, 0), function(b)
+    _G.Settings.Xray = not _G.Settings.Xray
+    b.Text = _G.Settings.Xray and "XRAY: ON" or "XRAY: OFF"
+    b.BackgroundColor3 = _G.Settings.Xray and Color3.fromRGB(40, 40, 60) or Color3.fromRGB(25, 25, 35)
+    RefreshXray()
+    SaveSettings()
+end)
+
+-- Sinkronisasi warna tombol pas load
+btnESP.BackgroundColor3 = _G.Settings.ESP and Color3.fromRGB(40, 40, 60) or Color3.fromRGB(25, 25, 35)
+btnXray.BackgroundColor3 = _G.Settings.Xray and Color3.fromRGB(40, 40, 60) or Color3.fromRGB(25, 25, 35)
+
+-- 5. RAINBOW EFFECT ANIMATION
+RunService.RenderStepped:Connect(function()
+    local h = tick() % 5 / 5 -- Mengubah warna secara halus setiap 5 detik
+    local color = Color3.fromHSV(h, 0.9, 1)
+    
+    -- Ubah warna border Logo dan Menu
+    LogoBorder.Color = color
+    MenuBorder.Color = color
+end)
+
+-- 6. INISIALISASI (AUTO-RUN)
 task.spawn(function()
     local d = workspace:GetDescendants()
-    for i = 1, #d do ApplyFlat(d[i]) if i % 250 == 0 then task.wait() end end
-    DoXray() -- Jalankan xray kalo di settingan lama emang ON
+    for i = 1, #d do ApplyFlat(d[i]) if i % 300 == 0 then task.wait() end end
+    if _G.Settings.Xray then RefreshXray() end -- Aktifkan Xray jika config ON
 end)
 
 workspace.DescendantAdded:Connect(ApplyFlat)
-for _, p in ipairs(Players:GetPlayers()) do if p ~= lp then CreateSmartESP(p) end end
-Players.PlayerAdded:Connect(CreateSmartESP)
+for _, p in ipairs(Players:GetPlayers()) do if p ~= lp then CreateTracer(p) end end
+Players.PlayerAdded:Connect(CreateTracer)
