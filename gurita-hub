@@ -1,7 +1,7 @@
--- [[ GURITA-HUB: GOST STEAL V2 - BYPASS DETECTOR ]] --
+-- [[ GURITA-HUB: GOST STEAL V2 - NAMELESS ENGINE ]] --
 
--- 1. FLAT COLOR (OPTIMAL)
-local function SetFlat(v)
+-- 1. OPTIMISASI RENDER (AGAR SCRIPT JALAN MULUS)
+local function Optimize(v)
     pcall(function()
         if v:IsA("BasePart") then
             v.Material = Enum.Material.Plastic
@@ -12,10 +12,10 @@ local function SetFlat(v)
     end)
 end
 task.spawn(function()
-    for _, v in ipairs(workspace:GetDescendants()) do SetFlat(v) end
+    for _, v in ipairs(workspace:GetDescendants()) do Optimize(v) end
 end)
 
--- 2. CUSTOM MENU (GOST STEAL v2)
+-- 2. UI GOST STEAL v2 (PERSIS FOTO)
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 180, 0, 110)
@@ -34,7 +34,7 @@ ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ActionBtn.Font = Enum.Font.SourceSansBold
 Instance.new("UICorner", ActionBtn).CornerRadius = UDim.new(0, 8)
 
--- 3. LOGIKA STEAL (ANTI-LOG BYPASS)
+-- 3. LOGIKA AUTO STEAL (BYPASS NAMELESS METHOD)
 _G.StealActive = false
 
 ActionBtn.MouseButton1Click:Connect(function()
@@ -45,24 +45,34 @@ end)
 
 task.spawn(function()
     local lp = game.Players.LocalPlayer
-    while task.wait(0.3) do -- Jeda 0.3s biar server gak curiga dan muncul teks itu
+    while task.wait(0.05) do -- Sinkronisasi cepat 0.05s
         if _G.StealActive then
             pcall(function()
-                local root = lp.Character.HumanoidRootPart
-                -- Scan area kecil (Radius 12) biar akurat
-                local items = workspace:GetPartBoundsInRadius(root.Position, 12)
-                
-                for _, p in ipairs(items) do
-                    local prompt = p:FindFirstChildOfClass("ProximityPrompt") or p.Parent:FindFirstChildOfClass("ProximityPrompt")
-                    if prompt then
-                        -- Set instan tapi kasih napas ke server
-                        prompt.HoldDuration = 0
-                        prompt.RequiresLineOfSight = false
-                        
-                        -- Eksekusi
-                        fireproximityprompt(prompt)
-                        -- Tunggu sebentar setelah mencuri satu barang
-                        task.wait(0.1) 
+                local char = lp.Character
+                local root = char:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+
+                -- Nameless Logic: Mencari Proximity di dalam Model khusus
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then
+                        -- Cek apakah tombol ini adalah tombol Mencuri/Steal
+                        if v.ActionText:lower():find("mencuri") or v.ObjectText:lower():find("brainrot") then
+                            local parent = v.Parent
+                            local dist = (parent:GetPivot().Position - root.Position).Magnitude
+                            
+                            -- Radius 15 stud (Sesuai Nameless Grab)
+                            if dist < 15 then
+                                -- Bypass Sinkronisasi:
+                                v.HoldDuration = 0
+                                v.RequiresLineOfSight = false
+                                
+                                -- Eksekusi instan
+                                fireproximityprompt(v)
+                                
+                                -- Paksa server menerima input
+                                task.wait(0.02)
+                            end
+                        end
                     end
                 end
             end)
