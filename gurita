@@ -1,7 +1,7 @@
--- [[ GURITA-HUB: CUSTOM GUI & FIXED STEAL ]] --
+-- [[ GURITA-HUB: GOST STEAL V2 - CORE FIX ]] --
 
--- [[ 1. FLAT COLOR (WAJIB JALAN PERTAMA & INSTAN) ]] --
-local function ApplyFlat(v)
+-- 1. FLAT COLOR (INSTAN & WAJIB)
+local function SetFlat(v)
     pcall(function()
         if v:IsA("BasePart") then
             v.Material = Enum.Material.Plastic
@@ -13,109 +13,80 @@ local function ApplyFlat(v)
     end)
 end
 
--- Langsung sikat semua objek di map (Cepat & Ringan)
-for _, v in ipairs(workspace:GetDescendants()) do ApplyFlat(v) end
-workspace.DescendantAdded:Connect(ApplyFlat)
+for _, v in ipairs(workspace:GetDescendants()) do SetFlat(v) end
+workspace.DescendantAdded:Connect(SetFlat)
 
--- Optimasi Render (HP ADEM)
-game:GetService("Lighting").GlobalShadows = false
-settings().Rendering.QualityLevel = 1
-
--- [[ 2. MEMBUAT CUSTOM MENU (PERSIS KAYAK DI FOTO) ]] --
+-- 2. CUSTOM MENU (GOST STEAL v2 STYLE)
 local SG = Instance.new("ScreenGui", game.CoreGui)
-SG.Name = "GostSteal_V2"
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 180, 0, 110)
+Main.Position = UDim2.new(0.5, -90, 0.4, 0)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Main.Active = true
+Main.Draggable = true
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
 
--- Frame Utama (Kotak Hitam)
-local MainFrame = Instance.new("Frame", SG)
-MainFrame.Size = UDim2.new(0, 180, 0, 110) -- Ukuran kira-kira sesuai foto
-MainFrame.Position = UDim2.new(0.5, -90, 0.4, 0) -- Di tengah layar
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Hitam Pekat
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true -- Bisa digeser sesuka hati
-
-local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 10) -- Membulat seperti di foto
-
--- Judul "GOST STEAL v2" (Teks Biru)
-local Title = Instance.new("TextLabel", MainFrame)
+local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Position = UDim2.new(0, 0, 0, 5)
-Title.BackgroundTransparency = 1
 Title.Text = "GOST STEAL v2"
-Title.TextColor3 = Color3.fromRGB(0, 200, 255) -- Biru Muda
+Title.TextColor3 = Color3.fromRGB(0, 200, 255)
+Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 16
 
--- Bar Biru Di Bawah Judul
-local BlueBar = Instance.new("Frame", MainFrame)
-BlueBar.Size = UDim2.new(0.9, 0, 0, 5)
+local BlueBar = Instance.new("Frame", Main)
+BlueBar.Size = UDim2.new(0.9, 0, 0, 4)
 BlueBar.Position = UDim2.new(0.05, 0, 0, 35)
-BlueBar.BackgroundColor3 = Color3.fromRGB(0, 200, 255) -- Biru
-BlueBar.BorderSizePixel = 0
-Instance.new("UICorner", BlueBar).CornerRadius = UDim.new(1, 0)
+BlueBar.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
 
--- Teks "Status : " & Status (Hanya dekorasi)
-local StatusLabel = Instance.new("TextLabel", MainFrame)
-StatusLabel.Size = UDim2.new(1, 0, 0, 20)
-StatusLabel.Position = UDim2.new(0, 0, 0, 45)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status : OK!"
-StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusLabel.Font = Enum.Font.SourceSans
-StatusLabel.TextSize = 12
-
--- Tombol Utama (Tombol Biru dengan tulisan STOP/START)
-local ActionBtn = Instance.new("TextButton", MainFrame)
-ActionBtn.Size = UDim2.new(0.9, 0, 0, 30)
-ActionBtn.Position = UDim2.new(0.05, 0, 1, -35) -- Di bagian bawah frame
-ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255) -- Biru Tombol
-ActionBtn.BorderSizePixel = 0
-ActionBtn.Text = "START" -- Default teks awal
+local ActionBtn = Instance.new("TextButton", Main)
+ActionBtn.Size = UDim2.new(0, 160, 0, 35)
+ActionBtn.Position = UDim2.new(0.05, 0, 1, -40)
+ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+ActionBtn.Text = "START"
 ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ActionBtn.Font = Enum.Font.SourceSansBold
-ActionBtn.TextSize = 16
+ActionBtn.TextSize = 18
+Instance.new("UICorner", ActionBtn).CornerRadius = UDim.new(0, 8)
 
-local BtnCorner = Instance.new("UICorner", ActionBtn)
-BtnCorner.CornerRadius = UDim.new(0, 8)
-
--- [[ 3. LOGIKA STEAL BRAINROT (FIXED & LITE) ]] --
+-- 3. LOGIKA STEAL (FIXED & AGRESSIVE)
 _G.StealActive = false
 
 ActionBtn.MouseButton1Click:Connect(function()
     _G.StealActive = not _G.StealActive
-    if _G.StealActive then
-        ActionBtn.Text = "STOP" -- Ganti teks saat ON (sesuai foto)
-        ActionBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Ganti jadi Merah biar jelas
-    else
-        ActionBtn.Text = "START"
-        ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255) -- Ganti jadi Biru lagi
-    end
+    ActionBtn.Text = _G.StealActive and "STOP" or "START"
+    ActionBtn.BackgroundColor3 = _G.StealActive and Color3.fromRGB(200, 0, 0) or Color3.fromRGB(0, 150, 255)
 end)
 
 task.spawn(function()
     local lp = game.Players.LocalPlayer
-    while task.wait(0.1) do
+    while task.wait(0.05) do -- Sangat cepat (0.05 detik)
         if _G.StealActive then
             pcall(function()
                 local root = lp.Character.HumanoidRootPart
-                -- Hanya scan objek dalam radius 35 stud di sekitar kamu agar TIDAK LAG
-                local region = workspace:GetPartBoundsInRadius(root.Position, 35)
                 
-                for _, part in ipairs(region) do
-                    -- Strategi: Ambil semua yang bisa disentuh (Anomali/Brainrot/Dropped Item)
-                    if part:FindFirstChildOfClass("TouchTransmitter") then
-                        firetouchinterest(root, part, 0)
-                        firetouchinterest(root, part, 1)
+                -- Cari semua ProximityPrompt di workspace (Tombol E Collect)
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then
+                        -- Cek jarak antara karakter dan tombol E (Radius 40 meter)
+                        local pos = v.Parent:IsA("Model") and v.Parent:GetPivot().Position or v.Parent.Position
+                        if (pos - root.Position).Magnitude < 40 then
+                            -- PAKSA eksekusi tombol E tanpa nunggu (Instant Steal)
+                            fireproximityprompt(v)
+                        end
                     end
                     
-                    -- Tekan tombol E otomatis (Collect)
-                    local prompt = part:FindFirstChildOfClass("ProximityPrompt") or part.Parent:FindFirstChildOfClass("ProximityPrompt")
-                    if prompt then
-                        fireproximityprompt(prompt)
+                    -- Tambahan: Sedot item yang jatoh/melayang pakai TouchInterest
+                    if v:IsA("TouchTransmitter") and (v.Parent.Position - root.Position).Magnitude < 40 then
+                        firetouchinterest(root, v.Parent, 0)
+                        firetouchinterest(root, v.Parent, 1)
                     end
                 end
             end)
         end
     end
 end)
+
+-- Optimasi Render
+game:GetService("Lighting").GlobalShadows = false
+settings().Rendering.QualityLevel = 1
