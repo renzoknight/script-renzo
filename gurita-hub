@@ -1,4 +1,4 @@
--- [[ RENZO GURITA - XRAY GURITA V4.1 PURE CLEAN ]] --
+-- [[ RENZO GURITA - XRAY GURITA V4.5 STABLE ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -9,48 +9,36 @@ local RunService = game:GetService("RunService")
 _G.TracerActive = false
 _G.XrayActive = false
 
--- 1. FUNGSI X-RAY & FLAT COLOR (SANGAT KETAT)
-local function ApplyXray()
+-- 1. FUNGSI X-RAY & FLAT (CUMA TEMBOK - LANTAI AMAN)
+local function RefreshXray()
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
             local name = v.Name:lower()
-            -- Proteksi Rumput & Player
-            local isNature = name:find("grass") or name:find("terrain") or name:find("tree") or name:find("leaf")
-            local isPlayer = v:FindFirstAncestorOfClass("Model") and v:FindFirstAncestorOfClass("Model"):FindFirstChild("Humanoid")
-
-            if not isNature and not isPlayer then
-                -- Cuma bangunan/part map
-                local isBuilding = name:find("wall") or name:find("base") or name:find("floor") or name:find("roof") or name:find("part")
-                
-                if isBuilding then
-                    if _G.XrayActive then
-                        if not v:FindFirstChild("GuritaData") then
-                            local d = Instance.new("StringValue", v); d.Name = "GuritaData"
-                            d.Value = tostring(v.Transparency).."|"..tostring(v.Material.Name)
-                        end
-                        v.Transparency = 0.5
-                        v.Material = Enum.Material.Plastic -- Flat Color Aktif
-                    else
-                        if v:FindFirstChild("GuritaData") then
-                            local data = string.split(v.GuritaData.Value, "|")
-                            v.Transparency = tonumber(data[1])
-                            v.Material = Enum.Material[data[2]]
-                        end
-                    end
+            -- WHY: Biar gak pelangi kaya di foto, kita CUMA sikat yang namanya Wall/Dinding
+            local isWall = name:find("wall") or name:find("dinding")
+            local isNature = name:find("grass") or name:find("floor") or name:find("lantai") or name:find("terrain")
+            
+            if isWall and not isNature then
+                if _G.XrayActive then
+                    v.Transparency = 0.5
+                    v.Material = Enum.Material.Plastic
+                    v.Color = Color3.fromRGB(150, 150, 150) -- Flat Abu Standar
+                else
+                    v.Transparency = 0
+                    v.Material = Enum.Material.SmoothPlastic
                 end
             end
         end
     end
 end
 
--- 2. TRACER BIRU NEON (FITUR BIASA)
+-- 2. TRACER BIRU NEON (RINGAN)
 local function AddTracer(plr)
     local Line = Drawing.new("Line")
     Line.Visible = false
     Line.Color = Color3.fromRGB(0, 160, 255)
-    Line.Thickness = 1.5
-    Line.Transparency = 1
-
+    Line.Thickness = 1
+    
     RunService.RenderStepped:Connect(function()
         if _G.TracerActive and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             local root = plr.Character.HumanoidRootPart
@@ -64,10 +52,10 @@ local function AddTracer(plr)
     end)
 end
 
--- 3. UI MENU GURITA
+-- 3. UI MENU (LIS BIRU)
 local SG = Instance.new("ScreenGui", game.CoreGui)
-local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 130); Main.Position = UDim2.new(0.5, -100, 0.2, 0)
-Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Main.Active = true; Main.Draggable = true; Instance.new("UICorner", Main)
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 180, 0, 120); Main.Position = UDim2.new(0.5, -90, 0.2, 0)
+Main.BackgroundColor3 = Color3.fromRGB(10, 10, 15); Main.Active = true; Main.Draggable = true; Instance.new("UICorner", Main)
 local Border = Instance.new("Frame", Main); Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2); Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0; Instance.new("UICorner", Border)
 
 local function CreateBtn(txt, pos, cb)
@@ -75,15 +63,15 @@ local function CreateBtn(txt, pos, cb)
     b.MouseButton1Click:Connect(function() cb(b) end) return b
 end
 
-CreateBtn("PLAYER TRACER: OFF", UDim2.new(0.05, 0, 0.25, 0), function(b) 
+CreateBtn("TRACER BIRU: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b) 
     _G.TracerActive = not _G.TracerActive
-    b.Text = _G.TracerActive and "TRACER: ON" or "PLAYER TRACER: OFF" 
+    b.Text = _G.TracerActive and "TRACER: ON" or "TRACER BIRU: OFF" 
 end)
 
-CreateBtn("XRAY & FLAT: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b) 
+CreateBtn("XRAY TEMBOK: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b) 
     _G.XrayActive = not _G.XrayActive
-    b.Text = _G.XrayActive and "XRAY: ON" or "XRAY & FLAT: OFF"
-    ApplyXray() 
+    b.Text = _G.XrayActive and "XRAY: ON" or "XRAY TEMBOK: OFF"
+    RefreshXray() 
 end)
 
 -- Init
