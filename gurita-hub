@@ -1,15 +1,17 @@
--- [[ RENZO GURITA - ULTRA LIGHTWEIGHT FLAT ]] --
+-- [[ RENZO GURITA - FLAT MAP WITH TOGGLE ]] --
 
--- Fungsi inti buat bikin polosan
+local Lighting = game:GetService("Lighting")
+_G.FlatActive = false
+
+-- FUNGSI INTI (FLAT COLOR)
 local function SikatRingan(v)
+    if not _G.FlatActive then return end
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
             v.Material = Enum.Material.Plastic
             v.Reflectance = 0
             v.CastShadow = false
-            if v:IsA("MeshPart") then
-                v.TextureID = ""
-            end
+            if v:IsA("MeshPart") then v.TextureID = "" end
         elseif v:IsA("SpecialMesh") then
             v.TextureId = ""
         elseif v:IsA("Texture") or v:IsA("Decal") then
@@ -18,32 +20,73 @@ local function SikatRingan(v)
     end)
 end
 
--- 1. PROSES SUPER SANTAI (Biar Gak Lag Sama Sekali)
-task.spawn(function()
-    local objs = workspace:GetDescendants()
-    for i = 1, #objs do
-        SikatRingan(objs[i])
-        -- Tiap 20 objek, kasih jeda (ini yang bikin enteng banget)
-        if i % 20 == 0 then 
-            task.wait() 
+local function ActivateFlat()
+    -- Lighting & Render (Instant)
+    Lighting.GlobalShadows = false
+    settings().Rendering.QualityLevel = 1
+    
+    -- Proses Map (Bertahap biar gak lag)
+    task.spawn(function()
+        local objs = workspace:GetDescendants()
+        for i = 1, #objs do
+            if not _G.FlatActive then break end
+            SikatRingan(objs[i])
+            if i % 20 == 0 then task.wait() end
         end
+    end)
+end
+
+-- UI MENU DENGAN PINGGIRAN BIRU
+local SG = Instance.new("ScreenGui", game.CoreGui)
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 160, 0, 80)
+Main.Position = UDim2.new(0.5, -80, 0.05, 0)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Main.BorderSizePixel = 2
+Main.BorderColor3 = Color3.fromRGB(0, 150, 255) -- Warna Biru di pinggir
+Main.Active = true
+Main.Draggable = true
+
+local Corner = Instance.new("UICorner", Main)
+Corner.CornerRadius = UDim.new(0, 8)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 25)
+Title.BackgroundTransparency = 1
+Title.Text = "GURITA FLAT"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 14
+
+local Btn = Instance.new("TextButton", Main)
+Btn.Size = UDim2.new(0.85, 0, 0, 35)
+Btn.Position = UDim2.new(0.075, 0, 0.45, 0)
+Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Btn.Text = "OFF"
+Btn.TextColor3 = Color3.new(1, 0, 0) -- Merah (Mati)
+Btn.Font = Enum.Font.SourceSansBold
+Btn.TextSize = 16
+
+local BtnCorner = Instance.new("UICorner", Btn)
+
+-- LOGIKA ON/OFF
+Btn.MouseButton1Click:Connect(function()
+    _G.FlatActive = not _G.FlatActive
+    
+    if _G.FlatActive then
+        Btn.Text = "ON"
+        Btn.TextColor3 = Color3.fromRGB(0, 255, 0) -- Hijau
+        ActivateFlat()
+    else
+        Btn.Text = "OFF"
+        Btn.TextColor3 = Color3.fromRGB(255, 0, 0) -- Merah
+        -- Catatan: Untuk balikin map ke awal harus Rejoin
     end
 end)
 
--- 2. PANTAU OBJEK BARU
+-- Cegat objek baru pas ON
 workspace.DescendantAdded:Connect(function(v)
-    task.delay(0.1, function() SikatRingan(v) end)
+    if _G.FlatActive then
+        task.delay(0.1, function() SikatRingan(v) end)
+    end
 end)
-
--- 3. LIGHTING RINGAN
-local L = game:GetService("Lighting")
-L.GlobalShadows = false
-L.Brightness = 2
-L.EnvironmentDiffuseScale = 0
-L.EnvironmentSpecularScale = 0
-
--- 4. RENDERING PALING RENDAH
-settings().Rendering.QualityLevel = 1
-settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level0
-
-print("Renzo: Ultra Light Active!")
