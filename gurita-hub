@@ -1,51 +1,75 @@
--- [[ GURITA-HUB: THE LAST RESORT - HUMAN MIMIC ]] --
+-- [[ GURITA-HUB: GOD SPEED AUTO-GRAB (0.1ms) ]] --
 
 local lp = game.Players.LocalPlayer
-_G.StealActive = false
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- UI SEADANYA
+_G.GodModeSteal = false
+
+-- 1. UI SIMPLE (BIAR GAK LAG SAMA SEKALI)
 local SG = Instance.new("ScreenGui", game.CoreGui)
-local Btn = Instance.new("TextButton", SG)
-Btn.Size = UDim2.new(0, 150, 0, 50)
-Btn.Position = UDim2.new(0.5, -75, 0.02, 0)
-Btn.Text = "AUTO STEAL: OFF"
-Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-Btn.TextColor3 = Color3.new(1, 1, 1)
+local MainBtn = Instance.new("TextButton", SG)
+MainBtn.Size = UDim2.new(0, 150, 0, 40)
+MainBtn.Position = UDim2.new(0.5, -75, 0, 10)
+MainBtn.Text = "GOD STEAL: OFF"
+MainBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", MainBtn)
 
-Btn.MouseButton1Click:Connect(function()
-    _G.StealActive = not _G.StealActive
-    Btn.Text = _G.StealActive and "AUTO STEAL: ON" or "AUTO STEAL: OFF"
-    Btn.BackgroundColor3 = _G.StealActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+MainBtn.MouseButton1Click:Connect(function()
+    _G.GodModeSteal = not _G.GodModeSteal
+    MainBtn.Text = _G.GodModeSteal and "GOD STEAL: ON" or "GOD STEAL: OFF"
+    MainBtn.BackgroundColor3 = _G.GodModeSteal and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(150, 0, 0)
 end)
 
-task.spawn(function()
-    while task.wait(0.5) do
-        if _G.StealActive then
-            pcall(function()
-                local root = lp.Character.HumanoidRootPart
-                -- Pakai folder yang Abang temuin tadi
-                local folder = workspace:FindFirstChild("RenderedMovingAnimal")
-                
-                if folder then
-                    for _, item in ipairs(folder:GetChildren()) do
-                        local prompt = item:FindFirstChildOfClass("ProximityPrompt") or item:FindFirstChildWhichIsA("ProximityPrompt", true)
+-- 2. THE STEALTH HOOK (Nyontek Kunci Otomatis)
+local savedRemote = nil
+local savedArgs = nil
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = {...}
+    local method = getnamecallmethod()
+    
+    if not checkcaller() and method == "FireServer" and #self.Name > 20 then
+        savedRemote = self
+        savedArgs = args
+    end
+    return oldNamecall(self, ...)
+end)
+
+-- 3. SPEED ENGINE (0.1ms via Heartbeat)
+RunService.Heartbeat:Connect(function()
+    if _G.GodModeSteal then
+        pcall(function()
+            local root = lp.Character.HumanoidRootPart
+            local spawnFolder = workspace:FindFirstChild("RenderedMovingAnimal")
+            
+            if spawnFolder then
+                for _, animal in ipairs(spawnFolder:GetChildren()) do
+                    -- Cek apakah ini beneran item (punya ProximityPrompt)
+                    local prompt = animal:FindFirstChildOfClass("ProximityPrompt") or animal:FindFirstChildWhichIsA("ProximityPrompt", true)
+                    
+                    if prompt then
+                        -- Bypass Jarak & Line of Sight
+                        prompt.HoldDuration = 0
+                        prompt.MaxActivationDistance = 50 -- Sedot dari jauh
+                        prompt.RequiresLineOfSight = false
                         
-                        if prompt and (item:GetPivot().Position - root.Position).Magnitude < 10 then
-                            -- JANGAN dipaksa 0, biarin ada durasi biar server percaya
-                            -- Tapi kita bantu "Hold" otomatis
+                        -- Jarak aman biar gak ke-kick (15-20 stud)
+                        if (animal:GetPivot().Position - root.Position).Magnitude < 20 then
                             
-                            -- Pindah posisi dikit biar beneran nempel
-                            root.CFrame = item:GetPivot() * CFrame.new(0, 2, 0)
+                            -- Kirim Paket Data secepat kilat
+                            if savedRemote and savedArgs then
+                                savedRemote:FireServer(unpack(savedArgs))
+                            end
                             
-                            task.wait(0.1)
-                            fireproximityprompt(prompt) -- Eksekusi
-                            
-                            -- Tunggu sampai proses curi selesai (sesuai durasi asli game)
-                            task.wait(prompt.HoldDuration + 0.2) 
+                            -- Trigger Tombol
+                            fireproximityprompt(prompt)
                         end
                     end
                 end
-            end)
-        end
+            end
+        end)
     end
 end)
