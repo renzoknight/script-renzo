@@ -1,81 +1,88 @@
--- [[ RENZO GURITA - XRAY GURITA V3.1 BUG FIX ]] --
+-- [[ RENZO GURITA - XRAY GURITA V3.2 REBORN ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- 1. AUTO FLAT COLOR (FIX: LOCK WARNA IJO)
-local function ApplyFlat(v)
-    pcall(function()
-        if v:IsA("BasePart") or v:IsA("MeshPart") then
-            local color = v.Color
-            -- Deteksi warna ijo (Rumput/Daun)
-            local isGreen = (color.G > color.R + 0.1 and color.G > color.B + 0.1)
-            local name = v.Name:lower()
-            local isNature = name:find("grass") or name:find("leaf") or name:find("tree") or name:find("terrain")
-
-            if not (isGreen or isNature) then
-                v.Material = Enum.Material.Plastic
-                v.Reflectance = 0
-                v.CastShadow = false
-                if v:IsA("MeshPart") then v.TextureID = "" end
-            end
-        end
-    end)
-end
-
-task.spawn(function()
-    local d = workspace:GetDescendants()
-    for i = 1, #d do
-        ApplyFlat(d[i])
-        if i % 300 == 0 then task.wait() end
-    end
-end)
-workspace.DescendantAdded:Connect(ApplyFlat)
-
--- 2. MASTER ESP & HOLDER ESP (FIX: TEXT BASED)
+-- Global Toggle
 _G.ESPActive = false
+_G.XrayActive = false
 _G.HolderActive = false
 
-local function CreateMasterESP(plr)
-    local Line = Drawing.new("Line")
-    Line.Visible = false; Line.Color = Color3.fromRGB(0, 160, 255); Line.Thickness = 1
-    
+-- 1. UI MENU (Ditaruh paling atas biar pasti muncul)
+local SG = Instance.new("ScreenGui", game.CoreGui)
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 175); Main.Position = UDim2.new(0.5, -100, 0.2, 0)
+Main.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Main.BorderSizePixel = 0; Main.Active = true; Main.Draggable = true
+Instance.new("UICorner", Main)
+local Border = Instance.new("Frame", Main); Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2); Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0; Instance.new("UICorner", Border)
+local Title = Instance.new("TextLabel", Main); Title.Size = UDim2.new(1, 0, 0, 30); Title.BackgroundTransparency = 1; Title.Text = "XRAY GURITA V3.2"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBold; Title.TextSize = 13
+
+local function CreateBtn(txt, pos, cb)
+    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(0, 160, 255); b.BackgroundTransparency = 0.8; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() cb(b) end) return b
+end
+
+-- 2. FLAT COLOR & XRAY LOGIC
+local function ProcessPart(v)
+    if v:IsA("BasePart") or v:IsA("MeshPart") then
+        local name = v.Name:lower()
+        -- Proteksi Alam (Rumput dkk)
+        local isNature = name:find("grass") or name:find("tree") or name:find("leaf") or name:find("bush") or name:find("terrain")
+        
+        if not isNature then
+            -- Flat Color
+            v.Material = Enum.Material.Plastic
+            if v:IsA("MeshPart") then v.TextureID = "" end
+            
+            -- Xray Logic (Hanya Tembok/Base)
+            local isBuilding = name:find("wall") or name:find("base") or name:find("door") or name:find("roof") or name:find("floor")
+            if isBuilding and _G.XrayActive then
+                v.Transparency = 0.5
+            elseif isBuilding and not _G.XrayActive then
+                v.Transparency = 0
+            end
+        end
+    end
+end
+
+-- 3. MASTER ESP SYSTEM
+local function CreateESP(plr)
     local function Setup()
         local char = plr.Character or plr.CharacterAdded:Wait()
-        local root = char:WaitForChild("HumanoidRootPart", 10)
-        local head = char:WaitForChild("Head", 10)
+        local root = char:WaitForChild("HumanoidRootPart", 5)
+        local head = char:WaitForChild("Head", 5)
+        if not root or not head then return end
+
+        local bbg = Instance.new("BillboardGui", root); bbg.AlwaysOnTop = true; bbg.Size = UDim2.new(0, 100, 0, 20); bbg.ExtentsOffset = Vector3.new(0, 3, 0)
+        local tag = Instance.new("TextLabel", bbg); tag.Size = UDim2.new(1, 0, 1, 0); tag.BackgroundTransparency = 1; tag.TextColor3 = Color3.new(1, 1, 0); tag.Font = Enum.Font.GothamBold; tag.TextSize = 12; tag.Text = plr.Name
         
-        -- Tag Nama
-        local bbg = Instance.new("BillboardGui", root)
-        bbg.Name = "SmartTag"; bbg.AlwaysOnTop = true; bbg.Size = UDim2.new(0, 80, 0, 20); bbg.ExtentsOffset = Vector3.new(0, 3, 0)
-        local tag = Instance.new("TextLabel", bbg); tag.Size = UDim2.new(1, 0, 1, 0); tag.BackgroundTransparency = 1
-        tag.Text = plr.Name; tag.TextColor3 = Color3.new(1, 1, 0); tag.Font = Enum.Font.GothamBold; tag.TextStrokeTransparency = 0.5
-        
-        -- Holder Tag (Ganti ke Text biar gak bug)
-        local hbg = Instance.new("BillboardGui", head)
-        hbg.Name = "HolderTag"; hbg.AlwaysOnTop = true; hbg.Size = UDim2.new(0, 50, 0, 20); hbg.ExtentsOffset = Vector3.new(0, 4.5, 0)
-        local htag = Instance.new("TextLabel", hbg); htag.Size = UDim2.new(1, 0, 1, 0); htag.BackgroundTransparency = 1
-        htag.Text = "[ ITEM ]"; htag.TextColor3 = Color3.fromRGB(0, 255, 255); htag.Font = Enum.Font.GothamBold; htag.TextSize = 12; htag.Visible = false
+        local hbg = Instance.new("BillboardGui", head); hbg.AlwaysOnTop = true; hbg.Size = UDim2.new(0, 100, 0, 20); hbg.ExtentsOffset = Vector3.new(0, 5, 0)
+        local htag = Instance.new("TextLabel", hbg); htag.Size = UDim2.new(1, 0, 1, 0); htag.BackgroundTransparency = 1; htag.TextColor3 = Color3.new(0, 1, 1); htag.Font = Enum.Font.GothamBold; htag.TextSize = 11; htag.Text = "[ ITEM ]"; htag.Visible = false
 
         game:GetService("RunService").RenderStepped:Connect(function()
-            if _G.ESPActive and char and root then
-                local Pos, OnScreen = Camera:WorldToViewportPoint(root.Position)
-                if OnScreen then
-                    Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y); Line.To = Vector2.new(Pos.X, Pos.Y); Line.Visible = true
-                    bbg.Enabled = true
-                else Line.Visible = false; bbg.Enabled = false end
-            else Line.Visible = false; bbg.Enabled = false end
-            
-            -- Holder Check (Kalo megang Tool atau ada objek nempel di tangan)
-            if _G.HolderActive then
-                local hasItem = char:FindFirstChildOfClass("Tool") or (char:FindFirstChild("Right Arm") and #char["Right Arm"]:GetChildren() > 0)
-                htag.Visible = hasItem and true or false
-            else htag.Visible = false end
+            bbg.Enabled = _G.ESPActive
+            if _G.HolderActive and char:FindFirstChildOfClass("Tool") then htag.Visible = true else htag.Visible = false end
         end)
     end
     task.spawn(Setup); plr.CharacterAdded:Connect(Setup)
 end
 
--- [[ UI & XRAY TETEP SAMA ]] --
--- (Tinggal copy sisa UI dari script sebelumnya)
+-- 4. BUTTONS CONFIG
+CreateBtn("ESP & TRACER: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b) 
+    _G.ESPActive = not _G.ESPActive; b.Text = _G.ESPActive and "ESP: ON" or "ESP: OFF" 
+end)
+
+CreateBtn("XRAY BASE: OFF", UDim2.new(0.05, 0, 0.45, 0), function(b) 
+    _G.XrayActive = not _G.XrayActive; b.Text = _G.XrayActive and "XRAY: ON" or "XRAY: OFF"
+    for _, v in pairs(workspace:GetDescendants()) do ProcessPart(v) end
+end)
+
+CreateBtn("HOLDER ESP: OFF", UDim2.new(0.05, 0, 0.7, 0), function(b) 
+    _G.HolderActive = not _G.HolderActive; b.Text = _G.HolderActive and "HOLDER: ON" or "HOLDER: OFF" 
+end)
+
+-- Initial Run
+for _, v in pairs(workspace:GetDescendants()) do ProcessPart(v) end
+for _, p in pairs(Players:GetPlayers()) do if p ~= lp then CreateESP(p) end end
+Players.PlayerAdded:Connect(CreateESP)
+workspace.DescendantAdded:Connect(ProcessPart)
