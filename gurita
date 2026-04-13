@@ -1,6 +1,6 @@
--- [[ GURITA-HUB: GOST STEAL V2 - CORE FIX ]] --
+-- [[ GURITA-HUB: GOST STEAL V2 - ULTIMATE FIX ]] --
 
--- 1. FLAT COLOR (INSTAN & WAJIB)
+-- 1. FLAT COLOR (INSTAN & OPTIMIZED)
 local function SetFlat(v)
     pcall(function()
         if v:IsA("BasePart") then
@@ -13,7 +13,10 @@ local function SetFlat(v)
     end)
 end
 
-for _, v in ipairs(workspace:GetDescendants()) do SetFlat(v) end
+-- Langsung sikat tanpa loading lama
+task.spawn(function()
+    for _, v in ipairs(workspace:GetDescendants()) do SetFlat(v) end
+end)
 workspace.DescendantAdded:Connect(SetFlat)
 
 -- 2. CUSTOM MENU (GOST STEAL v2 STYLE)
@@ -49,7 +52,7 @@ ActionBtn.Font = Enum.Font.SourceSansBold
 ActionBtn.TextSize = 18
 Instance.new("UICorner", ActionBtn).CornerRadius = UDim.new(0, 8)
 
--- 3. LOGIKA STEAL (FIXED & AGRESSIVE)
+-- 3. LOGIKA REAL STEAL (PROXIMITY & TOUCH BYPASS)
 _G.StealActive = false
 
 ActionBtn.MouseButton1Click:Connect(function()
@@ -60,26 +63,31 @@ end)
 
 task.spawn(function()
     local lp = game.Players.LocalPlayer
-    while task.wait(0.05) do -- Sangat cepat (0.05 detik)
+    while task.wait(0.01) do -- Speed gila (0.01s) biar instan
         if _G.StealActive then
             pcall(function()
-                local root = lp.Character.HumanoidRootPart
+                local char = lp.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+
+                -- Gunakan GetPartBoundsInRadius agar radiusnya AKURAT (40 meter)
+                local parts = workspace:GetPartBoundsInRadius(root.Position, 40)
                 
-                -- Cari semua ProximityPrompt di workspace (Tombol E Collect)
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("ProximityPrompt") then
-                        -- Cek jarak antara karakter dan tombol E (Radius 40 meter)
-                        local pos = v.Parent:IsA("Model") and v.Parent:GetPivot().Position or v.Parent.Position
-                        if (pos - root.Position).Magnitude < 40 then
-                            -- PAKSA eksekusi tombol E tanpa nunggu (Instant Steal)
-                            fireproximityprompt(v)
-                        end
+                for _, p in ipairs(parts) do
+                    -- 1. BYPASS PROXIMITY (Tombol E Collect/Steal)
+                    -- Ini yang bikin dia gak cuma 'klik' tapi benar-benar ngambil
+                    local prompt = p:FindFirstChildOfClass("ProximityPrompt") or p.Parent:FindFirstChildOfClass("ProximityPrompt")
+                    if prompt then
+                        -- Set HoldDuration jadi 0 biar instan tanpa loading bar
+                        prompt.HoldDuration = 0
+                        fireproximityprompt(prompt)
                     end
                     
-                    -- Tambahan: Sedot item yang jatoh/melayang pakai TouchInterest
-                    if v:IsA("TouchTransmitter") and (v.Parent.Position - root.Position).Magnitude < 40 then
-                        firetouchinterest(root, v.Parent, 0)
-                        firetouchinterest(root, v.Parent, 1)
+                    -- 2. FORCE TOUCH (Item yang melayang/jatuh)
+                    -- Kita tembak langsung ke TouchInterest-nya
+                    if p:FindFirstChildOfClass("TouchTransmitter") then
+                        firetouchinterest(root, p, 0)
+                        firetouchinterest(root, p, 1)
                     end
                 end
             end)
