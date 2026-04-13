@@ -1,4 +1,7 @@
--- [[ GURITA-HUB: AUTO STEAL FINAL BYPASS ]] --
+-- [[ GURITA-HUB: AUTO STEAL - STEALTH VERSION ]] --
+
+local lp = game.Players.LocalPlayer
+_G.StealActive = false
 
 -- 1. UI GOST STEAL v2
 local SG = Instance.new("ScreenGui", game.CoreGui)
@@ -19,30 +22,50 @@ ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ActionBtn.Font = Enum.Font.SourceSansBold
 Instance.new("UICorner", ActionBtn).CornerRadius = UDim.new(0, 8)
 
--- 2. LOGIKA REMOTE STEAL (DARI SIMPLESPY ABANG)
-_G.StealActive = false
-
 ActionBtn.MouseButton1Click:Connect(function()
     _G.StealActive = not _G.StealActive
     ActionBtn.Text = _G.StealActive and "STOP" or "START"
     ActionBtn.BackgroundColor3 = _G.StealActive and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 150, 255)
 end)
 
+-- 2. LOGIKA AUTO-DETECT (BIAR GAK CAPEK CEK SIMPLESPY)
 task.spawn(function()
-    -- Path Remote dari foto SimpleSpy Abang
-    -- Nama remote: 0b43c17e5ca18...
-    local remotePath = game:GetService("ReplicatedStorage"):WaitForChild("0b43c17e5ca184988716b110f5453086")
-    
-    while task.wait(0.3) do -- Jeda biar gak kick
+    while task.wait(0.3) do
         if _G.StealActive then
             pcall(function()
-                -- Args dari foto Abang
-                local args = {
-                    [1] = "33\163A33\163A"
-                }
+                local root = lp.Character.HumanoidRootPart
                 
-                -- Tembak langsung ke server
-                remotePath:FireServer(unpack(args))
+                -- Cari Remote Event yang namanya kode acak (Panjang karakternya banyak)
+                local targetRemote = nil
+                for _, v in ipairs(game:GetService("ReplicatedStorage"):GetChildren()) do
+                    if v:IsA("RemoteEvent") and string.len(v.Name) > 20 then
+                        targetRemote = v
+                        break
+                    end
+                end
+
+                -- Jika dapet remotenya, langsung sikat barang terdekat
+                if targetRemote then
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        if obj:IsA("ProximityPrompt") and (obj.ActionText:lower():find("steal") or obj.ActionText:lower():find("mencuri")) then
+                            local parent = obj.Parent
+                            if parent:IsA("BasePart") and (parent.Position - root.Position).Magnitude < 15 then
+                                
+                                -- Bypass Lapis 1: Friend System Sync
+                                pcall(function()
+                                    game:GetService("ReplicatedStorage").Friends.FriendMain:FireServer()
+                                end)
+
+                                -- Bypass Lapis 2: Steal Trigger
+                                local args = { [1] = "33\163A33\163A" }
+                                targetRemote:FireServer(unpack(args))
+                                
+                                -- Trigger Visual (Biar server gak curiga)
+                                fireproximityprompt(obj)
+                            end
+                        end
+                    end
+                end
             end)
         end
     end
