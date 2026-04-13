@@ -1,11 +1,11 @@
--- [[ RENZO GURITA - AUTO FLAT & LIGHT TRACER ESP ]] --
+-- [[ RENZO GURITA - SMART ESP & XRAY BASE ]] --
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- 1. FITUR WAJIB: AUTO FLAT COLOR (LANGSUNG AKTIF - NO LAG)
+-- 1. AUTO FLAT COLOR (WAJIB & INSTAN)
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
@@ -13,128 +13,136 @@ local function ApplyFlat(v)
             v.Reflectance = 0
             v.CastShadow = false
             if v:IsA("MeshPart") then v.TextureID = "" end
-        end
-        if v:IsA("Texture") or v:IsA("Decal") then
-            v:Destroy()
-        end
-        if v:IsA("SpecialMesh") then
+        elseif v:IsA("SpecialMesh") then
             v.TextureId = "" 
+        elseif v:IsA("Texture") or v:IsA("Decal") then
+            v:Destroy()
         end
     end)
 end
 
--- Eksekusi Map (Bertahap biar HP gak panas)
 task.spawn(function()
-    settings().Rendering.QualityLevel = 1
-    Lighting.GlobalShadows = false
     local d = workspace:GetDescendants()
     for i = 1, #d do
         ApplyFlat(d[i])
-        if i % 150 == 0 then task.wait() end
+        if i % 200 == 0 then task.wait() end
     end
 end)
 workspace.DescendantAdded:Connect(ApplyFlat)
 
--- 2. FITUR ESP PLAYER (NAMA SEDANG & TRACER LINE)
+-- 2. LOGIKA X-RAY BASE
+_G.XrayActive = false
+local function ApplyXray()
+    task.spawn(function()
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and (v.Name:lower():find("base") or v.Name:lower():find("wall")) then
+                v.LocalTransparencyModifier = _G.XrayActive and 0.5 or 0
+            end
+        end
+    end)
+end
+
+-- 3. SMART ESP (NAMA MENGECIL SAAT JAUH)
 _G.ESPActive = false
 
-local function CreateLightESP(plr)
-    -- Tracer Line (Garis Pengikut)
+local function CreateSmartESP(plr)
     local Line = Drawing.new("Line")
     Line.Visible = false
-    Line.Color = Color3.new(0, 1, 1) -- Biru Cyan
+    Line.Color = Color3.fromRGB(0, 160, 255)
     Line.Thickness = 1
-    Line.Transparency = 0.8
+    Line.Transparency = 0.7
 
-    local function UpdateESP()
+    local function Update()
         local Connection
         Connection = game:GetService("RunService").RenderStepped:Connect(function()
             if _G.ESPActive and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
                 local Root = plr.Character.HumanoidRootPart
                 local Pos, OnScreen = Camera:WorldToViewportPoint(Root.Position)
+                local Dist = (Camera.CFrame.Position - Root.Position).Magnitude
 
                 if OnScreen then
-                    -- Update Garis Tracer
+                    -- Tracer
                     Line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                     Line.To = Vector2.new(Pos.X, Pos.Y)
                     Line.Visible = true
+                    
+                    -- Nama Dinamis (Billboard)
+                    local bbg = Root:FindFirstChild("SmartTag")
+                    if bbg then
+                        bbg.Enabled = true
+                        -- Ukuran mengecil sesuai jarak
+                        local size = math.clamp(20 - (Dist/20), 10, 18)
+                        bbg.Tag.TextSize = size
+                    end
                 else
                     Line.Visible = false
+                    if Root:FindFirstChild("SmartTag") then Root.SmartTag.Enabled = false end
                 end
             else
                 Line.Visible = false
-                if not plr.Parent then
-                    Line:Remove()
-                    Connection:Disconnect()
-                end
+                if not plr.Parent then Line:Remove(); Connection:Disconnect() end
             end
         end)
     end
 
-    -- Billboard untuk Nama (Ukuran Sedang)
     local function SetupTag()
         local char = plr.Character or plr.CharacterAdded:Wait()
         local root = char:WaitForChild("HumanoidRootPart", 10)
-        local bbg = root:FindFirstChild("LightESP") or Instance.new("BillboardGui", root)
-        bbg.Name = "LightESP"
+        local bbg = Instance.new("BillboardGui", root)
+        bbg.Name = "SmartTag"
         bbg.AlwaysOnTop = true
-        bbg.Size = UDim2.new(0, 150, 0, 40)
-        bbg.ExtentsOffset = Vector3.new(0, 4, 0)
-        bbg.Enabled = _G.ESPActive
-
-        local nameTag = bbg:FindFirstChild("Tag") or Instance.new("TextLabel", bbg)
-        nameTag.Size = UDim2.new(1, 0, 1, 0)
-        nameTag.BackgroundTransparency = 1
-        nameTag.Text = plr.Name
-        nameTag.TextColor3 = Color3.new(1, 1, 0)
-        nameTag.TextScaled = false
-        nameTag.TextSize = 14 -- Ukuran tidak terlalu besar
-        nameTag.Font = Enum.Font.GothamBold
-        nameTag.TextStrokeTransparency = 0.5
+        bbg.Size = UDim2.new(0, 100, 0, 30)
+        bbg.ExtentsOffset = Vector3.new(0, 3, 0)
+        
+        local tag = Instance.new("TextLabel", bbg)
+        tag.Name = "Tag"
+        tag.Size = UDim2.new(1, 0, 1, 0)
+        tag.BackgroundTransparency = 1
+        tag.Text = plr.Name
+        tag.TextColor3 = Color3.new(1, 1, 0)
+        tag.Font = Enum.Font.GothamBold
+        tag.TextStrokeTransparency = 0.5
     end
 
-    task.spawn(UpdateESP)
-    SetupTag()
+    task.spawn(Update); SetupTag()
     plr.CharacterAdded:Connect(SetupTag)
 end
 
--- 3. MENU (LIS BIRU - HULK STYLE)
+-- 4. MENU (HULK STYLE - LIS BIRU)
 local SG = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 90)
+Main.Size = UDim2.new(0, 200, 0, 140)
 Main.Position = UDim2.new(0.5, -100, 0.1, 0)
 Main.BackgroundColor3 = Color3.fromRGB(5, 10, 20)
 Main.BorderSizePixel = 0
 Main.Active = true; Main.Draggable = true
+Instance.new("UICorner", Main)
 
 local Border = Instance.new("Frame", Main)
 Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2)
 Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0
-Instance.new("UICorner", Border); Instance.new("UICorner", Main)
+Instance.new("UICorner", Border)
 
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 25); Title.BackgroundTransparency = 1
-Title.Text = "GURITA V3 - TRACER"; Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Font = Enum.Font.GothamBold; Title.TextSize = 12
+local function CreateBtn(name, pos, callback)
+    local b = Instance.new("TextButton", Main)
+    b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos
+    b.BackgroundColor3 = Color3.fromRGB(0, 160, 255); b.BackgroundTransparency = 0.8
+    b.Text = name; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(callback)
+    return b
+end
 
-local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0.9, 0, 0, 40); Btn.Position = UDim2.new(0.05, 0, 0.45, 0)
-Btn.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Btn.BackgroundTransparency = 0.7
-Btn.Text = "ESP & TRACER: OFF"; Btn.TextColor3 = Color3.new(1, 1, 1)
-Btn.Font = Enum.Font.GothamBold; Instance.new("UICorner", Btn)
-
-Btn.MouseButton1Click:Connect(function()
+local espBtn = CreateBtn("ESP & TRACER: OFF", UDim2.new(0.05, 0, 0.25, 0), function()
     _G.ESPActive = not _G.ESPActive
-    Btn.Text = _G.ESPActive and "ESP & TRACER: ON" or "ESP & TRACER: OFF"
-    Btn.TextColor3 = _G.ESPActive and Color3.new(0, 1, 1) or Color3.new(1, 1, 1)
-    
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local e = p.Character.HumanoidRootPart:FindFirstChild("LightESP")
-            if e then e.Enabled = _G.ESPActive end
-        end
-    end
+    Main.TextButton.Text = _G.ESPActive and "ESP & TRACER: ON" or "ESP & TRACER: OFF"
 end)
 
-for _, p in ipairs(Players:GetPlayers()) do if p ~= lp then CreateLightESP(p) end end
-Players.PlayerAdded:Connect(CreateLightESP)
+CreateBtn("XRAY BASE: OFF", UDim2.new(0.05, 0, 0.6, 0), function(self)
+    _G.XrayActive = not _G.XrayActive
+    self.Text = _G.XrayActive and "XRAY BASE: ON" or "XRAY BASE: OFF"
+    ApplyXray()
+end)
+
+for _, p in ipairs(Players:GetPlayers()) do if p ~= lp then CreateSmartESP(p) end end
+Players.PlayerAdded:Connect(CreateSmartESP)
