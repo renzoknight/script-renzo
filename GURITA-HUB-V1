@@ -1,0 +1,145 @@
+-- [[ GURITA HUB V4.5 - SMART HIDE & SAVE SYSTEM ]] --
+
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local CG = game:GetService("CoreGui")
+
+-- 1. CONFIG & SAVE SYSTEM
+local filename = "GH_Settings_Ezra.json"
+_G.GH_Settings = {
+    ESP_Player_GH = false,
+    Xray_GH = false,
+    AutoCollect_GH = false,
+    ESP_Egg_GH = false
+}
+
+local function SaveSettings()
+    if writefile then
+        pcall(function()
+            writefile(filename, HttpService:JSONEncode(_G.GH_Settings))
+        end)
+    end
+end
+
+local function LoadSettings()
+    if isfile and isfile(filename) then
+        local success, data = pcall(function() return HttpService:JSONDecode(readfile(filename)) end)
+        if success and data then _G.GH_Settings = data end
+    end
+end
+LoadSettings()
+
+-- 2. DRAGGABLE FUNCTION
+local function MakeDraggable(obj)
+    local dragging, dragInput, dragStart, startPos
+    obj.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; dragStart = input.Position; startPos = obj.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    obj.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            obj.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- 3. UI CONSTRUCTION
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GH_SmartHide_V45"
+
+-- Tombol Pembuka "GH" (Stand By di Atas)
+local GHTxtBtn = Instance.new("TextButton", SG)
+GHTxtBtn.Size = UDim2.new(0, 60, 0, 30); GHTxtBtn.Position = UDim2.new(0.5, -30, 0.05, 0)
+GHTxtBtn.BackgroundTransparency = 1; GHTxtBtn.Text = "GH"
+GHTxtBtn.TextColor3 = Color3.fromRGB(0, 170, 255); GHTxtBtn.Font = Enum.Font.GothamBold; GHTxtBtn.TextSize = 24
+GHTxtBtn.TextStrokeTransparency = 0.5
+MakeDraggable(GHTxtBtn)
+
+-- Main Menu Frame
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 420, 0, 280); Main.Position = UDim2.new(0.5, -210, 0.4, 0)
+Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fromRGB(0, 150, 255); MainStroke.Thickness = 2
+MakeDraggable(Main)
+
+-- Tombol Close (Hanya Sembunyikan Menu)
+local CloseBtn = Instance.new("TextButton", Main)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.BackgroundTransparency = 1; CloseBtn.Text = "X"; CloseBtn.TextColor3 = Color3.new(1, 0, 0)
+CloseBtn.Font = Enum.Font.GothamBold; CloseBtn.TextSize = 18
+CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
+
+GHTxtBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+
+-- Sidebar & Pages
+local Sidebar = Instance.new("Frame", Main)
+Sidebar.Size = UDim2.new(0, 120, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 28); Sidebar.BorderSizePixel = 0
+Instance.new("UICorner", Sidebar)
+local SideLayout = Instance.new("UIListLayout", Sidebar); SideLayout.Padding = UDim.new(0, 5); SideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local Pages = Instance.new("Frame", Main)
+Pages.Size = UDim2.new(1, -130, 1, -60); Pages.Position = UDim2.new(0, 125, 0, 10); Pages.BackgroundTransparency = 1
+
+local function CreatePage(name)
+    local p = Instance.new("ScrollingFrame", Pages); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 2
+    Instance.new("UIListLayout", p).Padding = UDim.new(0, 8)
+    return p
+end
+
+local PagePaska = CreatePage("PASKA"); local PageESP = CreatePage("ESP")
+PagePaska.Visible = true
+
+local function CreateSideBtn(txt, page)
+    local b = Instance.new("TextButton", Sidebar)
+    b.Size = UDim2.new(0.9, 0, 0, 35); b.BackgroundColor3 = Color3.fromRGB(25, 25, 40); b.Text = txt
+    b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function()
+        for _, v in pairs(Pages:GetChildren()) do if v:IsA("ScrollingFrame") then v.Visible = false end end
+        page.Visible = true
+    end)
+end
+CreateSideBtn("PASKA EVENT", PagePaska); CreateSideBtn("ESP", PageESP)
+
+-- Toggle & Save System
+local function CreateToggle(parent, txt, var, callback)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(22, 22, 35)
+    
+    local function UpdateBtn()
+        local status = _G.GH_Settings[var]
+        b.Text = txt..(status and ": ON" or ": OFF")
+        b.TextColor3 = status and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+    end
+    UpdateBtn()
+
+    b.MouseButton1Click:Connect(function()
+        _G.GH_Settings[var] = not _G.GH_Settings[var]
+        UpdateBtn(); callback()
+    end)
+    Instance.new("UICorner", b)
+end
+
+-- Save Button
+local SaveBtn = Instance.new("TextButton", Main)
+SaveBtn.Size = UDim2.new(0, 120, 0, 30); SaveBtn.Position = UDim2.new(0.5, -60, 1, -40)
+SaveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255); SaveBtn.Text = "SAVE SETTINGS"
+SaveBtn.TextColor3 = Color3.new(1, 1, 1); SaveBtn.Font = Enum.Font.GothamBold; SaveBtn.TextSize = 10; Instance.new("UICorner", SaveBtn)
+SaveBtn.MouseButton1Click:Connect(function() SaveSettings() end)
+
+-- [[ FITUR ]] --
+CreateToggle(PagePaska, "Auto Collect Koin Paska GH", "AutoCollect_GH", function() end)
+CreateToggle(PagePaska, "ESP EGG HUNT GH", "ESP_Egg_GH", function() end)
+CreateToggle(PageESP, "ESC Player GH", "ESP_Player_GH", function() end)
+CreateToggle(PageESP, "X-Rey GH", "Xray_GH", function() end)
