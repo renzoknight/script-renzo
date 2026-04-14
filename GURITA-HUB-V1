@@ -1,4 +1,4 @@
--- [[ GURITA HUB V6.4.7 - NEON BORDER LOGO ]] --
+-- [[ GURITA HUB V6.4.9 - AUTO-MERGE FULL EDITION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -6,8 +6,10 @@ local CG = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 
--- 1. DATABASE & CONFIG
+-- 1. DATABASE & CONFIG (SAVE/LOAD SYSTEM)
 local ConfigFile = "GHS_Config_Final.json"
+local AllowedEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako"}
+
 _G.GH_Config = {
     ESP_Player_GH = false,
     Xray_GH = false,
@@ -29,7 +31,7 @@ local function LoadData()
 end
 LoadData()
 
--- [[ FITUR FLAT COLOR ]] --
+-- [[ FITUR FLAT COLOR (ANTI-LAG) ]] --
 local function ApplyFlat(v)
     pcall(function()
         if (v:IsA("BasePart") or v:IsA("MeshPart")) and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
@@ -43,14 +45,17 @@ local function ApplyFlat(v)
     end)
 end
 
--- [[ FIX X-RAY ]] --
+-- [[ FITUR X-RAY (BASE-ONLY) ]] --
 local function RunXray()
     task.spawn(function()
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
+            if v:IsA("BasePart") then
                 local n = v.Name:lower()
-                if n:find("wall") or n:find("floor") or n:find("base") or n:find("part") or n:find("door") or n:find("plate") or n:find("ground") then
+                -- Hanya nembus lantai/baseplate sesuai request terakhir
+                if n == "baseplate" or n == "base" or n == "ground" or n == "floor" then
                     v.LocalTransparencyModifier = _G.GH_Config.Xray_GH and 0.6 or 0
+                else
+                    v.LocalTransparencyModifier = 0
                 end
             end
         end
@@ -61,11 +66,11 @@ end
 if CG:FindFirstChild("GHS_MainUI_V64") then CG.GHS_MainUI_V64:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V64"
 
--- LOGO G H (Background Hitam, Pinggiran RGB)
+-- LOGO G H (BG HITAM, BORDER RGB NEON)
 local LogoBtn = Instance.new("TextButton", SG)
 LogoBtn.Size = UDim2.new(0, 65, 0, 65)
 LogoBtn.Position = UDim2.new(0, 15, 0.3, 0)
-LogoBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Background Hitam Pekat
+LogoBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 LogoBtn.Text = "G H"
 LogoBtn.TextColor3 = Color3.new(1, 1, 1)
 LogoBtn.Font = Enum.Font.GothamBlack
@@ -73,12 +78,11 @@ LogoBtn.TextSize = 22
 Instance.new("UICorner", LogoBtn).CornerRadius = UDim.new(1, 0)
 LogoBtn.Draggable = true; LogoBtn.Active = true
 
--- Stroke Logo yang bakal ganti warna
 local LogoStroke = Instance.new("UIStroke", LogoBtn)
-LogoStroke.Thickness = 4 -- Agak tebal biar neon-nya kelihatan
+LogoStroke.Thickness = 4
 LogoStroke.Color = Color3.fromRGB(0, 150, 255)
 
--- RGB Cycle buat PINGGIRAN Logo
+-- RGB Cycle for Border
 task.spawn(function()
     local colors = {Color3.fromRGB(0, 150, 255), Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 220, 0), Color3.fromRGB(160, 32, 240)}
     local i = 1
@@ -89,7 +93,7 @@ task.spawn(function()
     end
 end)
 
--- MAIN FRAME
+-- MAIN FRAME (BLACK & BLUE)
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 440, 0, 260)
 Main.Position = UDim2.new(0.5, -220, 0.5, -130)
@@ -124,7 +128,7 @@ local function CreateSideBtn(txt, p)
 end
 CreateSideBtn("EVENT", P1); CreateSideBtn("ESP", P2)
 
--- TOGGLE
+-- TOGGLE WITH AUTO-SAVE
 local function CreateToggle(parent, txt, var, callback)
     local b = Instance.new("TextButton", parent)
     b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(15, 15, 20); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b)
@@ -145,7 +149,7 @@ CreateToggle(P1, "ESP Egg", "ESP_Egg_GH")
 CreateToggle(P2, "ESP Player", "ESP_Player_GH")
 CreateToggle(P2, "X-Ray", "Xray_GH", function() RunXray() end)
 
--- [[ RUNNER ]] --
+-- [[ AUTO-RUN ENGINE ]] --
 task.spawn(function()
     for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
     workspace.DescendantAdded:Connect(ApplyFlat)
