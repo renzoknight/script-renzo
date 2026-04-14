@@ -1,13 +1,12 @@
--- [[ GURITA HUB V6.4.26 - TYCOON BASE SPECIALIST ]] --
+-- [[ GURITA HUB V6.4.27 - THE ULTIMATE FIX ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local CG = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 
--- 1. CONFIG
+-- 1. CONFIG & TARGETS
 local AllowedEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako"}
-
 _G.GH_Config = {
     ESP_Player_GH = false,
     Xray_GH = false,
@@ -16,33 +15,35 @@ _G.GH_Config = {
     FlatColor_GH = true
 }
 
--- [[ 2. AUTO FLAT COLOR (OPTIMIZED) ]] --
-local function ApplyFlat(v)
-    if _G.GH_Config.FlatColor_GH then
+-- [[ 2. BRUTAL FLAT COLOR (Memaksa Material Plastic) ]] --
+local function ForceFlat(v)
+    if _G.GH_Config.FlatColor_GH and v:IsA("BasePart") then
         pcall(function()
-            if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+            -- Jangan ganggu karakter pemain
+            if not v:IsDescendantOf(lp.Character) and not v.Parent:FindFirstChild("Humanoid") then
                 v.Material = Enum.Material.Plastic
                 v.CastShadow = false
                 if v:IsA("MeshPart") then v.TextureID = "" end
+                for _, child in pairs(v:GetChildren()) do
+                    if child:IsA("Texture") or child:IsA("Decal") then child:Destroy() end
+                end
             end
         end)
     end
 end
 
--- [[ 3. TYCOON BASE X-RAY (Sesuai Gambar Overview) ]] --
-local function ToggleXray()
+-- [[ 3. SMART TYCOON X-RAY (Fokus Area Base Sesuai Gambar) ]] --
+local function RefreshXray()
     local is_on = _G.GH_Config.Xray_GH
-    
-    -- Mencari area Tycoon/Base pemain di Workspace
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
-            local name = v.Name:lower()
-            -- Fokus hanya ke lantai di dalam gedung Base (Tycoon)
-            -- Sesuai gambar: Lantai gedung biasanya punya part bernama Floor atau Part di dalam model Base
-            if (name:find("floor") or name == "baseplate") and v.Parent.Name:find("Base") then
+            -- Cari part yang ada di dalam model bernama "Base" atau "Tycoon"
+            local is_base_part = v.Parent.Name:find("Base") or v.Parent.Name:find("Tycoon") or v.Name == "Baseplate"
+            
+            if is_base_part and (v.Name:lower():find("floor") or v.Name == "Baseplate" or v.Name == "Base") then
                 v.LocalTransparencyModifier = is_on and 0.8 or 0
             else
-                -- Objek luar seperti tembok pembatas merah & rumput tetap normal (0)
+                -- Objek penting (Tembok, Pembatas Merah, Rumput) jangan dibeningin
                 v.LocalTransparencyModifier = 0
             end
         end
@@ -116,18 +117,19 @@ end
 
 CreateToggle(P1, "Auto Collect", "AutoCollect_GH")
 CreateToggle(P1, "ESP Egg", "ESP_Egg_GH", function() UpdateESP() end)
-CreateToggle(P1, "Flat Color", "FlatColor_GH")
+CreateToggle(P1, "Flat Color", "FlatColor_GH", function() for _,v in pairs(workspace:GetDescendants()) do ForceFlat(v) end end)
 CreateToggle(P2, "ESP Player", "ESP_Player_GH", function() UpdateESP() end)
-CreateToggle(P2, "X-Ray Tycoon", "Xray_GH", function() ToggleXray() end)
+CreateToggle(P2, "X-Ray Base", "Xray_GH", function() RefreshXray() end)
 
--- [[ 6. ENGINE LOOP ]] --
+-- [[ 6. MAIN ENGINE LOOP ]] --
 task.spawn(function()
-    while task.wait(5) do 
+    -- Apply awal
+    for _, v in pairs(workspace:GetDescendants()) do ForceFlat(v) end
+    -- Deteksi objek baru (biar flat color gak mati)
+    workspace.DescendantAdded:Connect(ForceFlat)
+    
+    while task.wait(3) do 
         UpdateESP() 
-        if _G.GH_Config.Xray_GH then ToggleXray() end
-        -- Re-Apply Flat Color untuk objek baru
-        if _G.GH_Config.FlatColor_GH then
-            for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
-        end
+        if _G.GH_Config.Xray_GH then RefreshXray() end
     end
 end)
