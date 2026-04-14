@@ -7,13 +7,36 @@ ScreenGui.Name = "GuritaHubGui"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- --- 1. Main Frame ---
+-- --- 1. LOGO "GH" (Tetap Ada di Layar) ---
+local LogoButton = Instance.new("TextButton")
+LogoButton.Name = "LogoGH"
+LogoButton.Parent = ScreenGui
+LogoButton.Size = UDim2.new(0, 50, 0, 50)
+LogoButton.Position = UDim2.new(0.5, -25, 0, 10)
+LogoButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+LogoButton.Text = "GH"
+LogoButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+LogoButton.Font = Enum.Font.GothamBold
+LogoButton.TextSize = 20
+LogoButton.ZIndex = 10
+
+local LogoCorner = Instance.new("UICorner")
+LogoCorner.CornerRadius = UDim.new(1, 0)
+LogoCorner.Parent = LogoButton
+
+local LogoStroke = Instance.new("UIStroke")
+LogoStroke.Parent = LogoButton
+LogoStroke.Thickness = 2
+LogoStroke.Color = Color3.fromRGB(0, 150, 255)
+
+-- --- 2. MAIN FRAME (MENU) ---
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
 MainFrame.Size = UDim2.new(0, 500, 0, 350)
+MainFrame.Visible = false 
 MainFrame.Active = true
 MainFrame.Draggable = true 
 
@@ -21,24 +44,28 @@ local UICornerMain = Instance.new("UICorner")
 UICornerMain.CornerRadius = UDim.new(0, 12)
 UICornerMain.Parent = MainFrame
 
--- Efek Neon RGB
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Parent = MainFrame
-UIStroke.Thickness = 3.5
-UIStroke.Color = Color3.fromRGB(0, 150, 255) 
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Parent = MainFrame
+MainStroke.Thickness = 3
+MainStroke.Color = Color3.fromRGB(0, 150, 255)
 
--- --- 2. LOGO (Tengah Atas) ---
-local Logo = Instance.new("ImageLabel")
-Logo.Name = "Logo"
-Logo.Parent = MainFrame
--- Ganti ID di bawah ini dengan ID Image Gurita kamu
-Logo.Image = "rbxassetid://6031075929" -- Ini contoh ID icon bulat, ganti sesuai keinginan
-Logo.BackgroundTransparency = 1
-Logo.Size = UDim2.new(0, 60, 0, 60)
-Logo.Position = UDim2.new(0.5, -30, 0, -30) -- Posisi melayang di tengah atas
-Logo.ZIndex = 5 -- Biar paling depan
+-- --- 3. TOMBOL CLOSE (Di Pojok Kanan Atas Menu) ---
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseBtn"
+CloseButton.Parent = MainFrame
+CloseButton.BackgroundColor3 = Color3.fromRGB(231, 76, 60) -- Flat Red
+CloseButton.Position = UDim2.new(1, -35, 0, 10)
+CloseButton.Size = UDim2.new(0, 25, 0, 25)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 14
 
--- --- 3. Sidebar Kiri ---
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseButton
+
+-- --- 4. SIDEBAR KIRI ---
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
 Sidebar.Parent = MainFrame
@@ -49,75 +76,20 @@ local UICornerSidebar = Instance.new("UICorner")
 UICornerSidebar.CornerRadius = UDim.new(0, 12)
 UICornerSidebar.Parent = Sidebar
 
--- --- 4. Nama Hub (GURITA-HUB-V1) ---
-local HubName = Instance.new("TextLabel")
-HubName.Name = "HubName"
-HubName.Parent = Sidebar
-HubName.BackgroundTransparency = 1
-HubName.Size = UDim2.new(1, 0, 0, 50)
-HubName.Position = UDim2.new(0, 0, 0, 15)
-HubName.Font = Enum.Font.GothamBold
-HubName.Text = "GURITA-HUB-V1"
-HubName.TextColor3 = Color3.fromRGB(255, 255, 255)
-HubName.TextSize = 14
-HubName.TextWrapped = true
+local SidebarTitle = Instance.new("TextLabel")
+SidebarTitle.Parent = Sidebar
+SidebarTitle.Size = UDim2.new(1, 0, 0, 50)
+SidebarTitle.Position = UDim2.new(0, 0, 0, 15)
+SidebarTitle.BackgroundTransparency = 1
+SidebarTitle.Text = "GURITA-HUB-V1"
+SidebarTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+SidebarTitle.Font = Enum.Font.GothamBold
+SidebarTitle.TextSize = 12
 
--- --- 5. Container Tombol Sidebar ---
-local ButtonContainer = Instance.new("Frame")
-ButtonContainer.Name = "ButtonContainer"
-ButtonContainer.Parent = Sidebar
-ButtonContainer.BackgroundTransparency = 1
-ButtonContainer.Size = UDim2.new(1, -15, 1, -80)
-ButtonContainer.Position = UDim2.new(0, 7, 0, 70)
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Parent = ButtonContainer
-UIListLayout.Padding = UDim.new(0, 6)
-
-local function createSidebarButton(name)
-    local btn = Instance.new("TextButton")
-    btn.Name = name.."Btn"
-    btn.Parent = ButtonContainer
-    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    btn.Size = UDim2.new(1, 0, 0, 32)
-    btn.Font = Enum.Font.GothamMedium
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    btn.TextSize = 13
-    
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 6)
-    c.Parent = btn
-    return btn
-end
-
-createSidebarButton("Features")
-createSidebarButton("ESP")
-createSidebarButton("Protection")
-createSidebarButton("Customize")
-
--- --- ANIMASI RGB NEON ---
-local colors = {
-    Color3.fromRGB(0, 150, 255),  -- Biru
-    Color3.fromRGB(255, 100, 0),  -- Oranye
-    Color3.fromRGB(255, 200, 0),  -- Kuning
-    Color3.fromRGB(150, 0, 255)   -- Ungu
-}
-
-local colorIndex = 1
-local nextColorIndex = 2
-local transitionTime = 2 
-local currentTime = 0
-
-RunService.Heartbeat:Connect(function(dt)
-    currentTime = currentTime + dt
-    local percent = currentTime / transitionTime
-    UIStroke.Color = colors[colorIndex]:Lerp(colors[nextColorIndex], percent)
-    
-    if percent >= 1 then
-        currentTime = 0
-        colorIndex = nextColorIndex
-        nextColorIndex = nextColorIndex + 1
-        if nextColorIndex > #colors then nextColorIndex = 1 end
-    end
+-- --- 5. LOGIKA TOMBOL (OPEN/CLOSE) ---
+LogoButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true -- Membuka menu
 end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false -- Menutup menu (
