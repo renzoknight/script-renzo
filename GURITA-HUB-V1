@@ -1,51 +1,56 @@
--- [[ GURITA-HUB-V1 - FINAL ALL-IN-ONE REVISED ]] --
+-- [[ GURITA-HUB-V1 - ANTI-LAG & STRICT XRAY ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
 local CG = game:GetService("CoreGui")
 
--- 1. SETTINGS
 _G.GH_Settings = {
     ESP_Player_GH = false,
     Xray_GH = false,
     AutoCollect_GH = false,
     ESP_Egg_GH = false,
-    FlatColor_GH = true -- OTOMATIS JALAN
+    FlatColor_GH = true
 }
 
--- 2. AUTO FLAT COLOR (Bikin Map Mulus & Enteng)
+-- 1. OPTIMIZED FLAT COLOR (ANTI LAG)
 local function ApplyFlatColor()
-    for _, v in pairs(workspace:GetDescendants()) do
+    local descendants = workspace:GetDescendants()
+    for i, v in ipairs(descendants) do
         if v:IsA("BasePart") and not v:IsA("Terrain") then
             if not v:IsDescendantOf(lp.Character) and not v.Parent:FindFirstChildOfClass("Humanoid") then
                 v.Material = Enum.Material.Plastic
                 v.CastShadow = false
             end
         end
+        -- Kasih nafas tiap 300 part biar gak lag
+        if i % 300 == 0 then task.wait() end
     end
 end
 
--- 3. XRAY TUNED (Khusus Base/Lantai, Anti Tembus Map Utama)
+-- 2. STRICT XRAY (KHUSUS LANTAI BASE SAJA)
 local function UpdateXray()
-    task.spawn(function()
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
-                local n = v.Name:lower()
-                -- FILTER: Target Base/Property, tapi kecualikan Wall/Tembok map
-                if (n:find("base") or n:find("floor") or n:find("lantai") or n:find("plot")) and not n:find("wall") then
-                    if _G.GH_Settings.Xray_GH then
-                        v.LocalTransparencyModifier = 0.7
-                    else
-                        v.LocalTransparencyModifier = 0
-                    end
+    local descendants = workspace:GetDescendants()
+    for i, v in ipairs(descendants) do
+        if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
+            local n = v.Name:lower()
+            -- Filter super ketat: Harus ada kata kunci lantai, tapi HARUS BUKAN tembok/map
+            local isBase = n:find("base") or n:find("floor") or n:find("lantai") or n:find("plot")
+            local isWall = n:find("wall") or n:find("tembok") or n:find("map") or n:find("build") or n:find("tree")
+            
+            if isBase and not isWall then
+                if _G.GH_Settings.Xray_GH then
+                    v.LocalTransparencyModifier = 0.7
+                else
+                    v.LocalTransparencyModifier = 0
                 end
             end
         end
-    end)
+        if i % 300 == 0 then task.wait() end
+    end
 end
 
--- 4. ESP PLAYER
+-- 3. ESP PLAYER
 local function UpdateESP()
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
@@ -58,15 +63,14 @@ local function UpdateESP()
                     lbl.Text = p.Name; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 18; lbl.TextStrokeTransparency = 0
                 end
             else
-                if p.Character.Head:FindFirstChild("ESPTag") then
-                    p.Character.Head.ESPTag:Destroy()
-                end
+                local tag = p.Character.Head:FindFirstChild("ESPTag")
+                if tag then tag:Destroy() end
             end
         end
     end
 end
 
--- 5. UI CONSTRUCTION (LOGO & SIDEBAR)
+-- 4. UI CONSTRUCTION
 if CG:FindFirstChild("GuritaHubV1_Final") then CG.GuritaHubV1_Final:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHubV1_Final"
 
@@ -103,7 +107,7 @@ local function CreateSideBtn(txt, page)
     local b = Instance.new("TextButton", Sidebar)
     b.Size = UDim2.new(1, 0, 0, 45); b.BackgroundColor3 = Color3.fromRGB(25, 25, 35); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.TextSize = 12; Instance.new("UICorner", b)
     b.MouseButton1Click:Connect(function() 
-        for _, v in pairs(Pages:GetChildren()) do v.Visible = false end
+        for _, v in pairs(Pages:GetChildren()) do if v:IsA("ScrollingFrame") then v.Visible = false end end
         page.Visible = true 
     end)
 end
@@ -121,29 +125,27 @@ local function CreateToggle(parent, txt, var, callback)
     Instance.new("UICorner", b)
 end
 
--- ISI MENU
 CreateToggle(PagePaska, "Auto Collect Coin", "AutoCollect_GH")
 CreateToggle(PagePaska, "ESP Egg Hunt", "ESP_Egg_GH")
-CreateToggle(PageESP, "X-Ray Base Only", "Xray_GH", UpdateXray)
-CreateToggle(PageESP, "ESP Player", "ESP_Player_GH", UpdateESP)
+CreateToggle(PageESP, "X-Ray Base Only", "Xray_GH", function() UpdateXray() end)
+CreateToggle(PageESP, "ESP Player", "ESP_Player_GH", function() UpdateESP() end)
 
--- [[ LOOP SINKRONISASI ]] --
+-- [[ OPTIMIZED LOOP SYSTEM ]] --
 local Colors = {Color3.fromRGB(0, 170, 255), Color3.fromRGB(255, 120, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(170, 0, 255)}
 task.spawn(function()
     local i = 1
     while true do
-        -- Animasi Warna
         TweenService:Create(GHTxtBtn, TweenInfo.new(1.5), {TextColor3 = Colors[i]}):Play()
         TweenService:Create(MainStroke, TweenInfo.new(1.5), {Color = Colors[i]}):Play()
         
-        -- Auto Flat Color
+        -- Fungsi berat dijalankan bergantian biar gak lag
         if _G.GH_Settings.FlatColor_GH then ApplyFlatColor() end
-        
-        -- Update Fitur
+        task.wait(1)
         if _G.GH_Settings.ESP_Player_GH then UpdateESP() end
+        task.wait(1)
         if _G.GH_Settings.Xray_GH then UpdateXray() end
         
-        task.wait(2.5)
         i = i % #Colors + 1
+        task.wait(1)
     end
 end)
