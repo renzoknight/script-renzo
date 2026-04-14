@@ -1,10 +1,12 @@
--- [[ GURITA HUB V5.9 - THE FINAL TRUTH (SULTAN ONLY) ]] --
+-- [[ GURITA HUB V6.0 - THE FINAL PERFECTION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
 
-_G.ESP_Ezra = true
+_G.EzraESP = false
 
+-- 1. FUNGSI MEMBERSIHKAN (Penting biar Gak Lag)
 local function Cleanup()
     for _, v in pairs(workspace:GetDescendants()) do
         if v.Name == "EzraFinalTag" or v.Name == "EzraFinalBox" then
@@ -13,118 +15,99 @@ local function Cleanup()
     end
 end
 
--- LOGIKA NAMA PALING AKURAT (Spesifik Steal a Brainrot)
-local function GetProperName(baseObj)
-    local parent = baseObj.Parent
-    local model = baseObj:FindFirstAncestorWhichIsA("Model")
-    local finalName = "Unknown Brainrot"
-    
-    -- Cari di seluruh isi model brainrotnya
-    if model then
-        for _, v in pairs(model:GetDescendants()) do
-            if v:IsA("TextLabel") then
-                local t = v.Text
-                -- FILTER KETAT: Bukan Perm/s, Bukan Player, Bukan Lock, Bukan Base, Bukan Level
-                if not t:find("/") and not t:find("'s") and not t:find("Lock") and 
-                   not t:find("Base") and not t:find("Level") and not t:find("LVL") and 
-                   not tonumber(t) and #t > 2 then
-                    finalName = t
-                    break -- Ambil yang pertama ketemu setelah difilter
-                end
-            end
-        end
-    end
-    return finalName
-end
+-- 2. LOGIKA SCANNER TERBAIK (MURNI DARI BASE)
+local function GetBestBrainrot()
+    local bestVal = 0
+    local bestPart = nil
+    local bName = ""
+    local bIncome = ""
 
-local function ApplySultanESP(part, bName, income)
-    Cleanup() 
-    
-    local billboard = Instance.new("BillboardGui", part)
-    billboard.Name = "EzraFinalTag"
-    billboard.AlwaysOnTop = true
-    billboard.Size = UDim2.new(0, 300, 0, 100)
-    billboard.ExtentsOffset = Vector3.new(0, 6, 0)
-    
-    local label = Instance.new("TextLabel", billboard)
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.new(1, 0, 1, 0)
-    -- Putih Bold (Nama) & Kuning (Income) - UKURAN GEDE
-    label.Text = "<b>" .. bName .. "</b>\n<font color='#FFFF00'>" .. income .. "</font>"
-    label.RichText = true
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 28 
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.TextStrokeTransparency = 0
-    label.TextStrokeColor3 = Color3.new(0,0,0)
-
-    local box = Instance.new("BoxHandleAdornment", part)
-    box.Name = "EzraFinalBox"
-    box.AlwaysOnTop = true
-    box.Size = part.Size + Vector3.new(0.5, 0.5, 0.5)
-    box.Color3 = Color3.fromRGB(0, 255, 255) -- Balik ke Cyan sesuai request awal
-    box.Transparency = 0.5
-    box.Adornee = part
-end
-
-local function ScanOnlyTheBest()
-    if not _G.ESP_Ezra then Cleanup() return end
-
-    local bestIncomeValue = 0
-    local targetLabel = nil
-    
-    -- SCAN SELURUH MAP CARI ANGKA TERGEDE
     for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("TextLabel") then
-            local t = v.Text:upper():gsub(",", "")
-            if t:find("/S") or t:find("M/S") or t:find("B/S") then
-                -- Pastikan bukan spawn liar (Hanya di Base)
-                if v:FindFirstAncestor("Bases") or v:FindFirstAncestor("PlayerBases") then
-                    local num = tonumber(t:match("%d+%.?%d*"))
-                    if num then
-                        local power = num
-                        if t:find("B") then power = num * 1000 end
-                        
-                        if power > bestIncomeValue then
-                            bestIncomeValue = power
-                            targetLabel = v
+        -- Cari label income asli game ($.../s)
+        if v:IsA("TextLabel") and (v.Text:find("/") or v.Text:find("$")) then
+            local rawTxt = v.Text:gsub("%$", ""):gsub(",", "")
+            local num = tonumber(rawTxt:match("%d+%.?%d*"))
+            
+            if num then
+                local power = num
+                if v.Text:find("M") then power = num * 1000000
+                elseif v.Text:find("B") then power = num * 1000000000 end
+                
+                -- Cari yang paling tinggi di server
+                if power > bestVal then
+                    bestVal = power
+                    bestIncome = v.Text
+                    -- Cari nama asli di sekitar label income
+                    local model = v:FindFirstAncestorWhichIsA("Model")
+                    if model then
+                        bestPart = model.PrimaryPart or v.Parent:FindFirstChildWhichIsA("BasePart") or v.Parent
+                        for _, child in pairs(model:GetDescendants()) do
+                            if child:IsA("TextLabel") and child ~= v and not child.Text:find("/") then
+                                bName = child.Text
+                                break
+                            end
                         end
                     end
                 end
             end
         end
     end
+    return bestPart, bName, bestIncome
+end
 
-    if targetLabel then
-        local targetPart = targetLabel.Parent:IsA("BasePart") and targetLabel.Parent or targetLabel:FindFirstAncestorWhichIsA("BasePart")
-        if targetPart then
-            local finalName = GetProperName(targetLabel)
-            ApplySultanESP(targetPart, finalName, targetLabel.Text)
-        end
+-- 3. FUNGSI PASANG ESP
+local function ApplyESP()
+    Cleanup()
+    if not _G.EzraESP then return end
+
+    local part, name, income = GetBestBrainrot()
+    if part and name ~= "" then
+        local bg = Instance.new("BillboardGui", part)
+        bg.Name = "EzraFinalTag"
+        bg.AlwaysOnTop = true
+        bg.Size = UDim2.new(0, 300, 0, 100)
+        bg.ExtentsOffset = Vector3.new(0, 8, 0)
+
+        local txt = Instance.new("TextLabel", bg)
+        txt.Size = UDim2.new(1, 0, 1, 0)
+        txt.BackgroundTransparency = 1
+        txt.Text = "<b>" .. name .. "</b>\n<font color='#00FF00'>" .. income .. "</font>"
+        txt.RichText = true
+        txt.Font = Enum.Font.GothamBold
+        txt.TextSize = 30 -- GEDE sesuai permintaan
+        txt.TextColor3 = Color3.new(1, 1, 1)
+        txt.TextStrokeTransparency = 0
     end
 end
 
--- UI
-local sg = Instance.new("ScreenGui", game:GetService("CoreGui"))
+-- 4. UI KONTROL (BIAR BISA ON/OFF)
+local sg = Instance.new("ScreenGui", CoreGui)
 local btn = Instance.new("TextButton", sg)
-btn.Size = UDim2.new(0, 140, 0, 40)
-btn.Position = UDim2.new(0, 20, 0.5, 0)
-btn.Text = "FIXED SCAN"
-btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-btn.TextColor3 = Color3.new(1,1,1)
+btn.Size = UDim2.new(0, 150, 0, 50)
+btn.Position = UDim2.new(0, 15, 0.4, 0)
+btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+btn.Text = "GURITA ESP: OFF"
+btn.TextColor3 = Color3.new(1, 0, 0)
 btn.Font = Enum.Font.GothamBold
 Instance.new("UICorner", btn)
 
 btn.MouseButton1Click:Connect(function()
-    ScanOnlyTheBest()
-end)
-
--- Scan tiap 10 detik
-task.spawn(function()
-    while true do
-        if _G.ESP_Ezra then ScanOnlyTheBest() end
-        task.wait(10)
+    _G.EzraESP = not _G.EzraESP
+    if _G.EzraESP then
+        btn.Text = "GURITA ESP: ON"
+        btn.TextColor3 = Color3.new(0, 1, 0)
+        ApplyESP()
+    else
+        btn.Text = "GURITA ESP: OFF"
+        btn.TextColor3 = Color3.new(1, 0, 0)
+        Cleanup()
     end
 end)
 
-ScanOnlyTheBest()
+-- Auto Update setiap 10 detik kalau player ganti barang
+task.spawn(function()
+    while true do
+        if _G.EzraESP then ApplyESP() end
+        task.wait(10)
+    end
+end)
