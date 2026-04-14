@@ -1,4 +1,4 @@
--- [[ GURITA-HUB-V1: STABLE AUTO-FLAT EDITION ]] --
+-- [[ GURITA-HUB-V1: TRUE FLAT COLOR (CHAMS) EDITION ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -42,7 +42,7 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
 Title.ZIndex = 110
 
--- --- SIDEBAR (KIRI) ---
+-- --- SIDEBAR (KIRI - HANYA PASKA EVENT) ---
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
 Sidebar.Position = UDim2.new(0, 10, 0, 45)
@@ -50,23 +50,10 @@ Sidebar.Size = UDim2.new(0, 130, 0, 225)
 Sidebar.ZIndex = 105
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
 
-local PageFolder = Instance.new("Frame", MainFrame)
-PageFolder.Position = UDim2.new(0, 150, 0, 45)
-PageFolder.Size = UDim2.new(1, -160, 0, 225)
-PageFolder.BackgroundTransparency = 1
-
-local PagePaska = Instance.new("ScrollingFrame", PageFolder)
-PagePaska.Name = "Paska Event"
-PagePaska.Size = UDim2.new(1, 0, 1, 0)
-PagePaska.BackgroundTransparency = 1
-PagePaska.Visible = true
-PagePaska.ZIndex = 110
-Instance.new("UIListLayout", PagePaska).Padding = UDim.new(0, 8)
-
--- Tombol Sidebar
+-- Tombol Menu Paska Event
 local b = Instance.new("TextButton", Sidebar)
-b.Size = UDim2.new(0.9, 0, 0, 35)
-b.Position = UDim2.new(0.05, 0, 0, 10)
+b.Size = UDim2.new(0, 115, 0, 35)
+b.Position = UDim2.new(0, 7, 0, 10)
 b.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 b.Text = "Paska Event"
 b.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -75,56 +62,61 @@ b.TextSize = 10
 b.ZIndex = 120
 Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
 
--- --- FITUR ESP TOGGLE (Hanya ESP yang bisa dimatikan) ---
+-- --- PAGE CONTENT ---
+local PagePaska = Instance.new("ScrollingFrame", MainFrame)
+PagePaska.Position = UDim2.new(0, 150, 0, 45)
+PagePaska.Size = UDim2.new(0, 290, 0, 225)
+PagePaska.BackgroundTransparency = 1
+PagePaska.ZIndex = 110
+PagePaska.ScrollBarThickness = 2
+local layout = Instance.new("UIListLayout", PagePaska)
+layout.Padding = UDim.new(0, 8)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- --- FITUR ESP TOGGLE ---
 local ESP_Active = true
-local function createToggle(parent, text, default, callback)
-    local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(0.9, 0, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.Text = text .. " GH: " .. (default and "ON" or "OFF")
-    btn.TextColor3 = default and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold; btn.ZIndex = 130
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    
-    local state = default
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.Text = text .. " GH: " .. (state and "ON" or "OFF")
-        btn.TextColor3 = state and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 255, 255)
-        callback(state)
-    end)
-end
+local btn = Instance.new("TextButton", PagePaska)
+btn.Size = UDim2.new(0, 260, 0, 40)
+btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+btn.Text = "Easter ESP GH: ON"
+btn.TextColor3 = Color3.fromRGB(0, 255, 100)
+btn.Font = Enum.Font.GothamBold
+btn.ZIndex = 130
+Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
-createToggle(PagePaska, "Easter ESP", true, function(v) ESP_Active = v end)
+btn.MouseButton1Click:Connect(function()
+    ESP_Active = not ESP_Active
+    btn.Text = "Easter ESP GH: " .. (ESP_Active and "ON" or "OFF")
+    btn.TextColor3 = ESP_Active and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 255, 255)
+end)
 
--- --- CORE LOGIC (AUTOMATIC FLAT COLOR) ---
+-- --- LOGIKA CORE (AUTO FLAT COLOR / CHAMS) ---
 task.spawn(function()
     while task.wait(0.5) do
         for _, obj in pairs(workspace:GetDescendants()) do
             for _, name in pairs(EasterList) do
                 if obj.Name == name then
-                    -- 1. Logika Flat Color (Otomatis & Selalu Aktif)
-                    if obj:IsA("BasePart") then
-                        obj.Color = Color3.fromRGB(0, 255, 0)
-                        obj.Material = Enum.Material.Neon
-                    elseif obj:IsA("Model") then
-                        for _, p in pairs(obj:GetDescendants()) do
-                            if p:IsA("BasePart") then
-                                p.Color = Color3.fromRGB(0, 255, 0)
-                                p.Material = Enum.Material.Neon
-                            end
-                        end
+                    -- 1. FLAT COLOR (CHAMS) - OTOMATIS AKTIF
+                    if not obj:FindFirstChild("GH_Chams") then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "GH_Chams"
+                        highlight.Parent = obj
+                        highlight.FillColor = Color3.fromRGB(100, 0, 255) -- Warna Ungu/Biru sesuai foto
+                        highlight.FillTransparency = 0.5
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        highlight.OutlineTransparency = 0
+                        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                     end
                     
-                    -- 2. Logika ESP
+                    -- 2. ESP BILLBOARD
                     local target = obj:IsA("Model") and obj.PrimaryPart or (obj:IsA("BasePart") and obj)
                     if target then
                         if ESP_Active then
                             if not target:FindFirstChild("GH_ESP") then
-                                local b = Instance.new("BillboardGui", target)
-                                b.Name = "GH_ESP"; b.AlwaysOnTop = true; b.Size = UDim2.new(0,100,0,50)
-                                local l = Instance.new("TextLabel", b)
-                                l.BackgroundTransparency = 1; l.Size = UDim2.new(1,0,1,0); l.Text = name.." GH"; l.TextColor3 = Color3.fromRGB(255,255,0); l.Font = Enum.Font.GothamBold; l.TextSize = 10
+                                local bgu = Instance.new("BillboardGui", target)
+                                bgu.Name = "GH_ESP"; bgu.AlwaysOnTop = true; bgu.Size = UDim2.new(0,100,0,50)
+                                local lbl = Instance.new("TextLabel", bgu)
+                                lbl.BackgroundTransparency = 1; lbl.Size = UDim2.new(1,0,1,0); lbl.Text = name.." GH"; lbl.TextColor3 = Color3.fromRGB(255,255,0); lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
                             end
                         else
                             if target:FindFirstChild("GH_ESP") then target.GH_ESP:Destroy() end
@@ -136,7 +128,7 @@ task.spawn(function()
     end
 end)
 
--- --- LOGO (FIXED SIZE 50x50) ---
+-- --- LOGO (UKURAN TETAP 50x50) ---
 local Logo = Instance.new("TextButton", ScreenGui)
 Logo.Size = UDim2.new(0, 50, 0, 50)
 Logo.Position = UDim2.new(0.5, -25, 0, 50)
@@ -150,7 +142,7 @@ Instance.new("UICorner", Logo).CornerRadius = UDim.new(0, 8)
 local LStroke = Instance.new("UIStroke", Logo)
 LStroke.Thickness = 2
 
--- --- UTILS ---
+-- --- UTILS (DRAG & CLOSE) ---
 local function Drag(ui)
     local d, i, s, sp
     ui.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then d = true; s = inp.Position; sp = ui.Position end end)
