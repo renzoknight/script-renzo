@@ -1,149 +1,98 @@
--- [[ GURITA HUB EGG HUNT - MENU FIXED ]] --
+-- [[ GURITA HUB - MENU MAXIMALIST ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
-local CG = game:GetService("CoreGui")
-local TweenService = game:GetService("TweenService")
+local PlayerGui = lp:WaitForChild("PlayerGui")
 
--- 1. LIST TELUR FIX (SESUAI REQUEST)
+-- 1. CLEAN UP (Hapus UI lama biar gak tumpuk)
+if PlayerGui:FindFirstChild("GHS_MenuEgg") then 
+    PlayerGui.GHS_MenuEgg:Destroy() 
+end
+
+-- 2. LIST TARGET (Kunci)
 local TargetEggs = {
     "hydra bunny", "noo my eggs", "baskito", "churrito", 
     "quackini snackini", "hopilikalika hopilikalako", "bunny sahur"
 }
 
-_G.EggESP = false
+_G.EggESP_Toggle = false
 
--- [[ 2. ENGINE ESP ]] --
+-- 3. FUNGSI ESP (Dibuat sesimpel mungkin biar gak lag)
 local function ApplyESP(obj)
-    if not obj:FindFirstChild("GHS_EGG_TAG") then
+    if not obj:FindFirstChild("Marker") then
         local h = Instance.new("Highlight", obj)
-        h.Name = "GHS_EGG_TAG"
-        h.FillColor = Color3.fromRGB(255, 255, 0)
-        h.FillTransparency = 0.5
+        h.Name = "Marker"; h.FillColor = Color3.fromRGB(255, 255, 0); h.FillTransparency = 0.5
         
         local b = Instance.new("BillboardGui", obj)
-        b.Name = "GHS_EGG_NAME"
-        b.Size = UDim2.new(0, 150, 0, 50)
-        b.AlwaysOnTop = true
-        b.ExtentsOffset = Vector3.new(0, 3, 0)
-
+        b.Name = "Tag"; b.Size = UDim2.new(0, 100, 0, 40); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
         local t = Instance.new("TextLabel", b)
-        t.Size = UDim2.new(1, 0, 1, 0)
-        t.BackgroundTransparency = 1
-        t.Text = obj.Name:upper()
-        t.TextColor3 = Color3.new(1, 1, 1)
-        t.Font = Enum.Font.GothamBlack
-        t.TextSize = 14
-        t.TextStrokeTransparency = 0
+        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.Text = obj.Name:upper()
+        t.TextColor3 = Color3.new(1, 1, 1); t.Font = Enum.Font.GothamBold; t.TextSize = 12
     end
 end
 
-local function ClearESP()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v.Name == "GHS_EGG_TAG" or v.Name == "GHS_EGG_NAME" then
-            v:Destroy()
-        end
-    end
+-- 4. PEMBUATAN UI (Fokus Utama)
+local SG = Instance.new("ScreenGui", PlayerGui)
+SG.Name = "GHS_MenuEgg"
+SG.ResetOnSpawn = false
+
+-- Tombol Logo (Bisa Digeser)
+local Logo = Instance.new("TextButton", SG)
+Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 10, 0.5, 0)
+Logo.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Logo.Text = "G H"; Logo.TextColor3 = Color3.new(1, 1, 0)
+Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 20; Logo.Draggable = true; Logo.Active = true
+Instance.new("UICorner", Logo); Instance.new("UIStroke", Logo).Thickness = 2
+
+-- Frame Menu
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 200, 0, 150); Main.Position = UDim2.new(0.5, -100, 0.5, -75)
+Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10); Main.Visible = false; Instance.new("UICorner", Main)
+local Stroke = Instance.new("UIStroke", Main); Stroke.Color = Color3.new(1, 1, 0); Stroke.Thickness = 2
+
+Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+
+-- Judul
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "EGG HUNT V1"; Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBold; Title.BackgroundTransparency = 1; Title.TextSize = 16
+
+-- TOMBOL ON/OFF (Ini yang Abang cari)
+local Tgl = Instance.new("TextButton", Main)
+Tgl.Size = UDim2.new(0.8, 0, 0, 50); Tgl.Position = UDim2.new(0.1, 0, 0.45, 0)
+Tgl.BackgroundColor3 = Color3.fromRGB(25, 25, 25); Tgl.Font = Enum.Font.GothamBold; Tgl.TextSize = 14
+Instance.new("UICorner", Tgl)
+
+local function UpdateUI()
+    Tgl.Text = _G.EggESP_Toggle and "FITUR: ON" or "FITUR: OFF"
+    Tgl.TextColor3 = _G.EggESP_Toggle and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
 end
+UpdateUI()
 
-local function RunESP()
-    if not _G.EggESP then ClearESP() return end
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and table.find(TargetEggs, v.Name:lower()) then
-            ApplyESP(v)
-        end
-    end
-end
-
--- [[ 3. UI MENU (DIBUAT ULANG - PASTI MUNCUL) ]] --
-local function CreateUI()
-    -- Hapus UI lama kalau ada
-    local old = CG:FindFirstChild("GHS_EggFix")
-    if old then old:Destroy() end
-
-    local SG = Instance.new("ScreenGui", CG)
-    SG.Name = "GHS_EggFix"
-    SG.ResetOnSpawn = false
-    SG.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-    -- TOMBOL BUKA (LOGO)
-    local OpenBtn = Instance.new("TextButton", SG)
-    OpenBtn.Name = "OpenButton"
-    OpenBtn.Size = UDim2.new(0, 60, 0, 60)
-    OpenBtn.Position = UDim2.new(0, 20, 0.4, 0)
-    OpenBtn.BackgroundColor3 = Color3.new(0, 0, 0)
-    OpenBtn.Text = "EGG"
-    OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
-    OpenBtn.Font = Enum.Font.GothamBlack
-    OpenBtn.TextSize = 18
-    OpenBtn.Draggable = true
-    OpenBtn.Active = true
-    Instance.new("UICorner", OpenBtn)
-    local Stroke = Instance.new("UIStroke", OpenBtn); Stroke.Thickness = 3; Stroke.Color = Color3.fromRGB(255, 255, 255)
-
-    -- PANEL UTAMA
-    local Main = Instance.new("Frame", SG)
-    Main.Name = "MainFrame"
-    Main.Size = UDim2.new(0, 220, 0, 150)
-    Main.Position = UDim2.new(0.5, -110, 0.5, -75)
-    Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    Main.Visible = false
-    Main.Active = true
-    Main.Draggable = true
-    Instance.new("UICorner", Main)
-    local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fromRGB(255, 255, 0)
-
-    -- JUDUL
-    local Title = Instance.new("TextLabel", Main)
-    Title.Size = UDim2.new(1, 0, 0, 40)
-    Title.Text = "EGG HUNT MENU"
-    Title.TextColor3 = Color3.new(1, 1, 1)
-    Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 16
-    Title.BackgroundTransparency = 1
-
-    -- TOMBOL TOGGLE ESP
-    local Tgl = Instance.new("TextButton", Main)
-    Tgl.Size = UDim2.new(0.85, 0, 0, 45)
-    Tgl.Position = UDim2.new(0.075, 0, 0.45, 0)
-    Tgl.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    Tgl.Font = Enum.Font.GothamBold
-    Tgl.TextSize = 14
-    Instance.new("UICorner", Tgl)
-
-    local function UpdateBtn()
-        Tgl.Text = _G.EggESP and "ESP STATUS: ON" or "ESP STATUS: OFF"
-        Tgl.TextColor3 = _G.EggESP and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-    end
-    UpdateBtn()
-
-    -- EVENT KLIK
-    OpenBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+Tgl.MouseButton1Click:Connect(function()
+    _G.EggESP_Toggle = not _G.EggESP_Toggle
+    UpdateUI()
     
-    Tgl.MouseButton1Click:Connect(function()
-        _G.EggESP = not _G.EggESP
-        UpdateBtn()
-        RunESP()
-    end)
-end
-
--- JALANKAN UI
-CreateUI()
-
--- [[ 4. LOOP & AUTO-SPAWN ]] --
-workspace.DescendantAdded:Connect(function(v)
-    if _G.EggESP then
-        task.wait(0.5)
-        if v:IsA("BasePart") and table.find(TargetEggs, v.Name:lower()) then
-            ApplyESP(v)
+    if _G.EggESP_Toggle then
+        -- Jalankan fitur kalau ON
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and table.find(TargetEggs, v.Name:lower()) then
+                ApplyESP(v)
+            end
+        end
+    else
+        -- Hapus fitur kalau OFF
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v.Name == "Marker" or v.Name == "Tag" then v:Destroy() end
         end
     end
 end)
 
-task.spawn(function()
-    while task.wait(5) do
-        if _G.EggESP then RunESP() end
+-- Auto-apply buat telur baru pas fitur ON
+workspace.DescendantAdded:Connect(function(v)
+    if _G.EggESP_Toggle then
+        task.wait(0.5)
+        if table.find(TargetEggs, v.Name:lower()) then ApplyESP(v) end
     end
 end)
 
-print("SCRIPT EGG HUNT READY - CEK TOMBOL 'EGG' DI LAYAR")
+print("Menu Egg Hunt Berhasil Dimuat!")
