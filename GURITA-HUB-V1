@@ -1,11 +1,15 @@
--- [[ GURITA HUB V6.5 - ULTRA LITE / ANTI-LAG ]] --
+-- [[ GURITA HUB V6.4 - OPTIMIZED FOR EGG HUNT ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
 local CG = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
 
--- 1. CONFIG & WHITELIST
+-- 1. DATABASE & CONFIG
+local ConfigFile = "GHS_Config_Final.json"
 local AllowedEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako"}
+
 _G.GH_Config = {
     ESP_Player_GH = false,
     Xray_GH = false,
@@ -13,22 +17,59 @@ _G.GH_Config = {
     ESP_Egg_GH = false
 }
 
--- [[ FUNGSI OPTIMASI - CUMA JALAN PAS DIPANGGIL ]] --
-local function ApplyFlat()
-    -- Scan bertahap biar gak freeze
-    task.spawn(function()
-        local d = workspace:GetDescendants()
-        for i, v in ipairs(d) do
-            if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
-                v.Material = Enum.Material.Plastic
-                v.CastShadow = false
-                if v:IsA("MeshPart") then v.TextureID = "" end
+local function SaveData()
+    pcall(function() if writefile then writefile(ConfigFile, HttpService:JSONEncode(_G.GH_Config)) end end)
+end
+
+-- [[ FITUR FLAT COLOR ]] --
+local function ApplyFlat(v)
+    pcall(function()
+        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
+            v.Material = Enum.Material.Plastic
+            v.CastShadow = false
+            if v:IsA("MeshPart") then v.TextureID = "" end
+            for _, child in pairs(v:GetChildren()) do
+                if child:IsA("Texture") or child:IsA("Decal") then child:Destroy() end
             end
-            if i % 500 == 0 then task.wait() end -- Kasih nafas 
         end
     end)
 end
 
+-- [[ FITUR X-RAY ]] --
+local function RefreshXray()
+    task.spawn(function()
+        local d = workspace:GetDescendants()
+        for i, v in ipairs(d) do
+            if v:IsA("BasePart") and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
+                local n = v.Name:lower()
+                if n:find("wall") or n:find("floor") or n:find("base") or n:find("part") then
+                    v.LocalTransparencyModifier = _G.GH_Config.Xray_GH and 0.6 or 0
+                end
+            end
+            if i % 500 == 0 then task.wait() end -- Anti-Lag Scan
+        end
+    end)
+end
+
+-- [[ FITUR ESP PLAYER ]] --
+local function UpdatePlayerESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
+            local head = p.Character.Head
+            local existing = head:FindFirstChild("ESP_PlayerTag")
+            if _G.GH_Config.ESP_Player_GH then
+                if not existing then
+                    local bg = Instance.new("BillboardGui", head); bg.Name = "ESP_PlayerTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 200, 0, 50); bg.ExtentsOffset = Vector3.new(0, 3, 0)
+                    local lbl = Instance.new("TextLabel", bg); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.TextColor3 = Color3.fromRGB(0, 255, 255); lbl.Text = p.Name; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 14
+                end
+            elseif existing then
+                existing:Destroy()
+            end
+        end
+    end
+end
+
+-- [[ FITUR ESP EGG (WHITELIST) ]] --
 local function TagEgg(v)
     if not _G.GH_Config.ESP_Egg_GH then return end
     local n = v.Name:lower()
@@ -36,72 +77,74 @@ local function TagEgg(v)
         if n:find(name) and not v:FindFirstChild("EHSTag") then
             local t = v:IsA("Model") and (v:FindFirstChild("Handle") or v:FindFirstChildWhichIsA("BasePart")) or v
             if t then
-                local bg = Instance.new("BillboardGui", t); bg.Name = "EHSTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 150, 0, 40)
-                local lbl = Instance.new("TextLabel", bg); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.Text = v.Name; lbl.TextColor3 = Color3.new(1, 1, 0); lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 12
+                local bg = Instance.new("BillboardGui", t); bg.Name = "EHSTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 160, 0, 40)
+                local lbl = Instance.new("TextLabel", bg); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.Text = v.Name; lbl.TextColor3 = Color3.fromRGB(255, 200, 0); lbl.Font = Enum.Font.GothamBlack; lbl.TextSize = 13
             end
         end
     end
 end
 
--- [[ UI ]] --
-if CG:FindFirstChild("GHS_MainUI_V65") then CG.GHS_MainUI_V65:Destroy() end
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V65"
+-- [[ UI SYSTEM ]] --
+if CG:FindFirstChild("GHS_MainUI_V64_Fix") then CG.GHS_MainUI_V64_Fix:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V64_Fix"
 
-local Logo = Instance.new("TextButton", SG); Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0, 15, 0.3, 0); Logo.Text = "GH"; Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 30); Logo.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Logo).CornerRadius = UDim.new(1,0)
-Logo.Draggable = true; Logo.Active = true
+local LogoFrame = Instance.new("Frame", SG); LogoFrame.Size = UDim2.new(0, 50, 0, 50); LogoFrame.Position = UDim2.new(0, 15, 0.3, 0); LogoFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25); LogoFrame.Active = true; LogoFrame.Draggable = true; Instance.new("UICorner", LogoFrame).CornerRadius = UDim.new(1, 0)
+local LogoBtn = Instance.new("TextButton", LogoFrame); LogoBtn.Size = UDim2.new(1, 0, 1, 0); LogoBtn.BackgroundTransparency = 1; LogoBtn.Font = Enum.Font.GothamBlack; LogoBtn.Text = "GH"; LogoBtn.TextSize = 18; LogoBtn.TextColor3 = Color3.new(1, 1, 1)
 
-local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 400, 0, 250); Main.Position = UDim2.new(0.5, -200, 0.5, -125); Main.Visible = false; Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20); Instance.new("UICorner", Main)
-Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 440, 0, 260); Main.Position = UDim2.new(0.5, -220, 0.5, -130); Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
+LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
-local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 120, 1, 0); Sidebar.BackgroundTransparency = 0.5; Instance.new("UIListLayout", Sidebar)
-local Pages = Instance.new("Frame", Main); Pages.Size = UDim2.new(1, -130, 1, 0); Pages.Position = UDim2.new(0, 125, 0, 0); Pages.BackgroundTransparency = 1
+local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 130, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 28); Instance.new("UICorner", Sidebar)
+Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 5)
+local Pages = Instance.new("Frame", Main); Pages.Size = UDim2.new(1, -145, 1, -20); Pages.Position = UDim2.new(0, 135, 0, 10); Pages.BackgroundTransparency = 1
 
 local function CreatePage(name)
-    local p = Instance.new("ScrollingFrame", Pages); p.Size = UDim2.new(1,0,1,0); p.Visible = false; p.BackgroundTransparency = 1; Instance.new("UIListLayout", p); return p
+    local p = Instance.new("ScrollingFrame", Pages); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 0; Instance.new("UIListLayout", p).Padding = UDim.new(0, 8); return p
 end
 local P1 = CreatePage("PASKA"); local P2 = CreatePage("ESP"); P1.Visible = true
 
-local function AddBtn(txt, p)
-    local b = Instance.new("TextButton", Sidebar); b.Size = UDim2.new(1,0,0,40); b.Text = txt; b.MouseButton1Click:Connect(function() P1.Visible = false; P2.Visible = false; p.Visible = true end)
+local function CreateSideBtn(txt, p)
+    local b = Instance.new("TextButton", Sidebar); b.Size = UDim2.new(0.9, 0, 0, 40); b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; b.BackgroundColor3 = Color3.fromRGB(25,25,40); Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() for _, v in pairs(Pages:GetChildren()) do v.Visible = false end; p.Visible = true end)
 end
-AddBtn("EVENT", P1); AddBtn("ESP", P2)
+CreateSideBtn("PASKA EVENT", P1); CreateSideBtn("ESP", P2)
 
-local function Toggle(parent, txt, var)
-    local b = Instance.new("TextButton", parent); b.Size = UDim2.new(1,0,0,40); b.Text = txt..": OFF"
-    b.MouseButton1Click:Connect(function()
-        _G.GH_Config[var] = not _G.GH_Config[var]
-        b.Text = txt..(_G.GH_Config[var] and ": ON" or ": OFF")
-        b.TextColor3 = _G.GH_Config[var] and Color3.new(0,1,0) or Color3.new(1,0,0)
-    end)
+local function CreateToggle(parent, txt, var, callback)
+    local b = Instance.new("TextButton", parent); b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(22, 22, 35); b.Font = Enum.Font.GothamBold; b.TextSize = 10; Instance.new("UICorner", b)
+    local function UpdateUI() b.Text = txt..(_G.GH_Config[var] and ": ON" or ": OFF"); b.TextColor3 = _G.GH_Config[var] and Color3.new(0, 1, 0) or Color3.new(1, 0, 0) end
+    UpdateUI()
+    b.MouseButton1Click:Connect(function() _G.GH_Config[var] = not _G.GH_Config[var]; UpdateUI(); SaveData(); if callback then callback() end end)
 end
 
-Toggle(P1, "Collect", "AutoCollect_GH")
-Toggle(P1, "Egg ESP", "ESP_Egg_GH")
-Toggle(P2, "Player ESP", "ESP_Player_GH")
-Toggle(P2, "X-Ray", "Xray_GH")
-
--- TOMBOL KHUSUS ANTI LAG
-local FixLag = Instance.new("TextButton", P2); FixLag.Size = UDim2.new(1,0,0,40); FixLag.Text = "KLIK: HAPUS LAG (FLAT)"; FixLag.BackgroundColor3 = Color3.new(0.2, 0, 0)
-FixLag.MouseButton1Click:Connect(function() ApplyFlat() end)
-
--- [[ RUNNER LITE ]] --
-workspace.DescendantAdded:Connect(function(v)
-    if _G.GH_Config.ESP_Egg_GH then TagEgg(v) end
+CreateToggle(P1, "Auto Collect Koin", "AutoCollect_GH")
+CreateToggle(P1, "ESP RARE EGG", "ESP_Egg_GH", function() 
+    if _G.GH_Config.ESP_Egg_GH then 
+        task.spawn(function()
+            local d = workspace:GetDescendants()
+            for i, v in ipairs(d) do 
+                TagEgg(v) 
+                if i % 300 == 0 then task.wait() end -- Budgeting CPU
+            end 
+        end)
+    end 
 end)
+CreateToggle(P2, "ESP Player", "ESP_Player_GH", function() UpdatePlayerESP() end)
+CreateToggle(P2, "X-Ray Bening", "Xray_GH", function() RefreshXray() end)
 
+-- [[ AUTO RUN & LOOP ]] --
 task.spawn(function()
-    while task.wait(3) do
-        -- ESP Player cuma update tiap 3 detik biar gak nyekek CPU
-        if _G.GH_Config.ESP_Player_GH then
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
-                    local h = p.Character.Head
-                    if not h:FindFirstChild("ETag") then
-                        local bg = Instance.new("BillboardGui", h); bg.Name = "ETag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0,100,0,30)
-                        local l = Instance.new("TextLabel", bg); l.Size = UDim2.new(1,0,1,0); l.Text = p.Name; l.TextColor3 = Color3.new(0,1,1); l.BackgroundTransparency = 1
-                    end
-                end
-            end
-        end
+    local d = workspace:GetDescendants()
+    for i, v in ipairs(d) do 
+        ApplyFlat(v) 
+        if i % 400 == 0 then task.wait() end
+    end
+    
+    workspace.DescendantAdded:Connect(function(v)
+        ApplyFlat(v)
+        if _G.GH_Config.ESP_Egg_GH then TagEgg(v) end
+    end)
+    
+    while task.wait(3) do -- Diperlama dikit loopnya biar enteng
+        if _G.GH_Config.ESP_Player_GH then UpdatePlayerESP() end
     end
 end)
