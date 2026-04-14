@@ -1,5 +1,5 @@
--- [[ GURITA HUB: V12 - ANTI-LAG & STRICT FILTER ]] --
--- Update: Filter diperketat, cuma cari target spesifik (No more Spam ESP)
+-- [[ GURITA HUB: V14 - FINAL CLEAN LIST ]] --
+-- Terhapus: Tralala, Egg Dun, Egg Din, Bunny, Buntteo, Los Bunitos
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -10,12 +10,10 @@ local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- [[ 1. CONFIG & STRICT TARGET LIST ]] --
-local FileName = "GuritaHub_v12.json"
--- Di sini kita cuma masukin nama yang bener-bener target, "egg" umum dihapus
+-- [[ 1. CONFIG & STRICT TARGET ]] --
+local FileName = "GuritaHub_v14.json"
+-- List sudah dibersihkan total sesuai permintaan
 local StrictTargets = {
-    "tralala", 
-    "egg dun", 
     "egg pedas",
     "baskito", 
     "churrito", 
@@ -50,7 +48,7 @@ lp.Idled:Connect(function()
     VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
--- [[ 3. MOVEMENT ENGINE ]] --
+-- [[ 3. MOVEMENT ]] --
 task.spawn(function()
     while true do
         pcall(function()
@@ -69,19 +67,18 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- [[ 4. VISUAL: NORMAL-BRIGHT NIGHT ]] --
+-- [[ 4. VISUAL OPTIMIZER ]] --
 task.spawn(function()
     while true do
         Lighting.ClockTime = 0
         Lighting.Brightness = 2
-        Lighting.GlobalShadows = false
         Lighting.Ambient = Color3.fromRGB(127, 127, 127)
         Lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
         task.wait(3)
     end
 end)
 
--- [[ 5. OPTIMIZED ESP ENGINE ]] --
+-- [[ 5. SMART ESP ENGINE ]] --
 local function CreateESP(target)
     if not target:FindFirstChild("GuritaMarker") then
         local h = Instance.new("Highlight")
@@ -109,7 +106,7 @@ local function CreateESP(target)
                         t.Text = "⭐ " .. target.Name:upper() .. " ⭐\n[" .. math.floor(dist) .. "m]"
                     end
                 end
-                task.wait(0.5) -- Scan rate diturunkan biar ringan
+                task.wait(0.5)
             end
             if b then b:Destroy() end; if h then h:Destroy() end
         end)
@@ -119,14 +116,34 @@ end
 -- [[ 6. STRICT SCANNER ]] --
 local function Scan(v)
     local name = v.Name:lower()
+    
+    -- Filter 1: Cek nama di list target yang sudah dibersihkan
+    local isTarget = false
     for _, key in pairs(StrictTargets) do
-        -- Sekarang pakai logika: Nama harus mengandung kata target spesifik
         if name:find(key) then
+            isTarget = true
+            break
+        end
+    end
+    
+    if isTarget then
+        -- Filter 2: Anti-Base (Jangan scan yang ada di markas)
+        local p = v.Parent
+        local isBase = false
+        while p and p ~= workspace do
+            local pn = p.Name:lower()
+            if pn:find("base") or pn:find("lobby") or pn:find("display") or pn:find("pajangan") then
+                isBase = true
+                break
+            end
+            p = p.Parent
+        end
+        
+        if not isBase then
             if _G.Settings.Notif then
-                StarterGui:SetCore("SendNotification", {Title = "🥚 TARGET FOUND!", Text = v.Name, Duration = 3})
+                StarterGui:SetCore("SendNotification", {Title = "🥚 EGG FOUND!", Text = v.Name, Duration = 3})
             end
             if _G.Settings.EggESP then CreateESP(v) end
-            break
         end
     end
 end
@@ -135,23 +152,17 @@ task.spawn(function()
     while true do
         for _, v in pairs(workspace:GetDescendants()) do
             if _G.Settings.EggESP then Scan(v) end
-            -- Flat color tetap jalan biar enteng
             if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
                 v.Material = Enum.Material.Plastic; v.CastShadow = false
             end
         end
-        task.wait(8) -- Scan per 8 detik biar CPU nggak meledak
+        task.wait(8)
     end
 end)
 
-workspace.DescendantAdded:Connect(function(v)
-    task.wait(1)
-    if _G.Settings.EggESP then Scan(v) end
-end)
-
--- [[ 7. UI CONSTRUCTION ]] --
-if PlayerGui:FindFirstChild("GURITA_V12") then PlayerGui.GURITA_V12:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V12"; SG.ResetOnSpawn = false
+-- [[ 7. UI ]] --
+if PlayerGui:FindFirstChild("GURITA_V14") then PlayerGui.GURITA_V14:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V14"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
@@ -175,8 +186,7 @@ local function CreateBtn(text, func)
 end
 
 local BtnESP = CreateBtn("ESP: OFF", function() 
-    _G.Settings.EggESP = not _G.Settings.EggESP; 
-    SaveData() 
+    _G.Settings.EggESP = not _G.Settings.EggESP; SaveData() 
     if not _G.Settings.EggESP then
         for _, v in pairs(workspace:GetDescendants()) do
             if v.Name == "GuritaMarker" or v.Name == "GuritaTag" then v:Destroy() end
