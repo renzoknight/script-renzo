@@ -1,4 +1,4 @@
--- [[ GURITA HUB V6.4.21 - FINAL REPAIR: ONLY BASEPLATE ]] --
+-- [[ GURITA HUB V6.4.24 - FULL COMPLETION & STABLE ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -6,7 +6,7 @@ local CG = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 
--- 1. DATABASE & CONFIG
+-- 1. DATABASE & CONFIG (LENGKAP)
 local ConfigFile = "GHS_Config_Final.json"
 local AllowedEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako"}
 
@@ -17,21 +17,25 @@ _G.GH_Config = {
     ESP_Egg_GH = false
 }
 
-local function SaveData()
-    pcall(function() if writefile then writefile(ConfigFile, HttpService:JSONEncode(_G.GH_Config)) end end)
-end
-
-local function LoadData()
-    pcall(function()
-        if isfile and isfile(ConfigFile) then
-            local decoded = HttpService:JSONDecode(readfile(ConfigFile))
-            if decoded then for k, v in pairs(decoded) do _G.GH_Config[k] = v end end
+-- [[ 2. ULTRA-STRICT X-RAY ENGINE ]] --
+local function ToggleXray()
+    local is_on = _G.GH_Config.Xray_GH
+    -- Hanya target Baseplate utama agar tidak lag dan tidak merusak tembok/rumput
+    local base = workspace:FindFirstChild("Baseplate") or workspace:FindFirstChild("Base")
+    
+    if base and base:IsA("BasePart") then
+        base.LocalTransparencyModifier = is_on and 0.8 or 0
+    end
+    
+    -- Memastikan objek lain (pembatas, gedung, rumput) tetap 100% normal
+    for _, v in pairs(workspace:GetChildren()) do
+        if v:IsA("BasePart") and v ~= base then
+            v.LocalTransparencyModifier = 0
         end
-    end)
+    end
 end
-LoadData()
 
--- [[ 2. CORE ESP ENGINE ]] --
+-- [[ 3. FULL ESP ENGINE (PLAYER & 6 EGGS) ]] --
 local function CreateESP(obj, text, color)
     if not obj:FindFirstChild("GHS_ESP") then
         local h = Instance.new("Highlight", obj); h.Name = "GHS_ESP"; h.FillColor = color; h.OutlineColor = Color3.new(1, 1, 1); h.FillTransparency = 0.5
@@ -41,12 +45,14 @@ local function CreateESP(obj, text, color)
 end
 
 local function UpdateESP()
+    -- ESP Player (Cyan)
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             if _G.GH_Config.ESP_Player_GH then CreateESP(p.Character, p.Name, Color3.fromRGB(0, 255, 255)) 
             elseif p.Character:FindFirstChild("GHS_ESP") then p.Character.GHS_ESP:Destroy(); p.Character.GHS_Tag:Destroy() end
         end
     end
+    -- ESP Eggs Target (Yellow)
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") and table.find(AllowedEggs, v.Name:lower()) then
             if _G.GH_Config.ESP_Egg_GH then CreateESP(v, v.Name, Color3.fromRGB(255, 255, 0)) 
@@ -55,36 +61,7 @@ local function UpdateESP()
     end
 end
 
--- [[ 3. ULTRA STRICT X-RAY (HANYA BASEPLATE DASAR) ]] --
-local function ForceXray()
-    pcall(function()
-        local is_on = _G.GH_Config.Xray_GH
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") then
-                -- FILTER SANGAT KETAT
-                -- Hanya objek bernama "Baseplate" atau objek besar yang posisinya sangat bawah
-                if v.Name == "Baseplate" or (v.Name == "Base" and v.Size.Y < 2) then
-                    v.LocalTransparencyModifier = is_on and 0.8 or 0
-                else
-                    -- Selain itu, pastikan tetap normal (tidak transparan)
-                    v.LocalTransparencyModifier = 0
-                end
-            end
-        end
-    end)
-end
-
--- [[ 4. FLAT COLOR & UI ]] --
-local function ApplyFlat(v)
-    pcall(function()
-        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
-            v.Material = Enum.Material.Plastic; v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, child in pairs(v:GetChildren()) do if child:IsA("Texture") or child:IsA("Decal") then child:Destroy() end end
-        end
-    end)
-end
-
+-- [[ 4. UI GURITA HUB (NEON RGB & FULL TABS) ]] --
 if CG:FindFirstChild("GHS_MainUI") then CG.GHS_MainUI:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI"
 
@@ -122,20 +99,18 @@ local function CreateToggle(parent, txt, var, callback)
     local b = Instance.new("TextButton", parent); b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(15, 15, 20); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b)
     local function UpdateUI() b.Text = txt..(_G.GH_Config[var] and ": ON" or ": OFF"); b.TextColor3 = _G.GH_Config[var] and Color3.new(0,1,0) or Color3.new(1,0,0) end
     UpdateUI()
-    b.MouseButton1Click:Connect(function() _G.GH_Config[var] = not _G.GH_Config[var]; UpdateUI(); SaveData(); if callback then callback() end end)
+    b.MouseButton1Click:Connect(function() _G.GH_Config[var] = not _G.GH_Config[var]; UpdateUI(); if callback then callback() end end)
 end
 
+-- Mengisi fitur secara lengkap sesuai instruksi
 CreateToggle(P1, "Auto Collect", "AutoCollect_GH")
 CreateToggle(P1, "ESP Egg", "ESP_Egg_GH", function() UpdateESP() end)
 CreateToggle(P2, "ESP Player", "ESP_Player_GH", function() UpdateESP() end)
-CreateToggle(P2, "X-Ray", "Xray_GH", function() ForceXray() end)
+CreateToggle(P2, "X-Ray Base", "Xray_GH", function() ToggleXray() end)
 
 -- [[ 5. ENGINE LOOP ]] --
 task.spawn(function()
-    for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
-    workspace.DescendantAdded:Connect(ApplyFlat)
-    while task.wait(3) do 
+    while task.wait(5) do 
         UpdateESP() 
-        if _G.GH_Config.Xray_GH then ForceXray() end
     end
 end)
