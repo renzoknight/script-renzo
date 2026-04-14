@@ -1,20 +1,21 @@
--- [[ GURITA-HUB-V1: FULL MAP FLAT COLOR & ANTI-LAG ]] --
+-- [[ GURITA-HUB-V1 - FINAL MERGED: FLAT COLOR & PASKA EVENT ]] --
+
 local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local CG = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-if PlayerGui:FindFirstChild("GuritaHub_Official") then
-    PlayerGui.GuritaHub_Official:Destroy()
-end
+-- 1. SETTINGS GLOBAL
+_G.GH_Settings = {
+    ESP_Player_GH = false,
+    Xray_GH = false,
+    AutoCollect_GH = false,
+    ESP_Egg_GH = false,
+    FlatColor_GH = true -- OTOMATIS AKTIF (ANTI-LAG)
+}
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "GuritaHub_Official"
-ScreenGui.Parent = PlayerGui
-ScreenGui.ResetOnSpawn = false
-
--- --- DATA UNIT ---
+-- DATA UNIT EVENT (DARI PASKA EVENT)
 local EasterList = {
     "Hydra Bunny", "Hopilikalika Hopilikalako", "Churrito Bunnito", 
     "Baskito", "Los Bunitos", "Easter Easter Easter Sahur", 
@@ -22,118 +23,174 @@ local EasterList = {
     "Bunny Bunny Bunny Sahur", "Noo my Eggs"
 }
 
--- --- FUNGSI UTAMA FLAT MAP (OTOMATIS AKTIF) ---
-local function PowerOptimization()
-    -- Mengubah Lighting agar lebih enteng
-    game:GetService("Lighting").GlobalShadows = false
-    game:GetService("Lighting").FogEnd = 9e9
-    
-    -- Menghapus semua tekstur di Map agar jadi Flat Color
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and not v:IsDescendantOf(LocalPlayer.Character) then
-            v.Material = Enum.Material.SmoothPlastic -- Material paling ringan
-            -- Jika bukan unit Easter, buat map jadi warna abu-abu/hijau flat (sesuai map)
-            if not table.find(EasterList, v.Name) and not table.find(EasterList, v.Parent.Name) then
-                -- Biarkan warna asli tapi hilangkan tekstur/material berat
-            else
-                -- Khusus Unit Easter tetap Ungu Neon agar kelihatan
-                v.Material = Enum.Material.Neon
-                v.Color = Color3.fromRGB(138, 43, 226)
+-- 2. ENGINE: FLAT COLOR & ANTI-LAG MAP
+local function ApplyFlatColor()
+    for i, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not v:IsA("Terrain") then
+            -- Filter: Abaikan karakter sendiri
+            if not v:IsDescendantOf(lp.Character) then
+                -- Paksa Material ke Plastic (Ringan) & Matikan Bayangan
+                if v.Material ~= Enum.Material.Plastic and v.Material ~= Enum.Material.Neon then
+                    v.Material = Enum.Material.Plastic
+                end
+                v.CastShadow = false
+                
+                -- Hapus Tekstur Map agar Flat
+                if v:FindFirstChildOfClass("Decal") or v:FindFirstChildOfClass("Texture") then
+                    for _, tex in pairs(v:GetChildren()) do
+                        if tex:IsA("Decal") or tex:IsA("Texture") then tex:Destroy() end
+                    end
+                end
             end
-        elseif v:IsA("Decal") or v:IsA("Texture") then
-            v:Destroy()
         elseif v:IsA("SpecialMesh") then
-            v.TextureId = ""
+            v.TextureId = "" -- Hapus tekstur mesh agar enteng
         end
+        if i % 500 == 0 then task.wait() end
     end
 end
 
--- Jalankan langsung pas di-execute
-PowerOptimization()
+-- 3. ENGINE: XRAY BASE
+local function UpdateXray()
+    for i, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
+            local n = v.Name:lower()
+            local isTarget = n:find("base") or n:find("floor") or n:find("lantai") or n:find("plot")
+            local isWall = n:find("wall") or n:find("tembok") or n:find("map") or n:find("build")
+            
+            if isTarget and not isWall then
+                v.LocalTransparencyModifier = _G.GH_Settings.Xray_GH and 0.7 or 0
+            end
+        end
+        if i % 500 == 0 then task.wait() end
+    end
+end
 
--- --- MAIN UI ---
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-MainFrame.Position = UDim2.new(0.5, -225, 0.5, -140)
-MainFrame.Size = UDim2.new(0, 450, 0, 280)
-MainFrame.Visible = false
-MainFrame.ZIndex = 100
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-Instance.new("UIStroke", MainFrame).Thickness = 2
+-- 4. ENGINE: ESP SYSTEM (PLAYER & EGG)
+local function UpdateESP()
+    -- ESP PLAYER
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
+            if _G.GH_Settings.ESP_Player_GH then
+                if not p.Character.Head:FindFirstChild("PlayerESP") then
+                    local bg = Instance.new("BillboardGui", p.Character.Head)
+                    bg.Name = "PlayerESP"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 200, 0, 50); bg.ExtentsOffset = Vector3.new(0, 3, 0)
+                    local lbl = Instance.new("TextLabel", bg)
+                    lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.TextColor3 = Color3.new(1, 1, 1)
+                    lbl.Text = p.Name; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 14; lbl.TextStrokeTransparency = 0
+                end
+            else
+                if p.Character.Head:FindFirstChild("PlayerESP") then p.Character.Head.PlayerESP:Destroy() end
+            end
+        end
+    end
 
-local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
-Sidebar.Position = UDim2.new(0, 10, 0, 45)
-Sidebar.Size = UDim2.new(0, 130, 0, 225)
-Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
-
-local b = Instance.new("TextButton", Sidebar)
-b.Size = UDim2.new(0, 115, 0, 35)
-b.Position = UDim2.new(0, 7, 0, 10)
-b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-b.Text = "Paska Event"
-b.TextColor3 = Color3.fromRGB(255, 255, 255)
-b.Font = Enum.Font.GothamBold
-b.TextSize = 10
-Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-
-local PagePaska = Instance.new("ScrollingFrame", MainFrame)
-PagePaska.Position = UDim2.new(0, 150, 0, 45)
-PagePaska.Size = UDim2.new(0, 290, 0, 225)
-PagePaska.BackgroundTransparency = 1
-PagePaska.Visible = true
-Instance.new("UIListLayout", PagePaska).Padding = UDim.new(0, 8)
-
--- ESP Toggle
-local ESP_Active = true
-local btn = Instance.new("TextButton", PagePaska)
-btn.Size = UDim2.new(0, 260, 0, 40)
-btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-btn.Text = "Easter ESP GH: ON"
-btn.TextColor3 = Color3.fromRGB(0, 255, 100)
-btn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-
-btn.MouseButton1Click:Connect(function()
-    ESP_Active = not ESP_Active
-    btn.Text = "Easter ESP GH: " .. (ESP_Active and "ON" or "OFF")
-    btn.TextColor3 = ESP_Active and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 255, 255)
-end)
-
--- --- LOOP UNIT ESP ---
-task.spawn(function()
-    while task.wait(1) do
+    -- ESP EGG PASKA (DENGAN FLAT COLOR UNGU)
+    if _G.GH_Settings.ESP_Egg_GH then
         for _, obj in pairs(workspace:GetDescendants()) do
-            for _, name in pairs(EasterList) do
-                if obj.Name == name then
-                    local target = obj:IsA("Model") and obj.PrimaryPart or (obj:IsA("BasePart") and obj)
-                    if target and ESP_Active then
-                        if not target:FindFirstChild("GH_ESP") then
-                            local bgu = Instance.new("BillboardGui", target)
-                            bgu.Name = "GH_ESP"; bgu.AlwaysOnTop = true; bgu.Size = UDim2.new(0,100,0,50)
-                            local lbl = Instance.new("TextLabel", bgu)
-                            lbl.BackgroundTransparency = 1; lbl.Size = UDim2.new(1,0,1,0); lbl.Text = name.." GH"; lbl.TextColor3 = Color3.fromRGB(255,255,0); lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
-                        end
-                    elseif target and not ESP_Active then
-                        if target:FindFirstChild("GH_ESP") then target.GH_ESP:Destroy() end
+            if table.find(EasterList, obj.Name) then
+                local target = obj:IsA("Model") and obj.PrimaryPart or (obj:IsA("BasePart") and obj)
+                if target then
+                    -- Buat Warna Jadi Flat Ungu (Chams Style)
+                    if obj:IsA("BasePart") then obj.Color = Color3.fromRGB(138, 43, 226); obj.Material = Enum.Material.Neon end
+                    
+                    if not target:FindFirstChild("EggESP") then
+                        local bgu = Instance.new("BillboardGui", target)
+                        bgu.Name = "EggESP"; bgu.AlwaysOnTop = true; bgu.Size = UDim2.new(0,100,0,50)
+                        local lbl = Instance.new("TextLabel", bgu)
+                        lbl.BackgroundTransparency = 1; lbl.Size = UDim2.new(1,0,1,0); lbl.Text = obj.Name.." [GH]"; lbl.TextColor3 = Color3.fromRGB(255,255,0); lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
                     end
                 end
             end
         end
+    else
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if table.find(EasterList, obj.Name) then
+                local target = obj:IsA("Model") and obj.PrimaryPart or (obj:IsA("BasePart") and obj)
+                if target and target:FindFirstChild("EggESP") then target.EggESP:Destroy() end
+            end
+        end
+    end
+end
+
+-- 5. UI CONSTRUCTION
+if CG:FindFirstChild("GuritaHub_Merged") then CG.GuritaHub_Merged:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHub_Merged"; SG.ResetOnSpawn = false
+
+-- Tombol Logo (Bisa Drag)
+local LogoBtn = Instance.new("TextButton", SG)
+LogoBtn.Size = UDim2.new(0, 50, 0, 50); LogoBtn.Position = UDim2.new(0.5, -25, 0.05, 0)
+LogoBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 20); LogoBtn.Text = "GH"; LogoBtn.TextColor3 = Color3.new(1, 1, 1)
+LogoBtn.Font = Enum.Font.GothamBold; LogoBtn.TextSize = 20; Instance.new("UICorner", LogoBtn)
+local LStroke = Instance.new("UIStroke", LogoBtn); LStroke.Color = Color3.fromRGB(0, 150, 255); LStroke.Thickness = 2
+
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 480, 0, 340); Main.Position = UDim2.new(0.5, -240, 0.5, -170)
+Main.BackgroundColor3 = Color3.fromRGB(10, 10, 15); Main.Visible = false; Instance.new("UICorner", Main)
+local MStroke = Instance.new("UIStroke", Main); MStroke.Color = Color3.fromRGB(0, 150, 255); MStroke.Thickness = 2
+
+LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+
+-- Sidebar & Pages
+local Sidebar = Instance.new("Frame", Main)
+Sidebar.Size = UDim2.new(0, 140, 1, -20); Sidebar.Position = UDim2.new(0, 10, 0, 10); Sidebar.BackgroundTransparency = 1
+Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 5)
+
+local PageContainer = Instance.new("Frame", Main)
+PageContainer.Size = UDim2.new(1, -170, 1, -20); PageContainer.Position = UDim2.new(0, 160, 0, 10); PageContainer.BackgroundTransparency = 1
+
+local function CreatePage(name)
+    local p = Instance.new("ScrollingFrame", PageContainer); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 2
+    Instance.new("UIListLayout", p).Padding = UDim.new(0, 5)
+    return p
+end
+
+local PaskaPage = CreatePage("PASKA"); local ESPPage = CreatePage("ESP")
+PaskaPage.Visible = true
+
+local function CreateSideBtn(txt, page)
+    local b = Instance.new("TextButton", Sidebar)
+    b.Size = UDim2.new(1, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(20, 20, 30); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.TextSize = 11; Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() 
+        for _, v in pairs(PageContainer:GetChildren()) do v.Visible = false end
+        page.Visible = true 
+    end)
+end
+CreateSideBtn("PASKA EVENT", PaskaPage); CreateSideBtn("VISUAL/MAP", ESPPage)
+
+local function CreateToggle(parent, txt, var, callback)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(1, -10, 0, 40); b.BackgroundColor3 = Color3.fromRGB(25, 25, 35); b.Font = Enum.Font.GothamBold; b.TextSize = 12; Instance.new("UICorner", b)
+    local function Update()
+        b.Text = txt..(_G.GH_Settings[var] and ": ON" or ": OFF")
+        b.TextColor3 = _G.GH_Settings[var] and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+    end
+    Update()
+    b.MouseButton1Click:Connect(function() _G.GH_Settings[var] = not _G.GH_Settings[var]; Update(); if callback then callback() end end)
+end
+
+-- Isi Fitur
+CreateToggle(PaskaPage, "Auto Collect", "AutoCollect_GH")
+CreateToggle(PaskaPage, "ESP Egg Hunt", "ESP_Egg_GH")
+CreateToggle(ESPPage, "Flat Color Map", "FlatColor_GH", function() if _G.GH_Settings.FlatColor_GH then ApplyFlatColor() end end)
+CreateToggle(ESPPage, "X-Ray Base", "Xray_GH", function() UpdateXray() end)
+CreateToggle(ESPPage, "ESP Player", "ESP_Player_GH")
+
+-- [[ DRAG SYSTEM ]] --
+local function Drag(obj)
+    local d, i, s, sp
+    obj.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then d = true; s = inp.Position; sp = obj.Position end end)
+    obj.InputChanged:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseMovement then i = inp end end)
+    UserInputService.InputEnded:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then d = false end end)
+    RunService.Heartbeat:Connect(function() if d and i then local delta = i.Position - s; obj.Position = UDim2.new(sp.X.Scale, sp.X.Offset + delta.X, sp.Y.Scale, sp.Y.Offset + delta.Y) end end)
+end
+Drag(Main); Drag(LogoBtn)
+
+-- [[ FINAL LOOP ]] --
+task.spawn(function()
+    ApplyFlatColor() -- Jalankan sekali saat start
+    while true do
+        if _G.GH_Settings.FlatColor_GH then ApplyFlatColor() end
+        UpdateESP()
+        task.wait(2)
     end
 end)
-
--- --- LOGO & DRAG ---
-local Logo = Instance.new("TextButton", ScreenGui)
-Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0.5, -25, 0, 50); Logo.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Logo.Text = "GH"; Logo.TextColor3 = Color3.fromRGB(255, 255, 255); Logo.Font = Enum.Font.GothamBold; Logo.TextSize = 20; Logo.ZIndex = 1000; Instance.new("UICorner", Logo).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", Logo).Thickness = 2
-
-local function Drag(ui)
-    local d, i, s, sp
-    ui.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then d = true; s = inp.Position; sp = ui.Position end end)
-    ui.InputChanged:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseMovement then i = inp end end)
-    UserInputService.InputEnded:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then d = false end end)
-    RunService.Heartbeat:Connect(function() if d and i then local delta = i.Position - s; ui.Position = UDim2.new(sp.X.Scale, sp.X.Offset + delta.X, sp.Y.Scale, sp.Y.Offset + delta.Y) end end)
-end
-Drag(MainFrame); Drag(Logo)
-Logo.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
