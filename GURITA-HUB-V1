@@ -1,5 +1,5 @@
--- [[ GURITA HUB: MIDNIGHT CLEAR EDITION ]] --
--- Fitur: Langit Malam + Map Terang Benderang (No Shadow) + Flat Color + Save System
+-- [[ GURITA HUB: SOFT-NIGHT & FLAT COLOR ]] --
+-- Update: Bunny Tralala, Manual Notif, Auto-Save, Soft Night Lighting
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -32,15 +32,15 @@ local function LoadData()
 end
 LoadData()
 
--- [[ 2. FEATURE: MIDNIGHT CLEAR (LANGIT MALAM, MAP TERANG) ]] --
+-- [[ 2. FEATURE: SOFT NIGHT LIGHTING (PAS DI MATA) ]] --
 task.spawn(function()
     while true do
         Lighting.ClockTime = 0 -- Langit Malam
-        Lighting.Brightness = 2 -- Jaga intensitas cahaya
-        Lighting.GlobalShadows = false -- MATIKAN BAYANGAN (Biar rumput/karpet nampak jelas semua)
-        Lighting.Ambient = Color3.fromRGB(255, 255, 255) -- Paksa warna objek jadi terang
-        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255) -- Paksa area luar jadi terang
-        Lighting.ExposureCompensation = 1 -- Tambahan booster penglihatan
+        Lighting.Brightness = 1 -- Cahaya Sedang
+        Lighting.GlobalShadows = false -- Tanpa Bayangan biar rata
+        Lighting.Ambient = Color3.fromRGB(120, 120, 120) -- Map nampak jelas
+        Lighting.OutdoorAmbient = Color3.fromRGB(120, 120, 120)
+        Lighting.ExposureCompensation = 0 -- Anti Silau
         task.wait(3)
     end
 end)
@@ -67,8 +67,7 @@ local function ApplyUltimateESP(obj)
                 end
                 task.wait(0.5)
             end
-            if b then b:Destroy() end
-            if h then h:Destroy() end
+            if b then b:Destroy() end; if h then h:Destroy() end
         end)
     end
 end
@@ -99,7 +98,7 @@ workspace.DescendantAdded:Connect(function(v)
     SikatJadiFlat(v)
     if table.find(TargetEggs, v.Name:lower()) then
         if _G.Settings.Notif then
-            StarterGui:SetCore("SendNotification", {Title = "🥚 EGG SPAWNED!", Text = v.Name:upper(), Duration = 5})
+            StarterGui:SetCore("SendNotification", {Title = "🥚 EGG DETECTED!", Text = v.Name:upper(), Duration = 5})
             local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
             s.Ended:Connect(function() s:Destroy() end)
         end
@@ -107,9 +106,9 @@ workspace.DescendantAdded:Connect(function(v)
     end
 end)
 
--- [[ 5. UI ]] --
-if PlayerGui:FindFirstChild("GURITA_CLEAR_NIGHT") then PlayerGui.GURITA_CLEAR_NIGHT:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_CLEAR_NIGHT"; SG.ResetOnSpawn = false
+-- [[ 5. UI CONSTRUCTION ]] --
+if PlayerGui:FindFirstChild("GURITA_SOFT_NIGHT") then PlayerGui.GURITA_SOFT_NIGHT:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_SOFT_NIGHT"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
@@ -118,25 +117,25 @@ Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 22; Logo.Draggable = true; Lo
 Instance.new("UICorner", Logo); Instance.new("UIStroke", Logo).Thickness = 2; Logo.UIStroke.Color = Color3.new(1,1,0)
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 220, 0, 200); Main.Position = UDim2.new(0.5, -110, 0.5, -100)
+Main.Size = UDim2.new(0, 220, 0, 180); Main.Position = UDim2.new(0.5, -110, 0.5, -90)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main)
 Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "GURITA HUB NIGHT"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 14
+Title.Size = UDim2.new(1, 0, 0, 45); Title.Text = "GURITA HUB SOFT-NIGHT"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 13
 
 local function CreateBtn(pos)
     local b = Instance.new("TextButton", Main)
     b.Size = UDim2.new(0.9, 0, 0, 45); b.Position = UDim2.new(0.05, 0, pos, 0)
-    b.BackgroundColor3 = Color3.fromRGB(25, 25, 25); b.Font = Enum.Font.GothamBold; b.TextSize = 13; Instance.new("UICorner", b)
+    b.BackgroundColor3 = Color3.fromRGB(25, 25, 25); b.Font = Enum.Font.GothamBold; b.TextSize = 12; Instance.new("UICorner", b)
     Instance.new("UIStroke", b).Color = Color3.fromRGB(50, 50, 50)
     return b
 end
 
 local BtnESP = CreateBtn(0.3)
-local BtnNotif = CreateBtn(0.6)
+local BtnNotif = CreateBtn(0.65)
 
 local function Refresh()
     BtnESP.Text = _G.Settings.EggESP and "ESP EGG: ON" or "ESP EGG: OFF"; BtnESP.TextColor3 = _G.Settings.EggESP and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
