@@ -1,51 +1,44 @@
--- [[ GURITA HUB V3.8 - HYBRID: FLAT WORLD + HD SKY ]] --
+-- [[ GURITA HUB V3.9 - SUPER SMOOTH & LOW LAG ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Lighting = game:GetService("Lighting")
 
--- 1. PROTEKSI KHUSUS (Biar Ezra & Langit Gak Kena Flat)
+-- 1. PROTEKSI (Biar Ezra & Sky tetep aman)
 local function IsProtected(v)
-    -- Jangan bikin Character kita jadi polos
-    if v:IsDescendantOf(lp.Character) or (v.Parent and v.Parent:FindFirstChild("Humanoid")) then
-        return true
-    end
-    -- Jangan hapus Awan, Langit, atau Efek Atmosfer
-    if v:IsA("Sky") or v:IsA("Clouds") or v:IsA("Atmosphere") or v.Name == "Terrain" then
-        return true
-    end
+    if v:IsDescendantOf(lp.Character) then return true end
+    if v:IsA("Sky") or v:IsA("Clouds") or v:IsA("Atmosphere") then return true end
     return false
 end
 
--- 2. FITUR FLAT COLOR (Khusus Lantai & Objek Map)
+-- 2. FLAT COLOR YANG ENTENG
 local function ApplyFlat(v)
-    pcall(function()
-        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsProtected(v) then
-            -- Bikin jadi Plastik biar enteng
+    -- Kita cuma eksekusi kalau part-nya lumayan gede (Lantai/Dinding)
+    -- Biar gak nge-lag ngerubah ribuan part kecil
+    if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsProtected(v) then
+        pcall(function()
             v.Material = Enum.Material.Plastic
             v.CastShadow = false
             
-            -- Hapus tekstur (skin lantai/dinding) biar Flat
             if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, tex in pairs(v:GetChildren()) do
-                if tex:IsA("Texture") or tex:IsA("Decal") then
-                    tex:Destroy()
+            
+            -- Hapus tekstur tapi pelan-pelan
+            for _, child in pairs(v:GetChildren()) do
+                if child:IsA("Texture") or child:IsA("Decal") then
+                    child:Destroy()
                 end
             end
-        end
-    end)
+        end)
+    end
 end
 
--- 3. FITUR HD SKY (Paksa Langit Jadi Jernih & HD)
+-- 3. HD SKY (Set Sekali Aja)
 local function SetHDSky()
-    -- Hapus langit bawaan yang buram
     for _, v in pairs(Lighting:GetChildren()) do
         if v:IsA("Sky") then v:Destroy() end
     end
 
     local Sky = Instance.new("Sky", Lighting)
-    Sky.Name = "EzraHDSky"
-    -- ID Skybox HD (Cerah)
     Sky.SkyboxBk = "rbxassetid://151165214"
     Sky.SkyboxDn = "rbxassetid://151165191"
     Sky.SkyboxFt = "rbxassetid://151165224"
@@ -53,34 +46,35 @@ local function SetHDSky()
     Sky.SkyboxRt = "rbxassetid://151165274"
     Sky.SkyboxUp = "rbxassetid://151165281"
     
-    -- Pasang Awan HD di Terrain
     local terrain = workspace:FindFirstChildOfClass("Terrain")
     if terrain then
         local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds", terrain)
         clouds.Enabled = true
         clouds.Cover = 0.5
-        clouds.Density = 0.7
     end
     
-    -- Setting Cahaya biar HD
     Lighting.ClockTime = 14
-    Lighting.Brightness = 2
-    Lighting.GlobalShadows = true
 end
 
--- 4. RUNNER SYSTEM
+-- 4. RUNNER DENGAN LIMITER (Biar Gak Frame Drop)
 task.spawn(function()
-    SetHDSky() -- Pasang Langit HD dulu
+    SetHDSky()
     
     local d = workspace:GetDescendants()
     for i = 1, #d do 
         ApplyFlat(d[i]) 
-        -- Biar gak freeze pas ngerubah ribuan part
-        if i % 350 == 0 then task.wait() end 
+        -- Setiap 100 part, kita kasih istirahat 1 frame
+        if i % 100 == 0 then 
+            task.wait() 
+        end 
     end
 end)
 
--- Biar kalau ada base baru spawn tetep jadi Flat
-workspace.DescendantAdded:Connect(ApplyFlat)
+-- Biar pas jalan gak lag, kita kasih delay pas ada part baru
+workspace.DescendantAdded:Connect(function(v)
+    task.delay(1, function()
+        ApplyFlat(v)
+    end)
+end)
 
-print("Gurita V3.8 Sukses: Lantai Polos, Langit HD!")
+print("Gurita V3.9: Low Lag Edition Ready!")
