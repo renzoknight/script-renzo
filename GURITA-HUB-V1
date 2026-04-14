@@ -1,4 +1,4 @@
--- [[ GURITA HUB V5.3 - PRECISION BLUE EDITION ]] --
+-- [[ GURITA HUB V5.6 - FULL INTEGRATED ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -8,8 +8,6 @@ local HttpService = game:GetService("HttpService")
 
 -- 1. DATABASE & CONFIG
 local ConfigFile = "GHS_Config_Final.json"
-local EggNames = {"Hydra Bunny", "Noo my Eggs", "Bunny Sahur", "Easter", "Eggdin", "Buntteo", "Baskito", "Churrito", "Tralala", "Bunny Bunny", "Dun Egg", "Quackini Snackini", "Hopilikalika Hopilikalako"}
-
 _G.GH_Config = {
     ESP_Player_GH = false,
     Xray_GH = false,
@@ -17,34 +15,22 @@ _G.GH_Config = {
     ESP_Egg_GH = false
 }
 
--- [[ AUTO SAVE & LOAD ]] --
 local function SaveData()
-    pcall(function()
-        if writefile then
-            writefile(ConfigFile, HttpService:JSONEncode(_G.GH_Config))
-        end
-    end)
+    pcall(function() if writefile then writefile(ConfigFile, HttpService:JSONEncode(_G.GH_Config)) end end)
 end
 
 local function LoadData()
     pcall(function()
         if isfile and isfile(ConfigFile) then
-            local content = readfile(ConfigFile)
-            local decoded = HttpService:JSONDecode(content)
-            if decoded then
-                for k, v in pairs(decoded) do
-                    _G.GH_Config[k] = v
-                end
-            end
+            local decoded = HttpService:JSONDecode(readfile(ConfigFile))
+            if decoded then for k, v in pairs(decoded) do _G.GH_Config[k] = v end end
         end
     end)
 end
 LoadData()
 
--- 2. BACKEND LOGIC
-local function IsPlayer(v)
-    return v:IsDescendantOf(lp.Character) or (v.Parent and v.Parent:FindFirstChild("Humanoid"))
-end
+-- [[ FUNGSI FLAT COLOR ]] --
+local function IsPlayer(v) return v:IsDescendantOf(lp.Character) or (v.Parent and v.Parent:FindFirstChild("Humanoid")) end
 
 local function ApplyFlat(v)
     pcall(function()
@@ -52,8 +38,8 @@ local function ApplyFlat(v)
             v.Material = Enum.Material.Plastic
             v.CastShadow = false
             if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, tex in pairs(v:GetChildren()) do
-                if tex:IsA("Texture") or tex:IsA("Decal") then tex:Destroy() end
+            for _, tex in pairs(v:GetChildren()) do 
+                if tex:IsA("Texture") or tex:IsA("Decal") then tex:Destroy() end 
             end
         end
     end)
@@ -72,173 +58,89 @@ local function RefreshXray()
     end)
 end
 
--- 3. ESP PLAYER SYSTEM
-local function CreatePlayerESP(p)
-    task.spawn(function()
-        while p and p.Parent do
-            if _G.GH_Config.ESP_Player_GH and p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
-                local head = p.Character.Head
-                if not head:FindFirstChild("ESP_PlayerTag") then
-                    local bg = Instance.new("BillboardGui", head)
-                    bg.Name = "ESP_PlayerTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 200, 0, 50); bg.ExtentsOffset = Vector3.new(0, 3, 0)
-                    local lbl = Instance.new("TextLabel", bg)
-                    lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.TextColor3 = Color3.new(1, 1, 1)
-                    lbl.Text = p.Name; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 16; lbl.TextStrokeTransparency = 0.5
-                end
-            else
-                if p.Character and p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESP_PlayerTag") then
-                    p.Character.Head.ESP_PlayerTag:Destroy()
-                end
-            end
-            task.wait(1)
-        end
-    end)
+-- 2. UI CONSTRUCTION
+if CG:FindFirstChild("GHS_MainUI_V56") then CG.GHS_MainUI_V56:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V56"
+
+-- [[ FAST WELCOME CLIP ]] --
+local function RunWelcomeClip()
+    local WFrame = Instance.new("Frame", SG)
+    WFrame.Size = UDim2.new(0, 250, 0, 70); WFrame.Position = UDim2.new(0.5, -125, 0.4, 0); WFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15); WFrame.BackgroundTransparency = 1; WFrame.BorderSizePixel = 0
+    Instance.new("UICorner", WFrame).CornerRadius = UDim.new(0, 10)
+    local WText = Instance.new("TextLabel", WFrame)
+    WText.Size = UDim2.new(1, 0, 1, 0); WText.BackgroundTransparency = 1; WText.Font = Enum.Font.GothamBlack; WText.Text = "WELCOME GH"; WText.TextSize = 25; WText.TextColor3 = Color3.fromRGB(0, 200, 255); WText.TextTransparency = 1
+    
+    TweenService:Create(WFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0.2}):Play()
+    TweenService:Create(WText, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+    task.wait(1)
+    TweenService:Create(WFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(WText, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+    game:GetService("Debris"):AddItem(WFrame, 0.5)
 end
+task.spawn(RunWelcomeClip)
 
--- 4. UI CONSTRUCTION (EXACT POSITION GHS)
-if CG:FindFirstChild("GHS_MainUI_V53") then CG.GHS_MainUI_V53:Destroy() end
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V53"
+-- [[ LOGO GH dekat SHOP ]] --
+local LogoFrame = Instance.new("Frame", SG)
+LogoFrame.Size = UDim2.new(0, 50, 0, 50); LogoFrame.Position = UDim2.new(0, 15, 0.3, 0); LogoFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25); LogoFrame.Active = true; LogoFrame.Draggable = true
+Instance.new("UICorner", LogoFrame).CornerRadius = UDim.new(1, 0)
+local LogoStroke = Instance.new("UIStroke", LogoFrame); LogoStroke.Thickness = 2.5; LogoStroke.Color = Color3.fromRGB(0, 150, 255)
+local LogoBtn = Instance.new("TextButton", LogoFrame)
+LogoBtn.Size = UDim2.new(1, 0, 1, 0); LogoBtn.BackgroundTransparency = 1; LogoBtn.Font = Enum.Font.GothamBlack; LogoBtn.Text = "GH"; LogoBtn.TextSize = 18; LogoBtn.TextColor3 = Color3.new(1, 1, 1)
 
--- TOMBOL GHS - POSISI PRESISI SESUAI FOTO
-local GHSBtn = Instance.new("TextButton", SG)
-GHSBtn.Size = UDim2.new(0, 100, 0, 40)
-GHSBtn.AnchorPoint = Vector2.new(0.5, 0)
-GHSBtn.Position = UDim2.new(0.42, 0, 0, 5) -- Digeser sedikit ke kiri dari tengah agar masuk ke sela-sela area merah
-GHSBtn.BackgroundTransparency = 1 
-GHSBtn.Font = Enum.Font.GothamBlack
-GHSBtn.Text = "GHS"
-GHSBtn.TextSize = 35 
-GHSBtn.TextColor3 = Color3.fromRGB(0, 200, 255) -- Warna Biru Bagus (Cyan)
-GHSBtn.Active = true
-GHSBtn.Draggable = true
-
--- STROKE BIAR NYALA
-local TextStroke = Instance.new("UIStroke", GHSBtn)
-TextStroke.Thickness = 2
-TextStroke.Color = Color3.fromRGB(0, 100, 255)
-TextStroke.Transparency = 0.3
-
--- EFEK KEDIP HALUS (BIRU MUDA KE BIRU TUA)
 task.spawn(function()
+    local Colors = {Color3.fromRGB(0, 170, 255), Color3.fromRGB(180, 0, 255), Color3.fromRGB(255, 230, 0), Color3.fromRGB(255, 110, 0)}
+    local i = 1
     while true do
-        TweenService:Create(GHSBtn, TweenInfo.new(1.5), {TextColor3 = Color3.fromRGB(0, 255, 255)}):Play()
-        task.wait(1.5)
-        TweenService:Create(GHSBtn, TweenInfo.new(1.5), {TextColor3 = Color3.fromRGB(0, 150, 255)}):Play()
-        task.wait(1.5)
+        TweenService:Create(LogoBtn, TweenInfo.new(1), {TextColor3 = Colors[i]}):Play()
+        TweenService:Create(LogoStroke, TweenInfo.new(1), {Color = Colors[i]}):Play()
+        i = i % #Colors + 1; task.wait(1.2)
     end
 end)
 
--- Main Frame Menu
+-- Main Menu
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 420, 0, 260); Main.Position = UDim2.new(0.5, -210, 0.5, -130); Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main)
-local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fromRGB(0, 150, 255); MainStroke.Thickness = 2
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
 
-GHSBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
 local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0, 120, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 28); Sidebar.BorderSizePixel = 0; Instance.new("UICorner", Sidebar)
-local SideLayout = Instance.new("UIListLayout", Sidebar); SideLayout.Padding = UDim.new(0, 5); SideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-local Pages = Instance.new("Frame", Main)
-Pages.Size = UDim2.new(1, -130, 1, -20); Pages.Position = UDim2.new(0, 125, 0, 10); Pages.BackgroundTransparency = 1
+Sidebar.Size = UDim2.new(0, 110, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 28); Instance.new("UICorner", Sidebar)
+local Pages = Instance.new("Frame", Main); Pages.Size = UDim2.new(1, -120, 1, -20); Pages.Position = UDim2.new(0, 115, 0, 10); Pages.BackgroundTransparency = 1
 
 local function CreatePage(name)
-    local p = Instance.new("ScrollingFrame", Pages); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 2
-    Instance.new("UIListLayout", p).Padding = UDim.new(0, 8)
-    return p
+    local p = Instance.new("ScrollingFrame", Pages); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 0
+    Instance.new("UIListLayout", p).Padding = UDim.new(0, 8); return p
 end
+local P1 = CreatePage("PASKA"); local P2 = CreatePage("ESP"); P1.Visible = true
 
-local PagePaska = CreatePage("PASKA"); local PageESP = CreatePage("ESP")
-PagePaska.Visible = true
-
-local function CreateSideBtn(txt, page)
-    local b = Instance.new("TextButton", Sidebar)
-    b.Size = UDim2.new(0.9, 0, 0, 35); b.BackgroundColor3 = Color3.fromRGB(25, 25, 40); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.TextSize = 11; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function() for _, v in pairs(Pages:GetChildren()) do v.Visible = false end; page.Visible = true end)
+local function CreateSideBtn(txt, p)
+    local b = Instance.new("TextButton", Sidebar); b.Size = UDim2.new(0.9, 0, 0, 35); b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; b.BackgroundColor3 = Color3.fromRGB(25,25,40); Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() for _, v in pairs(Pages:GetChildren()) do v.Visible = false end; p.Visible = true end)
 end
-CreateSideBtn("PASKA EVENT", PagePaska); CreateSideBtn("ESP", PageESP)
+CreateSideBtn("PASKA EVENT", P1); CreateSideBtn("ESP", P2)
 
 local function CreateToggle(parent, txt, var, callback)
-    local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(22, 22, 35); b.Font = Enum.Font.GothamBold; b.TextSize = 10; Instance.new("UICorner", b)
-    local s = Instance.new("UIStroke", b); s.Thickness = 1
-    
+    local b = Instance.new("TextButton", parent); b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(22, 22, 35); b.Font = Enum.Font.GothamBold; b.TextSize = 10; Instance.new("UICorner", b)
     local function UpdateUI()
-        local state = _G.GH_Config[var]
-        b.Text = txt..(state and ": ON" or ": OFF")
-        b.TextColor3 = state and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        s.Color = state and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 60)
+        b.Text = txt..(_G.GH_Config[var] and ": ON" or ": OFF")
+        b.TextColor3 = _G.GH_Config[var] and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
     end
     UpdateUI()
-    b.MouseButton1Click:Connect(function()
-        _G.GH_Config[var] = not _G.GH_Config[var]
-        UpdateUI(); SaveData()
-        if callback then callback() end
-    end)
+    b.MouseButton1Click:Connect(function() _G.GH_Config[var] = not _G.GH_Config[var]; UpdateUI(); SaveData(); if callback then callback() end end)
 end
 
--- [[ FITUR EXECUTION ]] --
-local function StartAutoCollect()
-    task.spawn(function()
-        while _G.GH_Config.AutoCollect_GH do
-            local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if not _G.GH_Config.AutoCollect_GH then break end
-                    if v:IsA("BasePart") and v.Name:lower():find("coin") then
-                        hrp.CFrame = v.CFrame
-                        firetouchinterest(hrp, v, 0); task.wait(); firetouchinterest(hrp, v, 1)
-                        task.wait(0.15)
-                    end
-                end
-            end
-            task.wait(1)
-        end
-    end)
-end
-
-CreateToggle(PagePaska, "Auto Collect Koin", "AutoCollect_GH", function()
-    if _G.GH_Config.AutoCollect_GH then StartAutoCollect() end
-end)
-
-CreateToggle(PagePaska, "ESP EGG HUNT", "ESP_Egg_GH", function()
-    if not _G.GH_Config.ESP_Egg_GH then
-        for _, v in pairs(workspace:GetDescendants()) do if v.Name == "EHSTag" then v:Destroy() end end
-    end
-end)
-
-CreateToggle(PageESP, "ESP Player", "ESP_Player_GH")
-CreateToggle(PageESP, "X-Ray Bening", "Xray_GH", function() RefreshXray() end)
+CreateToggle(P1, "Auto Collect Koin", "AutoCollect_GH")
+CreateToggle(P1, "ESP EGG HUNT", "ESP_Egg_GH")
+CreateToggle(P2, "ESP Player", "ESP_Player_GH")
+CreateToggle(P2, "X-Ray Bening", "Xray_GH", function() RefreshXray() end)
 
 -- [[ RUNNERS ]] --
-for _, p in pairs(Players:GetPlayers()) do CreatePlayerESP(p) end
-Players.PlayerAdded:Connect(CreatePlayerESP)
-
-if _G.GH_Config.AutoCollect_GH then StartAutoCollect() end
-if _G.GH_Config.Xray_GH then task.delay(1, RefreshXray) end
-
 task.spawn(function()
     local d = workspace:GetDescendants()
-    for i = 1, #d do ApplyFlat(d[i]); if i % 400 == 0 then task.wait() end end
+    for i = 1, #d do ApplyFlat(d[i]); if i % 500 == 0 then task.wait() end end
     workspace.DescendantAdded:Connect(ApplyFlat)
-    
-    while true do
-        if _G.GH_Config.ESP_Egg_GH then
-            for _, v in ipairs(workspace:GetDescendants()) do
-                local n = v.Name:lower()
-                for _, egg in ipairs(EggNames) do
-                    if n:find(egg:lower()) then
-                        local t = v:IsA("Model") and (v:FindFirstChild("Handle") or v:FindFirstChildWhichIsA("BasePart")) or v
-                        if t and not t:FindFirstChild("EHSTag") then
-                            local bg = Instance.new("BillboardGui", t); bg.Name = "EHSTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 150, 0, 40); bg.ExtentsOffset = Vector3.new(0, 3, 0)
-                            local lbl = Instance.new("TextLabel", bg); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.RichText = true
-                            lbl.Text = "<b>"..egg.."</b>"; lbl.TextColor3 = Color3.fromRGB(0, 220, 255); lbl.TextSize = 13; lbl.Font = Enum.Font.GothamBold
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(5)
-    end
 end)
+
+if _G.GH_Config.Xray_GH then task.delay(1, RefreshXray) end
