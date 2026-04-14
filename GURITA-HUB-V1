@@ -1,4 +1,5 @@
--- [[ GURITA HUB: NIGHT SKY EDITION ]] --
+-- [[ GURITA HUB: CONTRAST EDITION ]] --
+-- Fitur: Langit Malam + Map Terang (Rumput/Karpet Jelas) + Flat Color + ESP
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -31,15 +32,19 @@ local function LoadData()
 end
 LoadData()
 
--- [[ 2. FEATURE: NIGHT SKY ONLY (MAP TETAP TERANG) ]] --
+-- [[ 2. FEATURE: BRIGHT GROUND & DARK SKY ]] --
 task.spawn(function()
     while true do
-        Lighting.ClockTime = 0 -- Langit jadi Malam (Bintang-bintang)
-        Lighting.Brightness = 2 -- Jaga Brightness tetap tinggi biar map terang
-        Lighting.GlobalShadows = false
-        Lighting.Ambient = Color3.fromRGB(150, 150, 150) -- Biar map gak gelap gulita
-        Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150)
-        Lighting.ExposureCompensation = 0.5 -- Tambahan cahaya biar objek nampak jelas
+        Lighting.ClockTime = 0 -- Langit Malam (Gelap)
+        Lighting.Brightness = 3 -- Booster cahaya objek
+        Lighting.GlobalShadows = false -- Hilangkan bayangan biar rumput makin terang
+        
+        -- Paksa Ambient jadi Putih Terang (Biar Rumput & Karpet Markas tetap nampak siang)
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255) 
+        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+        
+        -- Jaga Exposure agar tetap stabil terang
+        Lighting.ExposureCompensation = 1
         task.wait(2)
     end
 end)
@@ -107,8 +112,8 @@ workspace.DescendantAdded:Connect(function(v)
 end)
 
 -- [[ 5. UI ]] --
-if PlayerGui:FindFirstChild("GURITA_NIGHT_SKY") then PlayerGui.GURITA_NIGHT_SKY:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_NIGHT_SKY"; SG.ResetOnSpawn = false
+if PlayerGui:FindFirstChild("GURITA_CONTRAST") then PlayerGui.GURITA_CONTRAST:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_CONTRAST"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
@@ -124,7 +129,7 @@ Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "GURITA SKY EDITION"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 14
+Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "GURITA BRIGHT-MAP"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 14
 
 local function CreateBtn(pos)
     local b = Instance.new("TextButton", Main)
