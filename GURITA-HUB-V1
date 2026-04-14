@@ -1,97 +1,96 @@
--- [[ GURITA HUB - PERMANENT FLAT COLOR EDITION ]] --
+-- [[ GURITA HUB - TRUE FLAT COLOR EDITION ]] --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- [[ FUNGSI FLAT COLOR PERMANEN & OTOMATIS ]] --
-local function MakeFlat(char)
-    -- Pastikan karakter ada
+-- [[ FUNGSI FLAT COLOR SUPREME (ANTI-LAG) ]] --
+local function ApplyTrueFlatColor(char)
     if not char then return end
     
-    -- Tunggu sebentar sampai part karakter muncul
-    task.wait(0.5)
+    -- Menghilangkan aksesoris/topi agar warna flat terlihat bersih di badan
+    task.wait(0.2)
     
-    -- Cari semua bagian tubuh (Part) pemain
     for _, v in pairs(char:GetDescendants()) do
         if v:IsA("BasePart") then
-            -- Menerapkan Flat Color
-            v.Material = Enum.Material.SmoothPlastic -- Membuat tekstur rata/flat
-            v.Color = Color3.fromRGB(0, 255, 127) -- Warna hijau flat yang soft (tidak mencolok)
+            -- Ini kunci warna FLAT: Menggunakan material Neon dengan Transparansi khusus
+            -- atau membuang semua texture (Decals/Texture)
+            v.Material = Enum.Material.Neon 
+            v.Color = Color3.fromRGB(170, 0, 255) -- Warna Ungu Flat (seperti di foto)
             
-            -- Menambahkan Highlight tipis (ESP) agar permanen tembus pandang
-            if not char:FindFirstChild("GuritaVisual") then
-                local highlight = Instance.new("Highlight")
-                highlight.Name = "GuritaVisual"
-                highlight.Parent = char
-                highlight.FillColor = Color3.fromRGB(0, 255, 127)
-                highlight.FillTransparency = 0.7 -- Transparan agar halus
-                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                highlight.OutlineTransparency = 0.5
-                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            -- Menghapus wajah/stiker agar benar-benar rata warnanya
+            if v:IsA("Decal") or v:IsA("Texture") then
+                v:Destroy()
             end
+        elseif v:IsA("SpecialMesh") then
+            -- Menghapus tekstur pada mesh tapi mempertahankan bentuk
+            v.TextureId = ""
+        end
+    end
+    
+    -- Menambahkan Outline Tipis (Highlight) agar tetap terlihat bentuknya
+    if not char:FindFirstChild("GuritaFlat") then
+        local hl = Instance.new("Highlight")
+        hl.Name = "GuritaFlat"
+        hl.Parent = char
+        hl.FillTransparency = 1 -- Kita pakai warna part-nya saja agar flat
+        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+        hl.OutlineTransparency = 0.2
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    end
+end
+
+-- Otomatis aktif untuk semua orang kecuali kita (agar tidak silau)
+local function MonitorPlayers()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            if p.Character then ApplyTrueFlatColor(p.Character) end
+            p.CharacterAdded:Connect(ApplyTrueFlatColor)
         end
     end
 end
 
--- Otomatis jalan untuk semua pemain yang masuk
-local function OnPlayerAdded(player)
-    if player ~= LocalPlayer then
-        player.CharacterAdded:Connect(function(char)
-            MakeFlat(char)
-        end)
-        if player.Character then
-            MakeFlat(player.Character)
-        end
-    end
-end
-
--- Menjalankan fungsi otomatis saat script di-execute
-for _, player in pairs(Players:GetPlayers()) do
-    OnPlayerAdded(player)
-end
-Players.PlayerAdded:Connect(OnPlayerAdded)
-
--- [[ UI SETUP ]] --
-local Window = Rayfield:CreateWindow({
-   Name = "🐙 GURITA HUB | Steal A Brainrot",
-   LoadingTitle = "Mengaktifkan Gurita Hub...",
-   LoadingSubtitle = "Flat Color: PERMANENT ACTIVE",
-})
-
--- [[ LOGO TOMBOL BUKA/TUTUP ]] --
-local OpenGui = Instance.new("ScreenGui")
-local ToggleButton = Instance.new("TextButton")
-OpenGui.Parent = game.CoreGui
-ToggleButton.Parent = OpenGui
-ToggleButton.Name = "GuritaBtn"
-ToggleButton.Text = "🐙"
-ToggleButton.Size = UDim2.new(0, 55, 0, 55)
-ToggleButton.Position = UDim2.new(0, 15, 0.5, 0)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleButton.TextColor3 = Color3.fromRGB(0, 255, 255)
-ToggleButton.TextSize = 30
-Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 15)
-ToggleButton.Draggable = true
-
-ToggleButton.MouseButton1Click:Connect(function()
-    game:GetService("CoreGui").Rayfield.Enabled = not game:GetService("CoreGui").Rayfield.Enabled
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(ApplyTrueFlatColor)
 end)
 
--- [[ TAB INFO ]] --
-local MainTab = Window:CreateTab("Main")
-MainTab:CreateSection("Status: Flat Color Is Permanently ON")
-MainTab:CreateLabel("GURITA HUB - Version 1.0 (Auto-Flat)")
+MonitorPlayers()
 
--- Tambahan Fitur Movement agar lebih lengkap
-local MoveTab = Window:CreateTab("Movement")
-MoveTab:CreateSlider({
-   Name = "WalkSpeed",
-   Range = {16, 200},
-   Increment = 1,
-   CurrentValue = 16,
-   Callback = function(Value)
-      LocalPlayer.Character.Humanoid.WalkSpeed = Value
-   end,
+-- [[ UI & LOGO SETUP ]] --
+local Window = Rayfield:CreateWindow({
+   Name = "🐙 GURITA HUB | Steal A Brainrot",
+   LoadingTitle = "Flat Color Active...",
+   LoadingSubtitle = "Warna Flat Permanen Terpasang",
+})
+
+-- LOGO GURITA (Bisa Digeser)
+local Gui = Instance.new("ScreenGui", game.CoreGui)
+local Btn = Instance.new("TextButton", Gui)
+Btn.Size = UDim2.new(0, 60, 0, 60)
+Btn.Position = UDim2.new(0, 20, 0.4, 0)
+Btn.Text = "🐙"
+Btn.TextSize = 35
+Btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Btn.Draggable = true
+local Corner = Instance.new("UICorner", Btn)
+Corner.CornerRadius = UDim.new(0, 20)
+
+Btn.MouseButton1Click:Connect(function()
+    game.CoreGui.Rayfield.Enabled = not game.CoreGui.Rayfield.Enabled
+end)
+
+local Tab = Window:CreateTab("Settings")
+Tab:CreateLabel("Flat Color: ALWAYS ON ✅")
+Tab:CreateLabel("Versi ini menghapus tekstur agar FPS lancar")
+
+-- Booster tambahan agar benar-benar tidak lag
+Tab:CreateButton({
+   Name = "🚀 Ultra FPS Boost",
+   Callback = function()
+       settings().Rendering.QualityLevel = 1
+       for _,v in pairs(game:GetDescendants()) do
+           if v:IsA("PostProcessEffect") then v.Enabled = false end
+       end
+   end
 })
