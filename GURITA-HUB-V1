@@ -1,96 +1,75 @@
--- [[ GURITA HUB - TRUE FLAT COLOR EDITION ]] --
+-- [[ GURITA HUB - ULTRA FLAT MAP EDITION ]] --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
 
--- [[ FUNGSI FLAT COLOR SUPREME (ANTI-LAG) ]] --
-local function ApplyTrueFlatColor(char)
-    if not char then return end
-    
-    -- Menghilangkan aksesoris/topi agar warna flat terlihat bersih di badan
-    task.wait(0.2)
-    
-    for _, v in pairs(char:GetDescendants()) do
-        if v:IsA("BasePart") then
-            -- Ini kunci warna FLAT: Menggunakan material Neon dengan Transparansi khusus
-            -- atau membuang semua texture (Decals/Texture)
-            v.Material = Enum.Material.Neon 
-            v.Color = Color3.fromRGB(170, 0, 255) -- Warna Ungu Flat (seperti di foto)
+-- [[ FUNGSI FLAT COLOR RUMPUT & MAP (OTOMATIS) ]] --
+local function MakeMapFlat()
+    -- Mengubah Terrain (Rumput asli Roblox) jadi flat
+    local terrain = Workspace:FindFirstChildOfClass("Terrain")
+    if terrain then
+        terrain.WaterWaveSize = 0
+        terrain.WaterWaveSpeed = 0
+        terrain.WaterReflectance = 0
+        terrain.WaterTransparency = 0
+        -- Memaksa tekstur rumput hilang
+        sethiddenproperty(terrain, "Decoration", false) 
+    end
+
+    -- Mencari semua Part di Map (Lantai/Rumput buatan)
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            -- Jika objek berwarna hijau (biasanya rumput) atau bagian dari map
+            -- Kita buat materialnya jadi SmoothPlastic supaya FLAT
+            obj.Material = Enum.Material.SmoothPlastic
             
-            -- Menghapus wajah/stiker agar benar-benar rata warnanya
-            if v:IsA("Decal") or v:IsA("Texture") then
-                v:Destroy()
+            -- Menghapus tekstur/decal yang nempel di tanah
+            if obj:IsA("Texture") or obj:IsA("Decal") then
+                obj:Destroy()
             end
-        elseif v:IsA("SpecialMesh") then
-            -- Menghapus tekstur pada mesh tapi mempertahankan bentuk
-            v.TextureId = ""
-        end
-    end
-    
-    -- Menambahkan Outline Tipis (Highlight) agar tetap terlihat bentuknya
-    if not char:FindFirstChild("GuritaFlat") then
-        local hl = Instance.new("Highlight")
-        hl.Name = "GuritaFlat"
-        hl.Parent = char
-        hl.FillTransparency = 1 -- Kita pakai warna part-nya saja agar flat
-        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-        hl.OutlineTransparency = 0.2
-        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    end
-end
-
--- Otomatis aktif untuk semua orang kecuali kita (agar tidak silau)
-local function MonitorPlayers()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            if p.Character then ApplyTrueFlatColor(p.Character) end
-            p.CharacterAdded:Connect(ApplyTrueFlatColor)
         end
     end
 end
 
-Players.PlayerAdded:Connect(function(p)
-    p.CharacterAdded:Connect(ApplyTrueFlatColor)
-end)
-
-MonitorPlayers()
+-- Langsung jalankan pas execute
+MakeMapFlat()
 
 -- [[ UI & LOGO SETUP ]] --
 local Window = Rayfield:CreateWindow({
    Name = "🐙 GURITA HUB | Steal A Brainrot",
-   LoadingTitle = "Flat Color Active...",
-   LoadingSubtitle = "Warna Flat Permanen Terpasang",
+   LoadingTitle = "Flat Map Mode Active...",
+   LoadingSubtitle = "By Gurita Team",
 })
 
--- LOGO GURITA (Bisa Digeser)
+-- LOGO GURITA (Klik buat buka menu)
 local Gui = Instance.new("ScreenGui", game.CoreGui)
-local Btn = Instance.new("TextButton", Gui)
-Btn.Size = UDim2.new(0, 60, 0, 60)
-Btn.Position = UDim2.new(0, 20, 0.4, 0)
-Btn.Text = "🐙"
-Btn.TextSize = 35
-Btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-Btn.Draggable = true
-local Corner = Instance.new("UICorner", Btn)
-Corner.CornerRadius = UDim.new(0, 20)
+local LogoBtn = Instance.new("TextButton", Gui)
 
-Btn.MouseButton1Click:Connect(function()
+LogoBtn.Name = "GuritaLogo"
+LogoBtn.Size = UDim2.new(0, 60, 0, 60)
+LogoBtn.Position = UDim2.new(0, 20, 0.45, 0) -- Pas di atas Shop/Rebirth
+LogoBtn.Text = "🐙"
+LogoBtn.TextSize = 35
+LogoBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+LogoBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+LogoBtn.Draggable = true -- Biar bisa digeser kalo ganggu tombol lain
+Instance.new("UICorner", LogoBtn).CornerRadius = UDim.new(0, 20)
+
+LogoBtn.MouseButton1Click:Connect(function()
     game.CoreGui.Rayfield.Enabled = not game.CoreGui.Rayfield.Enabled
 end)
 
-local Tab = Window:CreateTab("Settings")
-Tab:CreateLabel("Flat Color: ALWAYS ON ✅")
-Tab:CreateLabel("Versi ini menghapus tekstur agar FPS lancar")
+-- [[ TAB MAIN ]] --
+local Tab = Window:CreateTab("Main")
+Tab:CreateSection("Flat Color Map: PERMANENT ✅")
+Tab:CreateLabel("Rumput dan tanah sekarang sudah flat/polos.")
 
--- Booster tambahan agar benar-benar tidak lag
+-- Tombol refresh kalo ada map baru yang belum flat
 Tab:CreateButton({
-   Name = "🚀 Ultra FPS Boost",
+   Name = "🔄 Refresh Flat Map",
    Callback = function()
-       settings().Rendering.QualityLevel = 1
-       for _,v in pairs(game:GetDescendants()) do
-           if v:IsA("PostProcessEffect") then v.Enabled = false end
-       end
+       MakeMapFlat()
+       Rayfield:Notify({Title = "Success", Content = "Map dipaksa jadi flat lagi!", Duration = 2})
    end
 })
