@@ -1,18 +1,18 @@
--- [[ FLAT COLOR ONLY - ANTI LAG SYSTEM ]] --
+-- [[ FLAT COLOR ONLY - AUTO RE-RUN SYSTEM ]] --
 
 local CG = game:GetService("CoreGui")
 local _G = getgenv and getgenv() or _G
 _G.FlatColorActive = false
 
--- [[ 1. LOGIKA FLAT COLOR (ANTI-LAG) ]] --
+-- [[ 1. LOGIKA FLAT COLOR YANG LEBIH KUAT ]] --
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
-            -- Ubah material jadi Plastic (Paling Ringan)
+            -- Ubah ke material paling ringan
             v.Material = Enum.Material.Plastic
             v.CastShadow = false
             
-            -- Hapus tekstur kalau ada
+            -- Hapus tekstur & efek berat
             if v:IsA("MeshPart") then v.TextureID = "" end
             for _, child in pairs(v:GetChildren()) do 
                 if child:IsA("Texture") or child:IsA("Decal") then 
@@ -23,34 +23,33 @@ local function ApplyFlat(v)
     end)
 end
 
--- Fungsi Scan Map dengan Jeda (Anti-Lag)
-local function ScanMap()
-    local descendants = workspace:GetDescendants()
-    for i, v in pairs(descendants) do
-        if _G.FlatColorActive then
-            ApplyFlat(v)
-            -- Jeda setiap 50 objek biar HP gak nge-freeze
-            if i % 50 == 0 then task.wait() end
-        end
+-- [[ 2. SISTEM AUTO-SCAN (ANTI-LAG) ]] --
+local function RunFlatCycle()
+    local all = workspace:GetDescendants()
+    for i, v in pairs(all) do
+        if not _G.FlatColorActive then break end -- Berhenti kalau di-OFF
+        
+        ApplyFlat(v)
+        
+        -- Anti-Lag: Kasih jeda setiap 100 objek biar HP gak panas
+        if i % 100 == 0 then task.wait() end
     end
 end
 
--- [[ 2. UI SIMPEL (CUMAN ON/OFF) ]] --
+-- [[ 3. UI SIMPEL ]] --
 if CG:FindFirstChild("FlatOnlyUI") then CG.FlatOnlyUI:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "FlatOnlyUI"
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 140, 0, 70); Main.Position = UDim2.new(0.1, 0, 0.4, 0)
-Main.BackgroundColor3 = Color3.new(0,0,0); Main.Draggable = true; Main.Active = true
+Main.Size = UDim2.new(0, 150, 0, 70); Main.Position = UDim2.new(0.1, 0, 0.4, 0); Main.BackgroundColor3 = Color3.new(0,0,0); Main.Draggable = true; Main.Active = true
 Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 255, 150)
 
 local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0.9, 0, 0.7, 0); Btn.Position = UDim2.new(0.05, 0, 0.15, 0)
-Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 12; Instance.new("UICorner", Btn)
+Btn.Size = UDim2.new(0.9, 0, 0.7, 0); Btn.Position = UDim2.new(0.05, 0, 0.15, 0); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 13; Instance.new("UICorner", Btn)
 
 local function UpdateUI()
-    Btn.Text = _G.FlatColorActive and "FLAT COLOR: ON" or "FLAT COLOR: OFF"
-    Btn.BackgroundColor3 = _G.FlatColorActive and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
+    Btn.Text = _G.FlatColorActive and "FLAT: ACTIVE" or "FLAT: OFF"
+    Btn.BackgroundColor3 = _G.FlatColorActive and Color3.fromRGB(0, 180, 50) or Color3.fromRGB(180, 0, 0)
     Btn.TextColor3 = Color3.new(1,1,1)
 end
 
@@ -58,16 +57,27 @@ Btn.MouseButton1Click:Connect(function()
     _G.FlatColorActive = not _G.FlatColorActive
     UpdateUI()
     if _G.FlatColorActive then
-        ScanMap()
+        task.spawn(RunFlatCycle)
     end
 end)
 
 UpdateUI()
 
--- [[ 3. AUTO-FLAT UNTUK OBJEK BARU ]] --
+-- [[ 4. ENGINE OTOMATIS (BIAR GAK GAGAL) ]] --
+task.spawn(function()
+    while true do
+        if _G.FlatColorActive then
+            -- Scan map setiap 10 detik buat pastiin gak ada yang kelewat
+            RunFlatCycle()
+        end
+        task.wait(10) -- Jeda biar gak boros baterai
+    end
+end)
+
+-- Langsung sikat kalau ada benda baru muncul
 workspace.DescendantAdded:Connect(function(new)
     if _G.FlatColorActive then
-        task.wait(0.1)
+        task.wait(0.5) -- Nunggu part-nya beneran ada
         ApplyFlat(new)
     end
 end)
