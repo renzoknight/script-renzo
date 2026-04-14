@@ -1,83 +1,58 @@
--- [[ FLAT COLOR ONLY - AUTO RE-RUN SYSTEM ]] --
+-- [[ FLAT COLOR TESTER - FULL AUTOMATIC ]] --
+-- Sifat: Langsung Aktif, Tanpa Menu, Anti-Lag
 
-local CG = game:GetService("CoreGui")
-local _G = getgenv and getgenv() or _G
-_G.FlatColorActive = false
+print("GURITA HUB: Memulai Uji Coba Flat Color...")
 
--- [[ 1. LOGIKA FLAT COLOR YANG LEBIH KUAT ]] --
-local function ApplyFlat(v)
+-- 1. Fungsi Utama Flat Color
+local function SikatJadiFlat(v)
     pcall(function()
         if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
-            -- Ubah ke material paling ringan
+            -- Ubah ke material teringan
             v.Material = Enum.Material.Plastic
             v.CastShadow = false
             
-            -- Hapus tekstur & efek berat
+            -- Hapus tekstur & decal
             if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, child in pairs(v:GetChildren()) do 
-                if child:IsA("Texture") or child:IsA("Decal") then 
-                    child:Destroy() 
+            for _, anak in pairs(v:GetChildren()) do 
+                if anak:IsA("Texture") or anak:IsA("Decal") then 
+                    anak:Destroy() 
                 end 
             end
         end
     end)
 end
 
--- [[ 2. SISTEM AUTO-SCAN (ANTI-LAG) ]] --
-local function RunFlatCycle()
-    local all = workspace:GetDescendants()
-    for i, v in pairs(all) do
-        if not _G.FlatColorActive then break end -- Berhenti kalau di-OFF
+-- 2. Proses Scan Map Awal (Dibuat Bertahap Biar Gak Lag)
+task.spawn(function()
+    local semuaObjek = workspace:GetDescendants()
+    for i, obj in pairs(semuaObjek) do
+        SikatJadiFlat(obj)
         
-        ApplyFlat(v)
-        
-        -- Anti-Lag: Kasih jeda setiap 100 objek biar HP gak panas
-        if i % 100 == 0 then task.wait() end
+        -- Anti-Lag: Berhenti sebentar setiap 100 objek
+        if i % 100 == 0 then 
+            task.wait() 
+        end
     end
-end
-
--- [[ 3. UI SIMPEL ]] --
-if CG:FindFirstChild("FlatOnlyUI") then CG.FlatOnlyUI:Destroy() end
-local SG = Instance.new("ScreenGui", CG); SG.Name = "FlatOnlyUI"
-
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 150, 0, 70); Main.Position = UDim2.new(0.1, 0, 0.4, 0); Main.BackgroundColor3 = Color3.new(0,0,0); Main.Draggable = true; Main.Active = true
-Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 255, 150)
-
-local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0.9, 0, 0.7, 0); Btn.Position = UDim2.new(0.05, 0, 0.15, 0); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 13; Instance.new("UICorner", Btn)
-
-local function UpdateUI()
-    Btn.Text = _G.FlatColorActive and "FLAT: ACTIVE" or "FLAT: OFF"
-    Btn.BackgroundColor3 = _G.FlatColorActive and Color3.fromRGB(0, 180, 50) or Color3.fromRGB(180, 0, 0)
-    Btn.TextColor3 = Color3.new(1,1,1)
-end
-
-Btn.MouseButton1Click:Connect(function()
-    _G.FlatColorActive = not _G.FlatColorActive
-    UpdateUI()
-    if _G.FlatColorActive then
-        task.spawn(RunFlatCycle)
-    end
+    print("GURITA HUB: Scan Map Awal Selesai.")
 end)
 
-UpdateUI()
+-- 3. Deteksi Otomatis Benda Baru (Biar Gak Gagal)
+workspace.DescendantAdded:Connect(function(bendaBaru)
+    task.wait(0.5) -- Jeda biar objek ke-load sempurna
+    SikatJadiFlat(bendaBaru)
+end)
 
--- [[ 4. ENGINE OTOMATIS (BIAR GAK GAGAL) ]] --
+-- 4. Re-Scan Berkala (Setiap 15 Detik)
+-- Biar kalau ada yang membandel, otomatis disikat lagi
 task.spawn(function()
     while true do
-        if _G.FlatColorActive then
-            -- Scan map setiap 10 detik buat pastiin gak ada yang kelewat
-            RunFlatCycle()
+        task.wait(15)
+        local objekSekarang = workspace:GetDescendants()
+        for i, obj in pairs(objekSekarang) do
+            if obj:IsA("BasePart") and obj.Material ~= Enum.Material.Plastic then
+                SikatJadiFlat(obj)
+            end
+            if i % 200 == 0 then task.wait() end
         end
-        task.wait(10) -- Jeda biar gak boros baterai
-    end
-end)
-
--- Langsung sikat kalau ada benda baru muncul
-workspace.DescendantAdded:Connect(function(new)
-    if _G.FlatColorActive then
-        task.wait(0.5) -- Nunggu part-nya beneran ada
-        ApplyFlat(new)
     end
 end)
