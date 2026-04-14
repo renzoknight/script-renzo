@@ -1,4 +1,4 @@
--- [[ GURITA HUB V4.2 - STABLE EDITION ]] --
+-- [[ GURITA HUB V4.3 - CRYSTAL CLEAR EDITION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -14,7 +14,7 @@ _G.Xray_GH = false
 _G.AutoCollect_GH = false
 _G.ESP_Egg_GH = false
 
--- 2. BACKEND LOGIC (FLAT COLOR & NOTIF)
+-- 2. BACKEND LOGIC
 local function IsPlayer(v)
     return v:IsDescendantOf(lp.Character) or (v.Parent and v.Parent:FindFirstChild("Humanoid"))
 end
@@ -32,23 +32,26 @@ local function ApplyFlat(v)
     end)
 end
 
-local function CustomNotif(eggName)
-    local sg = lp.PlayerGui:FindFirstChild("EHS_Notif") or Instance.new("ScreenGui", lp.PlayerGui)
-    sg.Name = "EHS_Notif"
-    local frame = Instance.new("Frame", sg)
-    frame.Size = UDim2.new(0, 240, 0, 40); frame.Position = UDim2.new(0.5, -120, -0.1, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 25); frame.BorderSizePixel = 0
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-    local stroke = Instance.new("UIStroke", frame); stroke.Color = Color3.fromRGB(0, 150, 255); stroke.Thickness = 2
-    local txt = Instance.new("TextLabel", frame)
-    txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1; txt.Font = Enum.Font.GothamBold; txt.TextSize = 10; txt.TextColor3 = Color3.new(1, 1, 1); txt.Text = "📩 FOUND: " .. eggName:upper()
-    local sound = Instance.new("Sound", workspace); sound.SoundId = "rbxassetid://4835664299"; sound.Volume = 1; sound:Play()
-    game:GetService("Debris"):AddItem(sound, 2)
-    frame:TweenPosition(UDim2.new(0.5, -120, 0.05, 0), "Out", "Back", 0.5, true)
-    task.delay(4, function() if frame then frame:TweenPosition(UDim2.new(0.5, -120, -0.2, 0), "In", "Linear", 0.5, true); task.wait(0.5); frame:Destroy() end end)
+-- LOGIKA XRAY BENING (ANTI ABU-ABU)
+local function RefreshXray()
+    task.spawn(function()
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and not IsPlayer(v) then
+                local n = v.Name:lower()
+                -- Filter khusus base/wall/door
+                if n:find("wall") or n:find("base") or n:find("door") or n:find("floor") or n:find("part") then
+                    if _G.Xray_GH then
+                        v.LocalTransparencyModifier = 0.6 -- Pakai Modifier biar bening
+                    else
+                        v.LocalTransparencyModifier = 0
+                    end
+                end
+            end
+        end
+    end)
 end
 
--- 3. ESP PLAYER LOGIC (FIXED)
+-- 3. ESP PLAYER LOGIC (STABLE & BIG NAME)
 local function CreatePlayerESP(p)
     task.spawn(function()
         while p and p.Parent do
@@ -72,17 +75,18 @@ local function CreatePlayerESP(p)
 end
 
 -- 4. UI CONSTRUCTION
-if CG:FindFirstChild("GuritaHub_BlueV42") then CG.GuritaHub_BlueV42:Destroy() end
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHub_BlueV42"
+if CG:FindFirstChild("GuritaHub_BlueV43") then CG.GuritaHub_BlueV43:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHub_BlueV43"
 
+-- Logo / Floating Button
 local LogoFrame = Instance.new("Frame", SG)
-LogoFrame.Size = UDim2.new(0, 50, 0, 50); LogoFrame.Position = UDim2.new(0, 15, 0.45, 0)
-LogoFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 20); LogoFrame.Active = true; LogoFrame.Draggable = true
+LogoFrame.Size = UDim2.new(0, 50, 0, 50); LogoFrame.Position = UDim2.new(0, 15, 0.45, 0); LogoFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 20); LogoFrame.Active = true; LogoFrame.Draggable = true
 Instance.new("UICorner", LogoFrame).CornerRadius = UDim.new(1, 0)
 local LogoStroke = Instance.new("UIStroke", LogoFrame); LogoStroke.Color = Color3.fromRGB(0, 150, 255); LogoStroke.Thickness = 2
 local LogoBtn = Instance.new("TextButton", LogoFrame)
 LogoBtn.Size = UDim2.new(1, 0, 1, 0); LogoBtn.BackgroundTransparency = 1; LogoBtn.Text = "GH"; LogoBtn.TextColor3 = Color3.new(1, 1, 1); LogoBtn.Font = Enum.Font.GothamBold; LogoBtn.TextSize = 18
 
+-- Main Frame
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 420, 0, 260); Main.Position = UDim2.new(0.5, -210, 0.5, -130); Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main)
@@ -90,10 +94,12 @@ local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fro
 
 LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
+-- Sidebar
 local Sidebar = Instance.new("Frame", Main)
 Sidebar.Size = UDim2.new(0, 120, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 28); Sidebar.BorderSizePixel = 0; Instance.new("UICorner", Sidebar)
 local SideLayout = Instance.new("UIListLayout", Sidebar); SideLayout.Padding = UDim.new(0, 5); SideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
+-- Pages
 local Pages = Instance.new("Frame", Main)
 Pages.Size = UDim2.new(1, -130, 1, -20); Pages.Position = UDim2.new(0, 125, 0, 10); Pages.BackgroundTransparency = 1
 
@@ -126,7 +132,7 @@ local function CreateToggle(parent, txt, var, callback)
     end)
 end
 
--- [[ FITUR ]] --
+-- FITUR IMPLEMENTATION
 CreateToggle(PagePaska, "Auto Collect Koin Paska GH", "AutoCollect_GH", function()
     task.spawn(function()
         while _G.AutoCollect_GH do
@@ -152,18 +158,11 @@ end)
 
 CreateToggle(PageESP, "ESP Player GH", "ESP_Player_GH", function() end)
 
-CreateToggle(PageESP, "X-Ray GH", "Xray_GH", function()
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and not IsPlayer(v) then
-            local n = v.Name:lower()
-            if n:find("wall") or n:find("base") or n:find("door") or n:find("floor") then
-                v.Transparency = _G.Xray_GH and 0.6 or 0
-            end
-        end
-    end
+CreateToggle(PageESP, "X-Ray GH (Bening)", "Xray_GH", function()
+    RefreshXray()
 end)
 
--- [[ AUTO RUNNERS ]] --
+-- AUTO RUNNERS
 for _, p in pairs(Players:GetPlayers()) do CreatePlayerESP(p) end
 Players.PlayerAdded:Connect(CreatePlayerESP)
 
@@ -183,7 +182,6 @@ task.spawn(function()
                             local bg = Instance.new("BillboardGui", t); bg.Name = "EHSTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 150, 0, 40); bg.ExtentsOffset = Vector3.new(0, 3, 0)
                             local lbl = Instance.new("TextLabel", bg); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.RichText = true
                             lbl.Text = "<b>"..egg.."</b>"; lbl.TextColor3 = Color3.fromRGB(0, 220, 255); lbl.TextSize = 13; lbl.Font = Enum.Font.GothamBold
-                            if Inceran[egg] then CustomNotif(egg) end
                         end
                     end
                 end
