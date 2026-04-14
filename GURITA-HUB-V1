@@ -1,4 +1,4 @@
--- [[ GURITA-HUB-V1: TRUE FLAT COLOR (CHAMS) EDITION ]] --
+-- [[ GURITA-HUB-V1: FINAL CHAMS AUTO-ACTIVE ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -14,7 +14,7 @@ ScreenGui.Name = "GuritaHub_Official"
 ScreenGui.Parent = PlayerGui
 ScreenGui.ResetOnSpawn = false
 
--- --- DATA UNIT ---
+-- --- DATA UNIT EVENT ---
 local EasterList = {
     "Hydra Bunny", "Hopilikalika Hopilikalako", "Churrito Bunnito", 
     "Baskito", "Los Bunitos", "Easter Easter Easter Sahur", 
@@ -22,7 +22,7 @@ local EasterList = {
     "Bunny Bunny Bunny Sahur", "Noo my Eggs"
 }
 
--- --- MAIN FRAME ---
+-- --- MAIN UI ---
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MainFrame.Position = UDim2.new(0.5, -225, 0.5, -140)
@@ -33,16 +33,6 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Thickness = 2
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 45)
-Title.BackgroundTransparency = 1
-Title.Text = "GURITA-HUB"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
-Title.ZIndex = 110
-
--- --- SIDEBAR (KIRI - HANYA PASKA EVENT) ---
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
 Sidebar.Position = UDim2.new(0, 10, 0, 45)
@@ -50,11 +40,11 @@ Sidebar.Size = UDim2.new(0, 130, 0, 225)
 Sidebar.ZIndex = 105
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
 
--- Tombol Menu Paska Event
+-- Tombol Sidebar (Satu-satunya menu)
 local b = Instance.new("TextButton", Sidebar)
 b.Size = UDim2.new(0, 115, 0, 35)
 b.Position = UDim2.new(0, 7, 0, 10)
-b.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 b.Text = "Paska Event"
 b.TextColor3 = Color3.fromRGB(255, 255, 255)
 b.Font = Enum.Font.GothamBold
@@ -62,22 +52,20 @@ b.TextSize = 10
 b.ZIndex = 120
 Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
 
--- --- PAGE CONTENT ---
+-- Tab Content
 local PagePaska = Instance.new("ScrollingFrame", MainFrame)
 PagePaska.Position = UDim2.new(0, 150, 0, 45)
 PagePaska.Size = UDim2.new(0, 290, 0, 225)
 PagePaska.BackgroundTransparency = 1
+PagePaska.Visible = true
 PagePaska.ZIndex = 110
-PagePaska.ScrollBarThickness = 2
-local layout = Instance.new("UIListLayout", PagePaska)
-layout.Padding = UDim.new(0, 8)
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Instance.new("UIListLayout", PagePaska).Padding = UDim.new(0, 8)
 
--- --- FITUR ESP TOGGLE ---
+-- Toggle ESP (Satu-satunya tombol fitur yang bisa diatur)
 local ESP_Active = true
 local btn = Instance.new("TextButton", PagePaska)
 btn.Size = UDim2.new(0, 260, 0, 40)
-btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 btn.Text = "Easter ESP GH: ON"
 btn.TextColor3 = Color3.fromRGB(0, 255, 100)
 btn.Font = Enum.Font.GothamBold
@@ -90,25 +78,29 @@ btn.MouseButton1Click:Connect(function()
     btn.TextColor3 = ESP_Active and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 255, 255)
 end)
 
--- --- LOGIKA CORE (AUTO FLAT COLOR / CHAMS) ---
+-- --- LOGIKA CORE (CHAMS/FLAT COLOR SELALU AKTIF) ---
+local function ApplyChams(obj)
+    if not obj:FindFirstChild("GH_Chams") then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "GH_Chams"
+        highlight.Parent = obj
+        highlight.FillColor = Color3.fromRGB(138, 43, 226) -- Warna Ungu (Frost Hub Style)
+        highlight.FillTransparency = 0.4
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.OutlineTransparency = 0
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    end
+end
+
 task.spawn(function()
     while task.wait(0.5) do
         for _, obj in pairs(workspace:GetDescendants()) do
             for _, name in pairs(EasterList) do
                 if obj.Name == name then
-                    -- 1. FLAT COLOR (CHAMS) - OTOMATIS AKTIF
-                    if not obj:FindFirstChild("GH_Chams") then
-                        local highlight = Instance.new("Highlight")
-                        highlight.Name = "GH_Chams"
-                        highlight.Parent = obj
-                        highlight.FillColor = Color3.fromRGB(100, 0, 255) -- Warna Ungu/Biru sesuai foto
-                        highlight.FillTransparency = 0.5
-                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                        highlight.OutlineTransparency = 0
-                        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                    end
+                    -- 1. Apply Chams (Flat Color) Otomatis
+                    ApplyChams(obj)
                     
-                    -- 2. ESP BILLBOARD
+                    -- 2. ESP Billboard
                     local target = obj:IsA("Model") and obj.PrimaryPart or (obj:IsA("BasePart") and obj)
                     if target then
                         if ESP_Active then
@@ -128,7 +120,7 @@ task.spawn(function()
     end
 end)
 
--- --- LOGO (UKURAN TETAP 50x50) ---
+-- --- LOGO & UTILS ---
 local Logo = Instance.new("TextButton", ScreenGui)
 Logo.Size = UDim2.new(0, 50, 0, 50)
 Logo.Position = UDim2.new(0.5, -25, 0, 50)
@@ -139,10 +131,8 @@ Logo.Font = Enum.Font.GothamBold
 Logo.TextSize = 20
 Logo.ZIndex = 1000
 Instance.new("UICorner", Logo).CornerRadius = UDim.new(0, 8)
-local LStroke = Instance.new("UIStroke", Logo)
-LStroke.Thickness = 2
+Instance.new("UIStroke", Logo).Thickness = 2
 
--- --- UTILS (DRAG & CLOSE) ---
 local function Drag(ui)
     local d, i, s, sp
     ui.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then d = true; s = inp.Position; sp = ui.Position end end)
