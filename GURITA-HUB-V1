@@ -1,5 +1,4 @@
--- [[ GURITA HUB: SOFT-NIGHT & FLAT COLOR ]] --
--- Update: Bunny Tralala, Manual Notif, Auto-Save, Soft Night Lighting
+-- [[ GURITA HUB: NORMAL-BRIGHT & FLAT COLOR ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -32,15 +31,18 @@ local function LoadData()
 end
 LoadData()
 
--- [[ 2. FEATURE: SOFT NIGHT LIGHTING (PAS DI MATA) ]] --
+-- [[ 2. FEATURE: NORMAL BRIGHT NIGHT (CAHAYA NORMAL, LANGIT MALAM) ]] --
 task.spawn(function()
     while true do
         Lighting.ClockTime = 0 -- Langit Malam
-        Lighting.Brightness = 1 -- Cahaya Sedang
-        Lighting.GlobalShadows = false -- Tanpa Bayangan biar rata
-        Lighting.Ambient = Color3.fromRGB(120, 120, 120) -- Map nampak jelas
-        Lighting.OutdoorAmbient = Color3.fromRGB(120, 120, 120)
-        Lighting.ExposureCompensation = 0 -- Anti Silau
+        Lighting.Brightness = 2 -- Cahaya normal game
+        Lighting.GlobalShadows = true -- Hidupkan shadow tipis biar gak flat banget
+        
+        -- Gunakan warna Grey standar Roblox (Biar warna rumput & karpet normal)
+        Lighting.Ambient = Color3.fromRGB(127, 127, 127) 
+        Lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
+        
+        Lighting.ExposureCompensation = 0 -- Gak pake booster biar gak silau
         task.wait(3)
     end
 end)
@@ -107,8 +109,8 @@ workspace.DescendantAdded:Connect(function(v)
 end)
 
 -- [[ 5. UI CONSTRUCTION ]] --
-if PlayerGui:FindFirstChild("GURITA_SOFT_NIGHT") then PlayerGui.GURITA_SOFT_NIGHT:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_SOFT_NIGHT"; SG.ResetOnSpawn = false
+if PlayerGui:FindFirstChild("GURITA_NORMAL_NIGHT") then PlayerGui.GURITA_NORMAL_NIGHT:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_NORMAL_NIGHT"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
@@ -124,7 +126,7 @@ Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 45); Title.Text = "GURITA HUB SOFT-NIGHT"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 13
+Title.Size = UDim2.new(1, 0, 0, 45); Title.Text = "GURITA HUB NORMAL"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 13
 
 local function CreateBtn(pos)
     local b = Instance.new("TextButton", Main)
