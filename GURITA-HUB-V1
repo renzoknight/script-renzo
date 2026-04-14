@@ -1,4 +1,4 @@
--- [[ GURITA-HUB-V1 - MANUAL TOGGLE EDITION ]] --
+-- [[ GURITA-HUB-V1 - SIDEBAR EDITION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -7,175 +7,117 @@ local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 local CG = game:GetService("CoreGui")
 
--- 1. DATABASE FILTERING (LIST EGGROT)
+-- 1. DATABASE FILTERING
 local HighPriority = {
-    ["Hydra Bunny"] = true,
-    ["Hopilikalika Hopilikalako"] = true,
-    ["Churrito Bunnito"] = true,
-    ["Baskito"] = true,
-    ["Los Bunitos"] = true,
-    ["Noo my Eggs"] = true
+    ["Hydra Bunny"] = true, ["Hopilikalika"] = true, ["Churrito"] = true,
+    ["Baskito"] = true, ["Los Bunitos"] = true, ["Noo my Eggs"] = true
 }
 
 local LowPriority = {
-    ["Easter Easter Easter Sahur"] = true,
-    ["Bunny Tralala"] = true,
-    ["Eggdin Egg Egg Dun"] = true
+    ["Easter Easter Easter Sahur"] = true, ["Bunny Tralala"] = true, ["Eggdin Egg"] = true
 }
 
--- 2. KONFIGURASI & AUTO SAVE
-local filename = "GURITA_HUB_MANUAL_CONFIG.json"
+-- 2. CONFIG
 _G.GH_Settings = {
-    EggrotHunt_GH = false, -- SEKARANG MANUAL OFF
-    ESP_Player_GH = false, -- MANUAL OFF
-    XrayBase_GH = false,   -- MANUAL OFF
-    AutoCollect_GH = false, -- MANUAL OFF
-    FlatColor_GH = true,   -- TETAP AUTO ON
-    NotifSound_GH = true   -- TETAP AUTO ON
+    EggrotHunt_GH = false,
+    ESP_Player_GH = false,
+    XrayBase_GH = false,
+    AutoCollect_GH = false,
+    FlatColor_GH = true,
+    NotifSound_GH = true
 }
 
-local function SaveConfig()
-    pcall(function() if writefile then writefile(filename, HttpService:JSONEncode(_G.GH_Settings)) end end)
-end
-
--- 3. SISTEM SUARA & WARNA JALAN
-local function PlayNotifSound()
-    local sound = Instance.new("Sound", game:GetService("SoundService"))
-    sound.SoundId = "rbxassetid://4590662762"
-    sound.Volume = 2
-    sound:Play()
-    game:GetService("Debris"):AddItem(sound, 2)
-end
-
-local function RunColorAnimation(target)
-    task.spawn(function()
-        local colors = {
-            Color3.fromRGB(0, 170, 255), Color3.fromRGB(255, 120, 0),
-            Color3.fromRGB(255, 255, 0), Color3.fromRGB(170, 0, 255)
-        }
-        local i = 1
-        while true do
-            local nextColor = colors[i]
-            local prop = target:IsA("TextButton") and "TextColor3" or "Color"
-            TweenService:Create(target, TweenInfo.new(1.5, Enum.EasingStyle.Linear), {[prop] = nextColor}):Play()
-            task.wait(1.5)
-            i = i % #colors + 1
-        end
-    end)
-end
-
--- 4. LOGIKA FITUR
-local function ApplyFlatColor()
+-- 3. FITUR LOGIC FIX (ANTI BUG)
+local function UpdateXray()
     for _, v in pairs(workspace:GetDescendants()) do
-        if _G.GH_Settings.FlatColor_GH and v:IsA("BasePart") and not v:IsA("Terrain") then
-            v.Material = Enum.Material.Plastic
+        if v:IsA("BasePart") and not v:IsA("Terrain") then
+            local n = v.Name:lower()
+            if n:find("wall") or n:find("floor") or n:find("roof") or n:find("base") then
+                v.LocalTransparencyModifier = _G.GH_Settings.XrayBase_GH and 0.7 or 0
+            end
         end
     end
 end
 
--- Fitur Auto Collect Coin GH
-task.spawn(function()
-    while true do
-        if _G.GH_Settings.AutoCollect_GH then
-            pcall(function()
-                for _, v in pairs(workspace:GetDescendants()) do
-                    if v.Name == "Coin" or v.Name == "Candy" or v.Name == "Gem" then -- Sesuaikan nama objek di game
-                        if v:IsA("BasePart") and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                            v.CFrame = lp.Character.HumanoidRootPart.CFrame
-                        end
-                    end
-                end
-            end)
+local function ClearESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p.Character and p.Character:FindFirstChild("Head") then
+            local tag = p.Character.Head:FindFirstChild("GH_ESP")
+            if tag then tag:Destroy() end
         end
-        task.wait(0.5)
     end
-end)
+end
 
--- Fitur Eggrot Hunt GH
-task.spawn(function()
-    while true do
-        if _G.GH_Settings.EggrotHunt_GH then
-            for _, v in pairs(workspace:GetDescendants()) do
-                if (v:IsA("BasePart") or v:IsA("MeshPart")) then
-                    -- High Priority
-                    for name, _ in pairs(HighPriority) do
-                        if v.Name:find(name) and not v:FindFirstChild("EggTag") then
-                            local bg = Instance.new("BillboardGui", v); bg.Name = "EggTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 150, 0, 40); bg.ExtentsOffset = Vector3.new(0, 3, 0)
-                            local lbl = Instance.new("TextLabel", bg); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 16
-                            lbl.Text = "🚨 " .. name .. " 🚨"; lbl.TextColor3 = Color3.fromRGB(255, 0, 0)
-                            if _G.GH_Settings.NotifSound_GH then
-                                PlayNotifSound()
-                                StarterGui:SetCore("SendNotification", {Title = "📩 GURITA HUB", Text = "EGG LANGKA: " .. name, Duration = 6})
-                            end
-                        end
-                    end
-                    -- Low Priority
-                    for name, _ in pairs(LowPriority) do
-                        if v.Name:find(name) and not v:FindFirstChild("EggTag") then
-                            local bg = Instance.new("BillboardGui", v); bg.Name = "EggTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 150, 0, 40); bg.ExtentsOffset = Vector3.new(0, 3, 0)
-                            local lbl = Instance.new("TextLabel", bg); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 14
-                            lbl.Text = "🥚 " .. name; lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-                        end
-                    end
-                end
-            end
-        else
-            for _, v in pairs(workspace:GetDescendants()) do if v.Name == "EggTag" then v:Destroy() end end
-        end
-        task.wait(1.5)
-    end
-end)
-
--- 5. UI CONSTRUCTION
+-- 4. UI CONSTRUCTION (SIDEBAR STYLE)
 if CG:FindFirstChild("GuritaHub_V1") then CG.GuritaHub_V1:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHub_V1"
 
+-- LOGO TENGAH ATAS
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 220, 0, 35); Logo.Position = UDim2.new(0.5, -110, 0, 0)
 Logo.BackgroundTransparency = 1; Logo.Text = "GURITA-HUB-V1"; Logo.Font = Enum.Font.GothamBold; Logo.TextSize = 22; Logo.TextStrokeTransparency = 0.5
-RunColorAnimation(Logo)
 
+-- MAIN WINDOW
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 380, 0, 380); Main.Position = UDim2.new(0.5, -190, 0.5, -190); Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20); Main.Visible = false; Instance.new("UICorner", Main)
-local MainStroke = Instance.new("UIStroke", Main); MainStroke.Thickness = 3
-RunColorAnimation(MainStroke)
+Main.Size = UDim2.new(0, 500, 0, 350); Main.Position = UDim2.new(0.5, -250, 0.5, -175); Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20); Main.Visible = false; Instance.new("UICorner", Main)
+local MainStroke = Instance.new("UIStroke", Main); MainStroke.Thickness = 2; MainStroke.Color = Color3.fromRGB(0, 170, 255)
 
-local CloseBtn = Instance.new("TextButton", Main)
-CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0, 5); CloseBtn.Text = "X"; CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50); CloseBtn.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", CloseBtn)
-CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
+-- SIDEBAR (Kaya di Foto)
+local Sidebar = Instance.new("Frame", Main)
+Sidebar.Size = UDim2.new(0, 120, 1, -10); Sidebar.Position = UDim2.new(0, 5, 0, 5); Sidebar.BackgroundTransparency = 1
+local SideLayout = Instance.new("UIListLayout", Sidebar); SideLayout.Padding = UDim.new(0, 5)
+
+-- CONTAINER FITUR
+local Container = Instance.new("ScrollingFrame", Main)
+Container.Size = UDim2.new(1, -140, 1, -50); Container.Position = UDim2.new(0, 130, 0, 45); Container.BackgroundTransparency = 1; Container.ScrollBarThickness = 0
+local ContLayout = Instance.new("UIListLayout", Container); ContLayout.Padding = UDim.new(0, 8)
+
+-- Tombol Close (X)
+local X = Instance.new("TextButton", Main)
+X.Size = UDim2.new(0, 30, 0, 30); X.Position = UDim2.new(1, -35, 0, 5); X.Text = "X"; X.BackgroundColor3 = Color3.fromRGB(200, 50, 50); X.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", X)
+X.MouseButton1Click:Connect(function() Main.Visible = false end)
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
-local List = Instance.new("ScrollingFrame", Main)
-List.Size = UDim2.new(1, -20, 1, -60); List.Position = UDim2.new(0, 10, 0, 50); List.BackgroundTransparency = 1; List.ScrollBarThickness = 0
-Instance.new("UIListLayout", List).Padding = UDim.new(0, 8)
-
-local function CreateToggle(txt, var, callback)
-    local b = Instance.new("TextButton", List); b.Size = UDim2.new(1, 0, 0, 45); b.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    local function Upd()
-        b.Text = txt..(_G.GH_Settings[var] and ": ON" or ": OFF")
-        b.TextColor3 = _G.GH_Settings[var] and Color3.fromRGB(0, 255, 127) or Color3.fromRGB(255, 80, 80)
-    end
-    Upd()
-    b.MouseButton1Click:Connect(function() _G.GH_Settings[var] = not _G.GH_Settings[var]; Upd(); SaveConfig(); if callback then callback() end end)
-    Instance.new("UICorner", b)
+-- FUNGSI BUAT TAB SIDEBAR
+local function AddTab(name)
+    local t = Instance.new("TextButton", Sidebar)
+    t.Size = UDim2.new(1, 0, 0, 45); t.BackgroundColor3 = Color3.fromRGB(25, 25, 35); t.Text = name; t.TextColor3 = Color3.new(1,1,1); t.Font = Enum.Font.GothamBold; t.TextSize = 14; Instance.new("UICorner", t)
+    return t
 end
 
--- INJECT MENU
-CreateToggle("Eggrot Hunt GH", "EggrotHunt_GH")
-CreateToggle("Auto Collect Coin GH", "AutoCollect_GH")
-CreateToggle("ESP Player GH", "ESP_Player_GH")
-CreateToggle("X-Ray Base GH", "XrayBase_GH", function()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and (v.Name:lower():find("wall") or v.Name:lower():find("floor")) then
-            v.LocalTransparencyModifier = _G.GH_Settings.XrayBase_GH and 0.7 or 0
-        end
-    end
-end)
-CreateToggle("Flat Color GH", "FlatColor_GH", ApplyFlatColor)
-CreateToggle("Notif Suara GH", "NotifSound_GH")
+-- ISI SIDEBAR
+local TabEvent = AddTab("Event Paska")
+local TabPlayer = AddTab("Player")
+local TabServer = AddTab("Server")
 
--- AUTO RUN PADA SAAT EXECUTE
-ApplyFlatColor()
+-- FUNGSI BUAT TOGGLE
+local function CreateToggle(txt, var, callback)
+    local b = Instance.new("TextButton", Container); b.Size = UDim2.new(1, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(30, 30, 40); Instance.new("UICorner", b)
+    local function Upd()
+        b.Text = txt..(_G.GH_Settings[var] and ": ON" or ": OFF")
+        b.TextColor3 = _G.GH_Settings[var] and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+    end
+    Upd()
+    b.MouseButton1Click:Connect(function() 
+        _G.GH_Settings[var] = not _G.GH_Settings[var]; Upd(); if callback then callback() end 
+    end)
+end
+
+-- MENGISI KATEGORI
+TabEvent.MouseButton1Click:Connect(function()
+    for _, v in pairs(Container:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+    CreateToggle("Egg Hunt GH", "EggrotHunt_GH")
+    CreateToggle("Auto Collect GH", "AutoCollect_GH")
+    local bug = Instance.new("TextLabel", Container); bug.Size = UDim2.new(1,0,0,30); bug.Text = "Laporan Bug: Aktif"; bug.TextColor3 = Color3.new(0.7,0.7,0.7); bug.BackgroundTransparency=1
+end)
+
+TabPlayer.MouseButton1Click:Connect(function()
+    for _, v in pairs(Container:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+    CreateToggle("ESP Player GH", "ESP_Player_GH", function() if not _G.GH_Settings.ESP_Player_GH then ClearESP() end end)
+    CreateToggle("X-Ray Base GH", "XrayBase_GH", UpdateXray)
+end)
+
+-- LOOP UTAMA
 task.spawn(function()
     while true do
         if _G.GH_Settings.ESP_Player_GH then
@@ -186,6 +128,19 @@ task.spawn(function()
                 end
             end
         end
-        task.wait(2)
+        if _G.GH_Settings.XrayBase_GH then UpdateXray() end
+        task.wait(1)
+    end
+end)
+
+-- Warna Warni Logo
+local colors = {Color3.fromRGB(0,170,255), Color3.fromRGB(255,120,0), Color3.fromRGB(255,255,0), Color3.fromRGB(170,0,255)}
+task.spawn(function()
+    local i = 1
+    while true do
+        TweenService:Create(Logo, TweenInfo.new(1.5), {TextColor3 = colors[i]}):Play()
+        TweenService:Create(MainStroke, TweenInfo.new(1.5), {Color = colors[i]}):Play()
+        task.wait(1.5)
+        i = i % #colors + 1
     end
 end)
