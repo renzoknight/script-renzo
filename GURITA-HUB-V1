@@ -1,4 +1,4 @@
--- [[ GURITA HUB V6.3 - ALL FEATURES RESTORED ]] --
+-- [[ GURITA HUB V6.4 - TOTAL REPAIR ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -21,69 +21,55 @@ local function SaveData()
     pcall(function() if writefile then writefile(ConfigFile, HttpService:JSONEncode(_G.GH_Config)) end end)
 end
 
-local function LoadData()
-    pcall(function()
-        if isfile and isfile(ConfigFile) then
-            local decoded = HttpService:JSONDecode(readfile(ConfigFile))
-            if decoded then for k, v in pairs(decoded) do _G.GH_Config[k] = v end end
-        end
-    end)
-end
-LoadData()
-
--- [[ MESIN 1: FLAT COLOR (AUTO RUN) ]] --
-local function IsPlayer(v) return v:IsDescendantOf(lp.Character) or (v.Parent and v.Parent:FindFirstChild("Humanoid")) end
-
+-- [[ FITUR FLAT COLOR (OPTIMIZED) ]] --
 local function ApplyFlat(v)
     pcall(function()
-        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsPlayer(v) then
+        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
             v.Material = Enum.Material.Plastic
             v.CastShadow = false
             if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, tex in pairs(v:GetChildren()) do if tex:IsA("Texture") or tex:IsA("Decal") then tex:Destroy() end end
+            for _, child in pairs(v:GetChildren()) do
+                if child:IsA("Texture") or child:IsA("Decal") then child:Destroy() end
+            end
         end
     end)
 end
 
--- [[ MESIN 2: X-RAY ]] --
+-- [[ FITUR X-RAY ]] --
 local function RefreshXray()
-    task.spawn(function()
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not IsPlayer(v) then
-                local n = v.Name:lower()
-                if n:find("wall") or n:find("base") or n:find("door") or n:find("floor") or n:find("part") then
-                    v.LocalTransparencyModifier = _G.GH_Config.Xray_GH and 0.6 or 0
-                end
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
+            local n = v.Name:lower()
+            if n:find("wall") or n:find("floor") or n:find("base") or n:find("part") then
+                v.LocalTransparencyModifier = _G.GH_Config.Xray_GH and 0.6 or 0
             end
         end
-    end)
+    end
 end
 
--- [[ MESIN 3: ESP PLAYER ]] --
-local function CreatePlayerESP(p)
-    task.spawn(function()
-        while p and p.Parent do
-            if _G.GH_Config.ESP_Player_GH and p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
-                local head = p.Character.Head
-                if not head:FindFirstChild("ESP_PlayerTag") then
+-- [[ FITUR ESP PLAYER ]] --
+local function UpdatePlayerESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
+            local head = p.Character.Head
+            local existing = head:FindFirstChild("ESP_PlayerTag")
+            if _G.GH_Config.ESP_Player_GH then
+                if not existing then
                     local bg = Instance.new("BillboardGui", head); bg.Name = "ESP_PlayerTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 200, 0, 50); bg.ExtentsOffset = Vector3.new(0, 3, 0)
-                    local lbl = Instance.new("TextLabel", bg); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.TextColor3 = Color3.fromRGB(0, 255, 255); lbl.Text = p.Name; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 14; lbl.TextStrokeTransparency = 0.5
+                    local lbl = Instance.new("TextLabel", bg); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.TextColor3 = Color3.fromRGB(0, 255, 255); lbl.Text = p.Name; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 14
                 end
-            else
-                if p.Character and p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESP_PlayerTag") then
-                    p.Character.Head.ESP_PlayerTag:Destroy()
-                end
+            elseif existing then
+                existing:Destroy()
             end
-            task.wait(1)
         end
-    end)
+    end
 end
 
--- [[ MESIN 4: ESP EGG (WHITELIST) ]] --
+-- [[ FITUR ESP EGG (WHITELIST) ]] --
 local function TagEgg(v)
     if not _G.GH_Config.ESP_Egg_GH then return end
     local n = v.Name:lower()
-    for _, name in ipairs(AllowedEggs) do
+    for _, name in pairs(AllowedEggs) do
         if n:find(name) and not v:FindFirstChild("EHSTag") then
             local t = v:IsA("Model") and (v:FindFirstChild("Handle") or v:FindFirstChildWhichIsA("BasePart")) or v
             if t then
@@ -94,9 +80,9 @@ local function TagEgg(v)
     end
 end
 
--- [[ UI CONSTRUCTION ]] --
-if CG:FindFirstChild("GHS_MainUI_V63") then CG.GHS_MainUI_V63:Destroy() end
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V63"
+-- [[ UI SYSTEM ]] --
+if CG:FindFirstChild("GHS_MainUI_V64") then CG.GHS_MainUI_V64:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V64"
 
 local LogoFrame = Instance.new("Frame", SG); LogoFrame.Size = UDim2.new(0, 50, 0, 50); LogoFrame.Position = UDim2.new(0, 15, 0.3, 0); LogoFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25); LogoFrame.Active = true; LogoFrame.Draggable = true; Instance.new("UICorner", LogoFrame).CornerRadius = UDim.new(1, 0)
 local LogoBtn = Instance.new("TextButton", LogoFrame); LogoBtn.Size = UDim2.new(1, 0, 1, 0); LogoBtn.BackgroundTransparency = 1; LogoBtn.Font = Enum.Font.GothamBlack; LogoBtn.Text = "GH"; LogoBtn.TextSize = 18; LogoBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -127,25 +113,23 @@ local function CreateToggle(parent, txt, var, callback)
 end
 
 CreateToggle(P1, "Auto Collect Koin", "AutoCollect_GH")
-CreateToggle(P1, "ESP ULTRA RARE", "ESP_Egg_GH", function() if _G.GH_Config.ESP_Egg_GH then for _, v in ipairs(workspace:GetDescendants()) do TagEgg(v) end end end)
-CreateToggle(P2, "ESP Player", "ESP_Player_GH")
+CreateToggle(P1, "ESP RARE EGG", "ESP_Egg_GH", function() if _G.GH_Config.ESP_Egg_GH then for _, v in pairs(workspace:GetDescendants()) do TagEgg(v) end end end)
+CreateToggle(P2, "ESP Player", "ESP_Player_GH", function() UpdatePlayerESP() end)
 CreateToggle(P2, "X-Ray Bening", "Xray_GH", function() RefreshXray() end)
 
--- [[ FINAL RUNNERS ]] --
-for _, p in pairs(Players:GetPlayers()) do CreatePlayerESP(p) end
-Players.PlayerAdded:Connect(CreatePlayerESP)
-
+-- [[ AUTO RUN & LOOP ]] --
 task.spawn(function()
-    local d = workspace:GetDescendants()
-    for i, v in ipairs(d) do
-        ApplyFlat(v) -- Jalankan Flat Color
+    for _, v in pairs(workspace:GetDescendants()) do 
+        ApplyFlat(v) -- Jalankan Flat Color langsung
         if _G.GH_Config.ESP_Egg_GH then TagEgg(v) end
-        if i % 400 == 0 then task.wait() end
     end
     workspace.DescendantAdded:Connect(function(v)
         ApplyFlat(v)
         if _G.GH_Config.ESP_Egg_GH then TagEgg(v) end
     end)
+    
+    -- Loop buat update ESP Player biar gak hilang pas orang respawn
+    while task.wait(2) do
+        if _G.GH_Config.ESP_Player_GH then UpdatePlayerESP() end
+    end
 end)
-
-if _G.GH_Config.Xray_GH then task.delay(1, RefreshXray) end
