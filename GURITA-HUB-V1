@@ -1,11 +1,15 @@
--- [[ GURITA HUB V6.4.2 - DARK BLUE NEON EDITION ]] --
+-- [[ GURITA HUB V6.4.4 - FINAL FULL INTEGRATED ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local CG = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
--- 1. DATABASE & CONFIG
+-- 1. DATABASE & CONFIG (SAVE/LOAD SYSTEM)
+local ConfigFile = "GHS_Config_Final.json"
 local AllowedEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako"}
+
 _G.GH_Config = {
     ESP_Player_GH = false,
     Xray_GH = false,
@@ -13,59 +17,91 @@ _G.GH_Config = {
     ESP_Egg_GH = false
 }
 
--- [[ FITUR FLAT COLOR: PLASTIC ONLY ]] --
-local function ApplyFlat(v)
+-- Fungsi Simpan Data
+local function SaveData()
+    local success, err = pcall(function()
+        if writefile then
+            writefile(ConfigFile, HttpService:JSONEncode(_G.GH_Config))
+        end
+    end)
+end
+
+-- Fungsi Load Data
+local function LoadData()
     pcall(function()
-        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
-            v.Material = Enum.Material.Plastic -- Bikin jadi plastik polos
-            v.CastShadow = false -- Hilangkan bayangan biar FPS naik
-            if v:IsA("MeshPart") then v.TextureID = "" end -- Hapus tekstur mesh
-            for _, child in pairs(v:GetChildren()) do
-                if child:IsA("Texture") or child:IsA("Decal") then child:Destroy() end -- Hapus stiker/decal
+        if isfile and isfile(ConfigFile) then
+            local decoded = HttpService:JSONDecode(readfile(ConfigFile))
+            if decoded then
+                for k, v in pairs(decoded) do
+                    _G.GH_Config[k] = v
+                end
             end
         end
     end)
 end
 
--- [[ UI SYSTEM: BLACK & BLUE THEME ]] --
+LoadData() -- Jalankan load saat script pertama kali jalan
+
+-- [[ FITUR FLAT COLOR ]] --
+local function ApplyFlat(v)
+    pcall(function()
+        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
+            v.Material = Enum.Material.Plastic
+            v.CastShadow = false
+            if v:IsA("MeshPart") then v.TextureID = "" end
+            for _, child in pairs(v:GetChildren()) do
+                if child:IsA("Texture") or child:IsA("Decal") then child:Destroy() end
+            end
+        end
+    end)
+end
+
+-- [[ UI CONSTRUCTION ]] --
 if CG:FindFirstChild("GHS_MainUI_V64") then CG.GHS_MainUI_V64:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V64"
 
--- Tombol Logo GH (Bulat Biru)
+-- LOGO GH RGB (Warna-warni sesuai request)
 local LogoBtn = Instance.new("TextButton", SG)
-LogoBtn.Size = UDim2.new(0, 50, 0, 50)
+LogoBtn.Size = UDim2.new(0, 55, 0, 55)
 LogoBtn.Position = UDim2.new(0, 15, 0.3, 0)
-LogoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
 LogoBtn.Text = "GH"
 LogoBtn.TextColor3 = Color3.new(1, 1, 1)
-LogoBtn.Font = Enum.Font.GothamBold
+LogoBtn.Font = Enum.Font.GothamBlack
+LogoBtn.TextSize = 20
 Instance.new("UICorner", LogoBtn).CornerRadius = UDim.new(1, 0)
 LogoBtn.Draggable = true; LogoBtn.Active = true
 
--- Main Frame (Hitam Pekat dengan Pinggiran Biru)
+local LogoStroke = Instance.new("UIStroke", LogoBtn); LogoStroke.Thickness = 3; LogoStroke.Color = Color3.new(1, 1, 1)
+
+-- RGB Cycle Logic
+task.spawn(function()
+    local colors = {Color3.fromRGB(0, 150, 255), Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 220, 0), Color3.fromRGB(160, 32, 240)}
+    local i = 1
+    while true do
+        TweenService:Create(LogoBtn, TweenInfo.new(1.5), {BackgroundColor3 = colors[i]}):Play()
+        task.wait(2) -- Jeda transisi + diam sebentar
+        i = (i % #colors) + 1
+    end
+end)
+
+-- MAIN FRAME (Hitam & Pinggir Biru)
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 440, 0, 260)
 Main.Position = UDim2.new(0.5, -220, 0.5, -130)
-Main.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Menu Tengah Hitam
+Main.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Main.Visible = false
 Instance.new("UICorner", Main)
-
--- Stroke/Pinggiran Biru
-local Stroke = Instance.new("UIStroke", Main)
-Stroke.Color = Color3.fromRGB(0, 150, 255) -- Warna Pinggir Biru
-Stroke.Thickness = 3
-Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fromRGB(0, 150, 255); MainStroke.Thickness = 3
 
 LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
--- Sidebar (Hitam Pekat)
+-- SIDEBAR & PAGES
 local Sidebar = Instance.new("Frame", Main)
 Sidebar.Size = UDim2.new(0, 130, 1, 0)
-Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 10) 
+Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
 Instance.new("UICorner", Sidebar)
-local SideLayout = Instance.new("UIListLayout", Sidebar); SideLayout.Padding = UDim.new(0, 5); SideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Instance.new("UIListLayout", Sidebar).HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- Page Container
 local Pages = Instance.new("Frame", Main)
 Pages.Size = UDim2.new(1, -145, 1, -20)
 Pages.Position = UDim2.new(0, 135, 0, 10)
@@ -76,51 +112,45 @@ local function CreatePage(name)
 end
 local P1 = CreatePage("PASKA"); local P2 = CreatePage("ESP"); P1.Visible = true
 
--- Tombol Navigasi
 local function CreateSideBtn(txt, p)
     local b = Instance.new("TextButton", Sidebar)
-    b.Size = UDim2.new(0.9, 0, 0, 40)
-    b.Text = txt
-    b.TextColor3 = Color3.new(1, 1, 1)
-    b.Font = Enum.Font.GothamBold
-    b.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    Instance.new("UICorner", b)
+    b.Size = UDim2.new(0.9, 0, 0, 40); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.BackgroundColor3 = Color3.fromRGB(20, 20, 30); Instance.new("UICorner", b)
     b.MouseButton1Click:Connect(function() for _, v in pairs(Pages:GetChildren()) do v.Visible = false end; p.Visible = true end)
 end
 CreateSideBtn("EVENT", P1); CreateSideBtn("ESP", P2)
 
--- Tombol Toggle (ON/OFF)
-local function CreateToggle(parent, txt, var)
+-- TOGGLE WITH SAVE SYSTEM
+local function CreateToggle(parent, txt, var, callback)
     local b = Instance.new("TextButton", parent)
     b.Size = UDim2.new(0.95, 0, 0, 40)
     b.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
     b.Font = Enum.Font.GothamBold
-    b.Text = txt..": OFF"
-    b.TextColor3 = Color3.fromRGB(255, 0, 0)
     Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function() 
-        _G.GH_Config[var] = not _G.GH_Config[var]
+    
+    local function UpdateUI()
         b.Text = txt..(_G.GH_Config[var] and ": ON" or ": OFF")
         b.TextColor3 = _G.GH_Config[var] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    end
+    
+    UpdateUI() -- Set tampilan awal sesuai data yang di-load
+    
+    b.MouseButton1Click:Connect(function() 
+        _G.GH_Config[var] = not _G.GH_Config[var]
+        UpdateUI()
+        SaveData() -- Simpan setiap kali diklik
+        if callback then callback() end
     end)
 end
 
+-- MENGHUBUNGKAN FITUR KE TOMBOL
 CreateToggle(P1, "Auto Collect", "AutoCollect_GH")
 CreateToggle(P1, "ESP Egg", "ESP_Egg_GH")
 CreateToggle(P2, "ESP Player", "ESP_Player_GH")
 CreateToggle(P2, "X-Ray", "Xray_GH")
 
--- [[ EXECUTION ENGINE ]] --
+-- [[ RUNNER ]] --
 task.spawn(function()
-    -- Scan awal untuk Flat Color
-    local d = workspace:GetDescendants()
-    for i, v in ipairs(d) do
-        ApplyFlat(v)
-        if i % 400 == 0 then task.wait() end -- Anti-Lag
-    end
-    
-    -- Pantau objek baru agar tetap Flat
-    workspace.DescendantAdded:Connect(function(v)
-        ApplyFlat(v)
-    end)
+    -- Flat Color Auto-Run
+    for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
+    workspace.DescendantAdded:Connect(ApplyFlat)
 end)
