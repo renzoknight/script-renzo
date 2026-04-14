@@ -1,5 +1,5 @@
--- [[ GURITA HUB: V14 - FINAL CLEAN LIST ]] --
--- Terhapus: Tralala, Egg Dun, Egg Din, Bunny, Buntteo, Los Bunitos
+-- [[ GURITA HUB: V21 - MULTI-MENU SEPARATION ]] --
+-- Update: Menu ESP dipisah, Isinya Target Paska Event
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -7,27 +7,22 @@ local PlayerGui = lp:WaitForChild("PlayerGui")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
 local HttpService = game:GetService("HttpService")
-local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- [[ 1. CONFIG & STRICT TARGET ]] --
-local FileName = "GuritaHub_v14.json"
--- List sudah dibersihkan total sesuai permintaan
+-- [[ 1. CONFIG ]] --
+local FileName = "GuritaHub_v21.json"
 local StrictTargets = {
-    "egg pedas",
-    "baskito", 
-    "churrito", 
-    "quackini", 
-    "snackini", 
-    "sahur"
+    "egg pedas", "baskito", "churrito", 
+    "quackini", "snackini", "bunny bunny sahur"
 }
+
+local MIN_HEIGHT = 50 
+local NotifiedEggs = {} 
 
 _G.Settings = {
     EggESP = false,
     Notif = false,
-    WalkSpeed = 16,
-    JumpPower = 50,
-    InfJump = false
+    WalkSpeed = 16
 }
 
 local function SaveData()
@@ -48,53 +43,41 @@ lp.Idled:Connect(function()
     VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
--- [[ 3. MOVEMENT ]] --
+-- [[ 3. MOVEMENT & VISUAL ]] --
 task.spawn(function()
     while true do
         pcall(function()
             if lp.Character and lp.Character:FindFirstChild("Humanoid") then
                 lp.Character.Humanoid.WalkSpeed = _G.Settings.WalkSpeed
-                lp.Character.Humanoid.JumpPower = _G.Settings.JumpPower
             end
         end)
         task.wait(0.5)
     end
 end)
 
-UserInputService.JumpRequest:Connect(function()
-    if _G.Settings.InfJump and lp.Character and lp.Character:FindFirstChild("Humanoid") then
-        lp.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-end)
-
--- [[ 4. VISUAL OPTIMIZER ]] --
 task.spawn(function()
     while true do
         Lighting.ClockTime = 0
         Lighting.Brightness = 2
         Lighting.Ambient = Color3.fromRGB(127, 127, 127)
-        Lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
         task.wait(3)
     end
 end)
 
--- [[ 5. SMART ESP ENGINE ]] --
+-- [[ 4. ESP ENGINE ]] --
 local function CreateESP(target)
     if not target:FindFirstChild("GuritaMarker") then
         local h = Instance.new("Highlight")
-        h.Name = "GuritaMarker"; h.FillColor = Color3.fromRGB(255, 255, 0)
-        h.OutlineColor = Color3.fromRGB(255, 255, 255); h.FillTransparency = 0.3
-        h.Parent = target
+        h.Name = "GuritaMarker"; h.FillColor = Color3.fromRGB(255, 0, 0)
+        h.OutlineColor = Color3.fromRGB(255, 255, 255); h.FillTransparency = 0.3; h.Parent = target
         
         local b = Instance.new("BillboardGui")
-        b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50)
-        b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
-        b.Parent = target
+        b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50); b.AlwaysOnTop = true
+        b.ExtentsOffset = Vector3.new(0, 3, 0); b.Parent = target
         
         local t = Instance.new("TextLabel")
         t.Parent = b; t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1
-        t.TextColor3 = Color3.new(1, 1, 0); t.TextStrokeTransparency = 0
-        t.Font = Enum.Font.GothamBlack; t.TextSize = 14
+        t.TextColor3 = Color3.new(1, 1, 1); t.Font = Enum.Font.GothamBlack; t.TextSize = 14
 
         task.spawn(function()
             while target and target.Parent and _G.Settings.EggESP do
@@ -103,7 +86,7 @@ local function CreateESP(target)
                     local pos = target:IsA("BasePart") and target.Position or (target:FindFirstChildWhichIsA("BasePart") and target:FindFirstChildWhichIsA("BasePart").Position)
                     if pos then
                         local dist = (pos - root.Position).Magnitude
-                        t.Text = "⭐ " .. target.Name:upper() .. " ⭐\n[" .. math.floor(dist) .. "m]"
+                        t.Text = "🔥 " .. target.Name:upper() .. " 🔥\n[" .. math.floor(dist) .. "m]"
                     end
                 end
                 task.wait(0.5)
@@ -113,37 +96,32 @@ local function CreateESP(target)
     end
 end
 
--- [[ 6. STRICT SCANNER ]] --
+-- [[ 5. SCANNER ]] --
 local function Scan(v)
     local name = v.Name:lower()
-    
-    -- Filter 1: Cek nama di list target yang sudah dibersihkan
     local isTarget = false
     for _, key in pairs(StrictTargets) do
-        if name:find(key) then
-            isTarget = true
-            break
-        end
+        if name:find(key) then isTarget = true break end
     end
     
     if isTarget then
-        -- Filter 2: Anti-Base (Jangan scan yang ada di markas)
-        local p = v.Parent
-        local isBase = false
-        while p and p ~= workspace do
-            local pn = p.Name:lower()
-            if pn:find("base") or pn:find("lobby") or pn:find("display") or pn:find("pajangan") then
-                isBase = true
-                break
+        local pos = v:IsA("BasePart") and v.Position or (v:FindFirstChildWhichIsA("BasePart") and v:FindFirstChildWhichIsA("BasePart").Position)
+        if pos and pos.Y > MIN_HEIGHT then
+            local p = v.Parent
+            local isBase = false
+            while p and p ~= workspace do
+                if p.Name:lower():find("base") or p.Name:lower():find("lobby") then isBase = true break end
+                p = p.Parent
             end
-            p = p.Parent
-        end
-        
-        if not isBase then
-            if _G.Settings.Notif then
-                StarterGui:SetCore("SendNotification", {Title = "🥚 EGG FOUND!", Text = v.Name, Duration = 3})
+            
+            if not isBase then
+                if _G.Settings.EggESP then CreateESP(v) end
+                if _G.Settings.Notif and not NotifiedEggs[v] then
+                    NotifiedEggs[v] = true 
+                    StarterGui:SetCore("SendNotification", {Title = "🥚 SPAWN!", Text = v.Name, Duration = 5})
+                    v.AncestryChanged:Connect(function(_, parent) if not parent then NotifiedEggs[v] = nil end end)
+                end
             end
-            if _G.Settings.EggESP then CreateESP(v) end
         end
     end
 end
@@ -151,61 +129,64 @@ end
 task.spawn(function()
     while true do
         for _, v in pairs(workspace:GetDescendants()) do
-            if _G.Settings.EggESP then Scan(v) end
-            if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
-                v.Material = Enum.Material.Plastic; v.CastShadow = false
-            end
+            if _G.Settings.EggESP or _G.Settings.Notif then Scan(v) end
         end
         task.wait(8)
     end
 end)
 
--- [[ 7. UI ]] --
-if PlayerGui:FindFirstChild("GURITA_V14") then PlayerGui.GURITA_V14:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V14"; SG.ResetOnSpawn = false
+-- [[ 6. UI CONSTRUCTION ]] --
+if PlayerGui:FindFirstChild("GURITA_V21") then PlayerGui.GURITA_V21:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V21"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
 Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "G H"; Logo.TextColor3 = Color3.new(1, 1, 0)
-Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 22; Logo.Draggable = true; Logo.Active = true
-Instance.new("UICorner", Logo); Instance.new("UIStroke", Logo).Thickness = 2; Logo.UIStroke.Color = Color3.new(1,1,0)
+Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 22; Logo.Draggable = true; Logo.Active = true; Instance.new("UICorner", Logo)
 
+-- MAIN MENU
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 240, 0, 280); Main.Position = UDim2.new(0.5, -120, 0.5, -140)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main)
-Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
-
-Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+Main.Size = UDim2.new(0, 200, 0, 220); Main.Position = UDim2.new(0.5, -100, 0.5, -110)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 local UIList = Instance.new("UIListLayout", Main); UIList.Padding = UDim.new(0, 5); UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-local function CreateBtn(text, func)
-    local b = Instance.new("TextButton", Main)
+-- ESP MENU (TERPISAH)
+local ESPMenu = Instance.new("Frame", SG)
+ESPMenu.Size = UDim2.new(0, 200, 0, 150); ESPMenu.Position = UDim2.new(0.5, 110, 0.5, -75)
+ESPMenu.BackgroundColor3 = Color3.fromRGB(15, 15, 15); ESPMenu.Visible = false; Instance.new("UICorner", ESPMenu); Instance.new("UIStroke", ESPMenu).Color = Color3.fromRGB(255, 0, 0)
+local UIList2 = Instance.new("UIListLayout", ESPMenu); UIList2.Padding = UDim.new(0, 5); UIList2.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible; if not Main.Visible then ESPMenu.Visible = false end end)
+
+local function CreateBtn(parent, text, func)
+    local b = Instance.new("TextButton", parent)
     b.Size = UDim2.new(0.9, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(25, 25, 25); b.Font = Enum.Font.GothamBold; b.TextSize = 11; b.TextColor3 = Color3.new(1,1,1); b.Text = text
-    Instance.new("UICorner", b); Instance.new("UIStroke", b).Color = Color3.fromRGB(50, 50, 50)
-    b.MouseButton1Click:Connect(func); return b
+    Instance.new("UICorner", b); b.MouseButton1Click:Connect(func); return b
 end
 
-local BtnESP = CreateBtn("ESP: OFF", function() 
+-- Tombol Main Menu
+local BtnSpeed = CreateBtn(Main, "SPEED: 16", function() 
+    _G.Settings.WalkSpeed = (_G.Settings.WalkSpeed == 16 and 60 or (_G.Settings.WalkSpeed == 60 and 120 or 16)); SaveData() 
+end)
+local BtnNotif = CreateBtn(Main, "NOTIF: OFF", function() _G.Settings.Notif = not _G.Settings.Notif; SaveData() end)
+local BtnOpenESP = CreateBtn(Main, ">> PASKA EVENT <<", function() ESPMenu.Visible = not ESPMenu.Visible end)
+
+-- Tombol Menu ESP (Terpisah)
+local TitleESP = Instance.new("TextLabel", ESPMenu)
+TitleESP.Size = UDim2.new(1, 0, 0, 30); TitleESP.BackgroundTransparency = 1; TitleESP.Text = "ESP PASKA EVENT"; TitleESP.TextColor3 = Color3.new(1,0,0); TitleESP.Font = Enum.Font.GothamBlack; TitleESP.TextSize = 12
+
+local BtnEggESP = CreateBtn(ESPMenu, "ESP TARGET: OFF", function() 
     _G.Settings.EggESP = not _G.Settings.EggESP; SaveData() 
     if not _G.Settings.EggESP then
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v.Name == "GuritaMarker" or v.Name == "GuritaTag" then v:Destroy() end
-        end
+        for _, v in pairs(workspace:GetDescendants()) do if v.Name == "GuritaMarker" or v.Name == "GuritaTag" then v:Destroy() end end
     end
 end)
-local BtnNotif = CreateBtn("NOTIF: OFF", function() _G.Settings.Notif = not _G.Settings.Notif; SaveData() end)
-local BtnSpeed = CreateBtn("SPEED: 16", function() 
-    _G.Settings.WalkSpeed = (_G.Settings.WalkSpeed == 16 and 60 or (_G.Settings.WalkSpeed == 60 and 120 or 16))
-    SaveData() 
-end)
-local BtnJump = CreateBtn("INF JUMP: OFF", function() _G.Settings.InfJump = not _G.Settings.InfJump; SaveData() end)
 
 task.spawn(function()
     while true do
-        BtnESP.Text = "ESP: " .. (_G.Settings.EggESP and "ON" or "OFF"); BtnESP.TextColor3 = _G.Settings.EggESP and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        BtnNotif.Text = "NOTIF: " .. (_G.Settings.Notif and "ON" or "OFF"); BtnNotif.TextColor3 = _G.Settings.Notif and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
         BtnSpeed.Text = "SPEED: " .. _G.Settings.WalkSpeed
-        BtnJump.Text = "INF JUMP: " .. (_G.Settings.InfJump and "ON" or "OFF"); BtnJump.TextColor3 = _G.Settings.InfJump and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        BtnNotif.Text = "NOTIF: " .. (_G.Settings.Notif and "ON" or "OFF"); BtnNotif.TextColor3 = _G.Settings.Notif and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        BtnEggESP.Text = "ESP TARGET: " .. (_G.Settings.EggESP and "ON" or "OFF"); BtnEggESP.TextColor3 = _G.Settings.EggESP and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
         task.wait(0.5)
     end
 end)
