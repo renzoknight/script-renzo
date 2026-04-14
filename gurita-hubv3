@@ -1,42 +1,58 @@
--- [[ X-RAY SPECIALIST: PLAYER BASE ONLY ]] --
--- Sifat: Otomatis & Spesifik (Tanpa Tombol)
+-- [[ X-RAY KHUSUS GEDUNG MARKAS - BUKAN MAP ]] --
 
-local transparencyValue = 0.7
+local _G = getgenv and getgenv() or _G
+_G.XrayMarkas = false
 
-local function ApplyXrayToBase(obj)
+-- Fungsi untuk mengatur bening/tidaknya gedung
+local function UpdateVisual(obj, state)
     pcall(function()
         if obj:IsA("BasePart") then
-            -- 1. CEK: Apakah ini bagian dari Markas/Base? 
-            -- (Melihat dari nama Parent-nya sesuai struktur Tycoon)
-            local isBase = obj.Parent.Name:find("Base") or obj.Parent.Name:find("Tycoon") or obj.Name == "Baseplate"
+            -- KUNCI TELITI: Cari apakah part ini milik folder "Base" atau "Tycoon"
+            -- Kita cek dari nama Parent-nya (Gedung Markas)
+            local isGedungMarkas = obj.Parent.Name:find("Base") or obj.Parent.Name:find("Tycoon")
+            local bukanOrang = obj.Parent:FindFirstChild("Humanoid") == nil
             
-            -- 2. CEK: Pastikan bukan Karakter Pemain (Humanoid)
-            local isNotHuman = obj.Parent:FindFirstChild("Humanoid") == nil
-            
-            if isBase and isNotHuman then
-                -- Target hanya lantai atau bagian dalam gedung base
-                if obj.Name:lower():find("floor") or obj.Name == "Baseplate" or obj.Name == "Part" then
-                    obj.LocalTransparencyModifier = transparencyValue
-                end
+            if isGedungMarkas and bukanOrang then
+                -- Hanya bikin bening gedung markas
+                obj.LocalTransparencyModifier = state and 0.7 or 0
             else
-                -- Objek selain markas (tembok merah, rumput, dll) dipaksa normal
+                -- Selain gedung markas (rumput, jalan, pembatas map) TETAP PADAT
                 obj.LocalTransparencyModifier = 0
             end
         end
     end)
 end
 
--- [[ SISTEM OTOMATIS ]] --
+-- UI SIMPEL ON/OFF
+local CG = game:GetService("CoreGui")
+if CG:FindFirstChild("MarkasXrayUI") then CG.MarkasXrayUI:Destroy() end
 
--- 1. Jalankan awal untuk objek yang sudah ada
-for _, v in pairs(workspace:GetDescendants()) do
-    ApplyXrayToBase(v)
+local SG = Instance.new("ScreenGui", CG); SG.Name = "MarkasXrayUI"
+local Btn = Instance.new("TextButton", SG)
+Btn.Size = UDim2.new(0, 140, 0, 50); Btn.Position = UDim2.new(0, 10, 0.5, 0); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 14; Btn.Draggable = true; Btn.Active = true
+Instance.new("UICorner", Btn)
+
+local function ToggleUI()
+    Btn.Text = _G.XrayMarkas and "X-RAY MARKAS: ON" or "X-RAY MARKAS: OFF"
+    Btn.BackgroundColor3 = _G.XrayMarkas and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+    Btn.TextColor3 = Color3.new(1,1,1)
 end
 
--- 2. Jalankan otomatis untuk objek baru (Pas Abang beli upgrade markas)
-workspace.DescendantAdded:Connect(function(newObj)
-    task.wait(0.1) -- Kasih jeda dikit biar objeknya ke-load sempurna
-    ApplyXrayToBase(newObj)
+Btn.MouseButton1Click:Connect(function()
+    _G.XrayMarkas = not _G.XrayMarkas
+    ToggleUI()
+    -- Scan ulang semua objek biar efeknya ganti
+    for _, v in pairs(workspace:GetDescendants()) do
+        UpdateVisual(v, _G.XrayMarkas)
+    end
 end)
 
-print("X-Ray Markas Aktif & Otomatis.")
+ToggleUI()
+
+-- SISTEM OTOMATIS (Biar pas beli gedung baru langsung bening)
+workspace.DescendantAdded:Connect(function(newPart)
+    if _G.XrayMarkas then
+        task.wait(0.2) -- Jeda biar part-nya muncul dulu
+        UpdateVisual(newPart, true)
+    end
+end)
