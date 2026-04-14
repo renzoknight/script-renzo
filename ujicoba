@@ -1,12 +1,12 @@
--- [[ EHS SYSTEM V2.2 - ULTRA SMOOTH ]] --
+-- [[ EHS SYSTEM V2.3 - FIXED COLLECT & ANTI LAG ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- Database Nama Egg
+-- 1. DATABASE NAMA EGG (FIXED LIST)
 local EggNames = {
-    "Hydra Bunny", "Noo my Eggs", "Sahur", "Easter", 
+    "Hydra Bunny", "Noo my Eggs", "Bunny Sahur", "Easter", 
     "Eggdin", "Buntteo", "Baskito", "Churrito", 
     "Tralala", "Bunny Bunny", "Dun Egg"
 }
@@ -14,21 +14,19 @@ local EggNames = {
 _G.AutoCollectCoin_EHS = false
 _G.AutoESP_Egg_EHS = false
 
--- 1. FUNGSI OPTIMASI (Cek Base Kilat)
+-- 2. FUNGSI FILTER BASE (SUPER CEPAT)
 local function IsInPlayerBase(v)
     local p = v.Parent
     if not p then return false end
-    local n = p.Name:lower()
-    -- Cek 2 level aja biar gak makan CPU
-    if n:find("base") or n:find("plot") or n:find("house") then return true end
+    if p.Name:lower():find("base") or p.Name:lower():find("plot") then return true end
     local pp = p.Parent
     if pp and (pp.Name:lower():find("base") or pp.Name:lower():find("plot")) then return true end
     return false
 end
 
--- 2. ESP EGG (Sistem Sekali Pasang)
+-- 3. ESP EGG (SISTEM TANPA LOOPING BERAT)
 local function CreateTag(v, name)
-    if v:FindFirstChild("EHSTag") then return end
+    if not v or v:FindFirstChild("EHSTag") then return end
     local bg = Instance.new("BillboardGui", v)
     bg.Name = "EHSTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 150, 0, 40); bg.ExtentsOffset = Vector3.new(0, 3, 0)
     local lbl = Instance.new("TextLabel", bg)
@@ -37,14 +35,13 @@ local function CreateTag(v, name)
     lbl.TextSize = 15; lbl.Font = Enum.Font.GothamBold; lbl.TextStrokeTransparency = 0.5
 end
 
-local function ScanMap()
+local function ScanEgg()
     if not _G.AutoESP_Egg_EHS then return end
-    -- Hanya scan objek yang ada di Workspace (bukan dalam folder dalam)
     for _, v in ipairs(workspace:GetChildren()) do
-        if (v:IsA("BasePart") or v:IsA("Model")) and not IsInPlayerBase(v) then
-            local objName = v.Name:lower()
+        if not IsInPlayerBase(v) then
+            local n = v.Name:lower()
             for _, name in ipairs(EggNames) do
-                if objName:find(name:lower()) then
+                if n:find(name:lower()) then
                     local target = v:IsA("Model") and (v:FindFirstChild("Handle") or v:FindFirstChildWhichIsA("BasePart")) or v
                     if target then CreateTag(target, name) end
                     break
@@ -54,30 +51,30 @@ local function ScanMap()
     end
 end
 
--- 3. AUTO COLLECT COIN (Sistem Radius - ANTI LAG)
-local function AutoCollectCoin()
-    task.spawn(function()
-        while _G.AutoCollectCoin_EHS do
-            local char = lp.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            if root then
-                -- Scan koin di sekitar aja (Radius 500 studs) biar gak lag
-                for _, v in ipairs(workspace:GetChildren()) do
-                    if v:IsA("BasePart") and v.Name:lower():find("coin") and v:FindFirstChild("TouchInterest") then
-                        if (v.Position - root.Position).Magnitude < 500 and not IsInPlayerBase(v) then
-                            root.CFrame = v.CFrame
-                            task.wait(0.2) -- Jeda biar server gak kaget
-                            if not _G.AutoCollectCoin_EHS then break end
-                        end
-                    end
-                end
+-- 4. AUTO COLLECT COIN (SISTEM "SAYAT" - ANTI BANDEL)
+-- Kita pake sistem teleport ke koin yang beneran ada TouchInterest-nya
+local function SikatKoin(v)
+    if _G.AutoCollectCoin_EHS and v:IsA("BasePart") and v.Name:lower():find("coin") then
+        if not IsInPlayerBase(v) and v:FindFirstChildWhichIsA("TouchInterest") then
+            local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                -- Teleport langsung ke koin
+                hrp.CFrame = v.CFrame
+                task.wait(0.1) -- Jeda dikit biar gak bug
             end
-            task.wait(1.5)
         end
-    end)
+    end
 end
 
--- 4. UI EHS (TEMA BIRU)
+-- Monitor koin baru yang muncul di map (Biar gak usah looping terus)
+workspace.ChildAdded:Connect(function(v)
+    if _G.AutoCollectCoin_EHS then
+        task.wait(0.5) -- Nunggu koin stabil spawn
+        SikatKoin(v)
+    end
+end)
+
+-- 5. UI EHS (TEMA BIRU)
 local SG = Instance.new("ScreenGui", game:GetService("CoreGui"))
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 180, 0, 130); Main.Position = UDim2.new(0.05, 0, 0.4, 0); Main.BackgroundColor3 = Color3.fromRGB(10, 10, 25)
@@ -98,7 +95,10 @@ local function CreateBtn(txt, pos, var, callback)
 end
 
 CreateBtn("COLLECT COIN", UDim2.new(0.05, 0, 0.25, 0), "AutoCollectCoin_EHS", function()
-    if _G.AutoCollectCoin_EHS then AutoCollectCoin() end
+    if _G.AutoCollectCoin_EHS then
+        -- Scan awal pas dinyalain
+        for _, v in ipairs(workspace:GetChildren()) do SikatKoin(v) end
+    end
 end)
 
 CreateBtn("ESP EGG HUNT", UDim2.new(0.05, 0, 0.6, 0), "AutoESP_Egg_EHS", function()
@@ -107,10 +107,10 @@ CreateBtn("ESP EGG HUNT", UDim2.new(0.05, 0, 0.6, 0), "AutoESP_Egg_EHS", functio
     end
 end)
 
--- LOOP UTAMA (Sangat pelan biar gak lag)
+-- LOOP ESP (Sangat pelan biar CPU dingin)
 task.spawn(function()
     while true do
-        if _G.AutoESP_Egg_EHS then ScanMap() end
-        task.wait(8) -- Scan Egg tiap 8 detik aja, sangat ringan!
+        if _G.AutoESP_Egg_EHS then ScanEgg() end
+        task.wait(10) -- Scan Egg tiap 10 detik
     end
 end)
