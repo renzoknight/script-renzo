@@ -1,58 +1,71 @@
--- [[ FLAT COLOR TESTER - FULL AUTOMATIC ]] --
--- Sifat: Langsung Aktif, Tanpa Menu, Anti-Lag
+-- [[ GURITA HUB - CORE ESP EGG HUNT V1 ]] --
+-- LIST FIX: Hydra Bunny, Noo My Eggs, Baskito, Churrito, Quackini Snackini, Hopilikalika, Bunny Sahur
 
-print("GURITA HUB: Memulai Uji Coba Flat Color...")
+local TargetEggs = {
+    "hydra bunny", 
+    "noo my eggs", 
+    "baskito", 
+    "churrito", 
+    "quackini snackini", 
+    "hopilikalika hopilikalako", 
+    "bunny sahur"
+}
 
--- 1. Fungsi Utama Flat Color
-local function SikatJadiFlat(v)
-    pcall(function()
-        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
-            -- Ubah ke material teringan
-            v.Material = Enum.Material.Plastic
-            v.CastShadow = false
-            
-            -- Hapus tekstur & decal
-            if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, anak in pairs(v:GetChildren()) do 
-                if anak:IsA("Texture") or anak:IsA("Decal") then 
-                    anak:Destroy() 
-                end 
-            end
-        end
-    end)
+-- [[ 1. FUNGSI PENANDA (HIGHLIGHT & TEXT) ]] --
+local function ApplyEggESP(obj)
+    -- Pastikan tidak double ESP
+    if obj:FindFirstChild("EGG_MARKER") then return end
+
+    -- A. Highlight (Biar telurnya nyala)
+    local h = Instance.new("Highlight")
+    h.Name = "EGG_MARKER"
+    h.Parent = obj
+    h.FillColor = Color3.fromRGB(255, 255, 0) -- Kuning Terang
+    h.FillTransparency = 0.4
+    h.OutlineColor = Color3.fromRGB(255, 255, 255) -- Garis Putih
+
+    -- B. BillboardGui (Biar nama tembus tembok)
+    local bg = Instance.new("BillboardGui")
+    bg.Name = "EGG_NAME"
+    bg.Parent = obj
+    bg.AlwaysOnTop = true
+    bg.Size = UDim2.new(0, 200, 0, 50)
+    bg.ExtentsOffset = Vector3.new(0, 3, 0)
+
+    local tl = Instance.new("TextLabel")
+    tl.Parent = bg
+    tl.Size = UDim2.new(1, 0, 1, 0)
+    tl.BackgroundTransparency = 1
+    tl.Text = obj.Name:upper()
+    tl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tl.TextStrokeTransparency = 0
+    tl.Font = Enum.Font.GothamBlack
+    tl.TextSize = 16
 end
 
--- 2. Proses Scan Map Awal (Dibuat Bertahap Biar Gak Lag)
-task.spawn(function()
-    local semuaObjek = workspace:GetDescendants()
-    for i, obj in pairs(semuaObjek) do
-        SikatJadiFlat(obj)
-        
-        -- Anti-Lag: Berhenti sebentar setiap 100 objek
-        if i % 100 == 0 then 
-            task.wait() 
-        end
-    end
-    print("GURITA HUB: Scan Map Awal Selesai.")
-end)
-
--- 3. Deteksi Otomatis Benda Baru (Biar Gak Gagal)
-workspace.DescendantAdded:Connect(function(bendaBaru)
-    task.wait(0.5) -- Jeda biar objek ke-load sempurna
-    SikatJadiFlat(bendaBaru)
-end)
-
--- 4. Re-Scan Berkala (Setiap 15 Detik)
--- Biar kalau ada yang membandel, otomatis disikat lagi
-task.spawn(function()
-    while true do
-        task.wait(15)
-        local objekSekarang = workspace:GetDescendants()
-        for i, obj in pairs(objekSekarang) do
-            if obj:IsA("BasePart") and obj.Material ~= Enum.Material.Plastic then
-                SikatJadiFlat(obj)
+-- [[ 2. SISTEM SCANNING (ANTI-LAG) ]] --
+local function ScanForEggs()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") or v:IsA("Model") then
+            if table.find(TargetEggs, v.Name:lower()) then
+                ApplyEggESP(v)
             end
-            if i % 200 == 0 then task.wait() end
         end
+        -- Jeda dikit biar gak freeze pas scan map gede
+        if _ % 100 == 0 then task.wait() end
+    end
+end
+
+-- [[ 3. OTOMATISASI ]] --
+-- Sikat telur yang sudah ada
+task.spawn(ScanForEggs)
+
+-- Sikat telur yang baru muncul (spawn)
+workspace.DescendantAdded:Connect(function(newObj)
+    task.wait(0.5) -- Tunggu bentar biar ke-load sempurna
+    if table.find(TargetEggs, newObj.Name:lower()) then
+        ApplyEggESP(newObj)
     end
 end)
+
+print("ESP EGG HUNT AKTIF: Mencari target...")
