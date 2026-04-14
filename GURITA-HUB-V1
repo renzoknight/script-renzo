@@ -1,4 +1,4 @@
--- [[ GURITA HUB V1 - ANTI LAG EDITION ]] --
+-- [[ GURITA HUB V1 - ULTIMATE SMOOTH ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -7,23 +7,22 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local CG = game:GetService("CoreGui")
 
--- 1. SUPER FLAT COLOR (ANTI LAG)
+-- 1. OPTIMIZED FLAT COLOR (Jaga Rumput Tetap Aman)
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") or v:IsA("MeshPart") then
-            v.Material = Enum.Material.Plastic
-            v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end
-        elseif v:IsA("Decal") or v:IsA("Texture") then
-            v:Destroy() -- Hapus tekstur biar enteng banget
+            -- Kecualikan rumput (Terrain) agar tidak abu-abu
+            if v.Name ~= "Terrain" and not v:IsDescendantOf(workspace:FindFirstChild("Terrain")) then
+                v.Material = Enum.Material.Plastic
+                v.CastShadow = false
+            end
         end
     end)
 end
 for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
-workspace.DescendantAdded:Connect(ApplyFlat)
 
 -- 2. SAVE SYSTEM
-local filename = "GURITA_HUB_V1_LAGFIX.json"
+local filename = "GURITA_HUB_V1_STABLE.json"
 _G.GH_Settings = {
     ESP_Player_GH = false,
     Xray_GH = false,
@@ -31,7 +30,7 @@ _G.GH_Settings = {
     ESP_Egg_GH = false
 }
 
--- 3. OPTIMIZED LOGIC (ESP & XRAY)
+-- 3. ESP PLAYER (SMOOTH & BIG TEXT)
 local function CreateESP(plr)
     task.spawn(function()
         while plr and plr.Parent do
@@ -53,29 +52,34 @@ local function CreateESP(plr)
                     plr.Character.Head.ESPTag:Destroy()
                 end
             end
-            task.wait(2) -- Jeda lebih lama biar nggak lag
+            task.wait(3) -- Jeda lama biar gak lag
         end
     end)
 end
 
+-- 4. XRAY (TARGETED & NO LAG)
 local function UpdateXray()
     task.spawn(function()
-        local objs = workspace:GetDescendants()
-        for i, v in ipairs(objs) do
-            if v:IsA("BasePart") and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
-                local n = v.Name:lower()
-                if n:find("base") or n:find("wall") or n:find("floor") then
-                    v.Transparency = _G.GH_Settings.Xray_GH and 0.6 or 0
+        local allObjs = workspace:GetDescendants()
+        for i, v in ipairs(allObjs) do
+            if _G.GH_Settings.Xray_GH then
+                if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+                    local n = v.Name:lower()
+                    -- Hanya tembok/base, rumput abaikan
+                    if n:find("wall") or n:find("base") or n:find("floor") or n:find("pillar") then
+                        v.Transparency = 0.6
+                    end
                 end
+            else
+                if v:IsA("BasePart") then v.Transparency = 0 end
             end
-            if i % 100 == 0 then task.wait() end -- Kasih nafas biar nggak freeze
+            if i % 200 == 0 then task.wait() end -- Biar gak freeze
         end
     end)
 end
 
--- 4. UI CONSTRUCTION (ANIMATED COLOR)
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHubV1_LagFix"
-
+-- 5. UI CONSTRUCTION (ANIMASI WARNA TETAP ADA)
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHubV1_Smooth"
 local GHTxtBtn = Instance.new("TextButton", SG)
 GHTxtBtn.Size = UDim2.new(0, 180, 0, 35); GHTxtBtn.Position = UDim2.new(0.5, -90, 0.05, 0)
 GHTxtBtn.BackgroundTransparency = 1; GHTxtBtn.Text = "GURITA HUB V1"; GHTxtBtn.Font = Enum.Font.GothamBold; GHTxtBtn.TextSize = 22; GHTxtBtn.TextStrokeTransparency = 0.6
@@ -99,7 +103,7 @@ CloseBtn.Size = UDim2.new(0, 35, 0, 35); CloseBtn.Position = UDim2.new(0, 5, 0, 
 CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
 GHTxtBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
--- [ Sidebar & Toggle System Tetap Sama / Tidak Berubah ]
+-- Sidebar & Toggles (Struktur Sama)
 local Sidebar = Instance.new("Frame", Main)
 Sidebar.Size = UDim2.new(0, 120, 1, -50); Sidebar.Position = UDim2.new(0, 10, 0, 45); Sidebar.BackgroundTransparency = 1
 local Pages = Instance.new("Frame", Main)
@@ -138,7 +142,7 @@ local SaveBtn = Instance.new("TextButton", Main)
 SaveBtn.Size = UDim2.new(0, 150, 0, 35); SaveBtn.Position = UDim2.new(0.5, -75, 1, -45); SaveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255); SaveBtn.Text = "SAVE SETTINGS"; SaveBtn.TextColor3 = Color3.new(1, 1, 1); SaveBtn.Font = Enum.Font.GothamBold; SaveBtn.TextSize = 10; Instance.new("UICorner", SaveBtn)
 SaveBtn.MouseButton1Click:Connect(function() if writefile then writefile(filename, HttpService:JSONEncode(_G.GH_Settings)) end end)
 
--- [[ FITUR EXECUTION ]] --
+-- [[ EXECUTION ]] --
 CreateToggle(PagePaska, "Auto Collect Koin Paska GH", "AutoCollect_GH", function() end)
 CreateToggle(PagePaska, "ESP EGG HUNT GH", "ESP_Egg_GH", function() end)
 CreateToggle(PageESP, "ESC Player GH", "ESP_Player_GH", function() 
