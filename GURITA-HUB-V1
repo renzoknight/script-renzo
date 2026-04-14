@@ -2,23 +2,32 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
+-- Pastikan PlayerGui tersedia
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Hapus menu lama jika ada (biar tidak tumpang tindih saat testing)
+if PlayerGui:FindFirstChild("GuritaHubGui") then
+    PlayerGui.GuritaHubGui:Destroy()
+end
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GuritaHubGui"
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = PlayerGui
 ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true -- Agar tidak terpotong bar atas Roblox
 
--- --- 1. LOGO "GH" (Tetap Ada di Layar) ---
+-- --- 1. TOMBOL LOGO "GH" (Harus Muncul Di Atas) ---
 local LogoButton = Instance.new("TextButton")
 LogoButton.Name = "LogoGH"
 LogoButton.Parent = ScreenGui
-LogoButton.Size = UDim2.new(0, 50, 0, 50)
-LogoButton.Position = UDim2.new(0.5, -25, 0, 10)
+LogoButton.Size = UDim2.new(0, 60, 0, 60)
+LogoButton.Position = UDim2.new(0.5, -30, 0, 50) -- Diturunkan sedikit agar tidak tertutup menu Roblox
 LogoButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 LogoButton.Text = "GH"
 LogoButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 LogoButton.Font = Enum.Font.GothamBold
-LogoButton.TextSize = 20
-LogoButton.ZIndex = 10
+LogoButton.TextSize = 24
+LogoButton.ZIndex = 100 -- Pastikan paling depan
 
 local LogoCorner = Instance.new("UICorner")
 LogoCorner.CornerRadius = UDim.new(1, 0)
@@ -26,17 +35,17 @@ LogoCorner.Parent = LogoButton
 
 local LogoStroke = Instance.new("UIStroke")
 LogoStroke.Parent = LogoButton
-LogoStroke.Thickness = 2
-LogoStroke.Color = Color3.fromRGB(0, 150, 255)
+LogoStroke.Thickness = 3
+LogoStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
--- --- 2. MAIN FRAME (MENU) ---
+-- --- 2. MAIN FRAME ---
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
 MainFrame.Size = UDim2.new(0, 500, 0, 350)
-MainFrame.Visible = false 
+MainFrame.Visible = false -- Sembunyi dulu
 MainFrame.Active = true
 MainFrame.Draggable = true 
 
@@ -47,30 +56,13 @@ UICornerMain.Parent = MainFrame
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Parent = MainFrame
 MainStroke.Thickness = 3
-MainStroke.Color = Color3.fromRGB(0, 150, 255)
 
--- --- 3. TOMBOL CLOSE (Di Pojok Kanan Atas Menu) ---
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseBtn"
-CloseButton.Parent = MainFrame
-CloseButton.BackgroundColor3 = Color3.fromRGB(231, 76, 60) -- Flat Red
-CloseButton.Position = UDim2.new(1, -35, 0, 10)
-CloseButton.Size = UDim2.new(0, 25, 0, 25)
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.TextSize = 14
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
-CloseCorner.Parent = CloseButton
-
--- --- 4. SIDEBAR KIRI ---
+-- --- 3. SIDEBAR KIRI ---
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
 Sidebar.Parent = MainFrame
 Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-Sidebar.Size = UDim2.new(0, 130, 1, 0)
+Sidebar.Size = UDim2.new(0, 140, 1, 0)
 
 local UICornerSidebar = Instance.new("UICorner")
 UICornerSidebar.CornerRadius = UDim.new(0, 12)
@@ -78,18 +70,59 @@ UICornerSidebar.Parent = Sidebar
 
 local SidebarTitle = Instance.new("TextLabel")
 SidebarTitle.Parent = Sidebar
-SidebarTitle.Size = UDim2.new(1, 0, 0, 50)
-SidebarTitle.Position = UDim2.new(0, 0, 0, 15)
+SidebarTitle.Size = UDim2.new(1, 0, 0, 60)
+SidebarTitle.Position = UDim2.new(0, 0, 0, 0)
 SidebarTitle.BackgroundTransparency = 1
 SidebarTitle.Text = "GURITA-HUB-V1"
 SidebarTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 SidebarTitle.Font = Enum.Font.GothamBold
-SidebarTitle.TextSize = 12
+SidebarTitle.TextSize = 14
 
--- --- 5. LOGIKA TOMBOL (OPEN/CLOSE) ---
+-- --- 4. TOMBOL CLOSE ---
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseBtn"
+CloseButton.Parent = MainFrame
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.Position = UDim2.new(1, -35, 0, 10)
+CloseButton.Size = UDim2.new(0, 25, 0, 25)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Font = Enum.Font.GothamBold
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 5)
+CloseCorner.Parent = CloseButton
+
+-- --- 5. LOGIKA INTERAKSI ---
 LogoButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true -- Membuka menu
+    MainFrame.Visible = not MainFrame.Visible
+    print("Logo GH Diklik - Status Menu: " .. tostring(MainFrame.Visible))
 end)
 
 CloseButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false -- Menutup menu (
+    MainFrame.Visible = false
+end)
+
+-- --- 6. ANIMASI RGB ---
+local colors = {
+    Color3.fromRGB(0, 150, 255), Color3.fromRGB(255, 100, 0),
+    Color3.fromRGB(255, 200, 0), Color3.fromRGB(150, 0, 255)
+}
+local colorIndex, nextColorIndex = 1, 2
+local transitionTime, currentTime = 2, 0
+
+RunService.Heartbeat:Connect(function(dt)
+    currentTime = currentTime + dt
+    local percent = currentTime / transitionTime
+    local lerpColor = colors[colorIndex]:Lerp(colors[nextColorIndex], percent)
+    MainStroke.Color = lerpColor
+    LogoStroke.Color = lerpColor
+    if percent >= 1 then
+        currentTime = 0
+        colorIndex = nextColorIndex
+        nextColorIndex = nextColorIndex + 1
+        if nextColorIndex > #colors then nextColorIndex = 1 end
+    end
+end)
+
+print("GURITA-HUB-V1 Berhasil Dimuat!")
