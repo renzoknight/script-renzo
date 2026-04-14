@@ -1,4 +1,4 @@
--- [[ GURITA HUB V6.4.9 - AUTO-MERGE FULL EDITION ]] --
+-- [[ GURITA HUB V6.4.11 - ALL-IN-ONE FINAL VERSION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 
 -- 1. DATABASE & CONFIG (SAVE/LOAD SYSTEM)
 local ConfigFile = "GHS_Config_Final.json"
+-- Daftar telur langka pilihan Abang
 local AllowedEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako"}
 
 _G.GH_Config = {
@@ -31,7 +32,7 @@ local function LoadData()
 end
 LoadData()
 
--- [[ FITUR FLAT COLOR (ANTI-LAG) ]] --
+-- [[ 2. FITUR FLAT COLOR (ANTI-LAG) ]] --
 local function ApplyFlat(v)
     pcall(function()
         if (v:IsA("BasePart") or v:IsA("MeshPart")) and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
@@ -45,76 +46,71 @@ local function ApplyFlat(v)
     end)
 end
 
--- [[ FITUR X-RAY (BASE-ONLY) ]] --
+-- [[ 3. FITUR X-RAY (BASE-ONLY & ANTI LAG) ]] --
 local function RunXray()
-    task.spawn(function()
+    pcall(function()
+        local trans = _G.GH_Config.Xray_GH and 0.6 or 0
+        if workspace:FindFirstChild("Baseplate") then
+            workspace.Baseplate.LocalTransparencyModifier = trans
+        end
         for _, v in pairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") then
-                local n = v.Name:lower()
-                -- Hanya nembus lantai/baseplate sesuai request terakhir
-                if n == "baseplate" or n == "base" or n == "ground" or n == "floor" then
-                    v.LocalTransparencyModifier = _G.GH_Config.Xray_GH and 0.6 or 0
-                else
-                    v.LocalTransparencyModifier = 0
+                local name = v.Name:lower()
+                if name == "base" or name == "floor" or name == "ground" then
+                    v.LocalTransparencyModifier = trans
                 end
             end
+            if _ % 1000 == 0 then task.wait() end -- Optimasi biar gak lag
         end
     end)
 end
 
--- [[ UI CONSTRUCTION ]] --
+-- [[ 4. FITUR ESP EGG (KHUSUS 6 TELUR) ]] --
+local function UpdateEggESP()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and table.find(AllowedEggs, v.Name:lower()) then
+            if _G.GH_Config.ESP_Egg_GH then
+                if not v:FindFirstChild("EggHighlight") then
+                    local h = Instance.new("Highlight", v); h.Name = "EggHighlight"; h.FillColor = Color3.new(1, 1, 0)
+                    local b = Instance.new("BillboardGui", v); b.Name = "EggName"; b.Size = UDim2.new(0, 100, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
+                    local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.Text = v.Name; t.TextColor3 = Color3.new(1, 1, 0); t.Font = Enum.Font.GothamBold; t.TextSize = 14
+                end
+            else
+                if v:FindFirstChild("EggHighlight") then v.EggHighlight:Destroy() end
+                if v:FindFirstChild("EggName") then v.EggName:Destroy() end
+            end
+        end
+    end
+end
+
+-- [[ 5. UI CONSTRUCTION ]] --
 if CG:FindFirstChild("GHS_MainUI_V64") then CG.GHS_MainUI_V64:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V64"
 
--- LOGO G H (BG HITAM, BORDER RGB NEON)
+-- LOGO G H (BORDER RGB NEON)
 local LogoBtn = Instance.new("TextButton", SG)
-LogoBtn.Size = UDim2.new(0, 65, 0, 65)
-LogoBtn.Position = UDim2.new(0, 15, 0.3, 0)
-LogoBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-LogoBtn.Text = "G H"
-LogoBtn.TextColor3 = Color3.new(1, 1, 1)
-LogoBtn.Font = Enum.Font.GothamBlack
-LogoBtn.TextSize = 22
-Instance.new("UICorner", LogoBtn).CornerRadius = UDim.new(1, 0)
-LogoBtn.Draggable = true; LogoBtn.Active = true
+LogoBtn.Size = UDim2.new(0, 65, 0, 65); LogoBtn.Position = UDim2.new(0, 15, 0.3, 0); LogoBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0); LogoBtn.Text = "G H"; LogoBtn.TextColor3 = Color3.new(1, 1, 1); LogoBtn.Font = Enum.Font.GothamBlack; LogoBtn.TextSize = 22
+Instance.new("UICorner", LogoBtn).CornerRadius = UDim.new(1, 0); LogoBtn.Draggable = true; LogoBtn.Active = true
+local LogoStroke = Instance.new("UIStroke", LogoBtn); LogoStroke.Thickness = 4
 
-local LogoStroke = Instance.new("UIStroke", LogoBtn)
-LogoStroke.Thickness = 4
-LogoStroke.Color = Color3.fromRGB(0, 150, 255)
-
--- RGB Cycle for Border
 task.spawn(function()
     local colors = {Color3.fromRGB(0, 150, 255), Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 220, 0), Color3.fromRGB(160, 32, 240)}
     local i = 1
     while true do
         TweenService:Create(LogoStroke, TweenInfo.new(1.5), {Color = colors[i]}):Play()
-        task.wait(2)
-        i = (i % #colors) + 1
+        task.wait(2); i = (i % #colors) + 1
     end
 end)
 
--- MAIN FRAME (BLACK & BLUE)
+-- MAIN FRAME
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 440, 0, 260)
-Main.Position = UDim2.new(0.5, -220, 0.5, -130)
-Main.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Main.Visible = false
-Instance.new("UICorner", Main)
+Main.Size = UDim2.new(0, 440, 0, 260); Main.Position = UDim2.new(0.5, -220, 0.5, -130); Main.BackgroundColor3 = Color3.fromRGB(0, 0, 0); Main.Visible = false; Instance.new("UICorner", Main)
 local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fromRGB(0, 150, 255); MainStroke.Thickness = 3
-
 LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
 -- SIDEBAR & PAGES
-local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0, 130, 1, 0)
-Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
-Instance.new("UICorner", Sidebar)
-Instance.new("UIListLayout", Sidebar).HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-local Pages = Instance.new("Frame", Main)
-Pages.Size = UDim2.new(1, -145, 1, -20)
-Pages.Position = UDim2.new(0, 135, 0, 10)
-Pages.BackgroundTransparency = 1
+local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 130, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Instance.new("UICorner", Sidebar); Instance.new("UIListLayout", Sidebar).HorizontalAlignment = Enum.HorizontalAlignment.Center
+local Pages = Instance.new("Frame", Main); Pages.Size = UDim2.new(1, -145, 1, -20); Pages.Position = UDim2.new(0, 135, 0, 10); Pages.BackgroundTransparency = 1
 
 local function CreatePage(name)
     local p = Instance.new("ScrollingFrame", Pages); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 0; Instance.new("UIListLayout", p).Padding = UDim.new(0, 8); return p
@@ -122,36 +118,34 @@ end
 local P1 = CreatePage("PASKA"); local P2 = CreatePage("ESP"); P1.Visible = true
 
 local function CreateSideBtn(txt, p)
-    local b = Instance.new("TextButton", Sidebar)
-    b.Size = UDim2.new(0.9, 0, 0, 40); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.BackgroundColor3 = Color3.fromRGB(20, 20, 30); Instance.new("UICorner", b)
+    local b = Instance.new("TextButton", Sidebar); b.Size = UDim2.new(0.9, 0, 0, 40); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.BackgroundColor3 = Color3.fromRGB(20, 20, 30); Instance.new("UICorner", b)
     b.MouseButton1Click:Connect(function() for _, v in pairs(Pages:GetChildren()) do v.Visible = false end; p.Visible = true end)
 end
 CreateSideBtn("EVENT", P1); CreateSideBtn("ESP", P2)
 
--- TOGGLE WITH AUTO-SAVE
+-- TOGGLE ENGINE
 local function CreateToggle(parent, txt, var, callback)
-    local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(15, 15, 20); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b)
+    local b = Instance.new("TextButton", parent); b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(15, 15, 20); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b)
     local function UpdateUI()
         b.Text = txt..(_G.GH_Config[var] and ": ON" or ": OFF")
         b.TextColor3 = _G.GH_Config[var] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     end
     UpdateUI()
     b.MouseButton1Click:Connect(function() 
-        _G.GH_Config[var] = not _G.GH_Config[var]
-        UpdateUI(); SaveData()
+        _G.GH_Config[var] = not _G.GH_Config[var]; UpdateUI(); SaveData()
         if callback then callback() end
     end)
 end
 
 CreateToggle(P1, "Auto Collect", "AutoCollect_GH")
-CreateToggle(P1, "ESP Egg", "ESP_Egg_GH")
+CreateToggle(P1, "ESP Egg", "ESP_Egg_GH", function() UpdateEggESP() end)
 CreateToggle(P2, "ESP Player", "ESP_Player_GH")
 CreateToggle(P2, "X-Ray", "Xray_GH", function() RunXray() end)
 
--- [[ AUTO-RUN ENGINE ]] --
+-- [[ 6. AUTO-RUN ]] --
 task.spawn(function()
     for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
     workspace.DescendantAdded:Connect(ApplyFlat)
     if _G.GH_Config.Xray_GH then task.wait(2); RunXray() end
+    while task.wait(5) do if _G.GH_Config.ESP_Egg_GH then UpdateEggESP() end end
 end)
