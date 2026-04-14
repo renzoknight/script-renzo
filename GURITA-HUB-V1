@@ -2,160 +2,122 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- Membuat ScreenGui Utama
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NeonHub"
+ScreenGui.Name = "GuritaHubGui"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- --- 1. Main Frame (Background Gelap) ---
+-- --- 1. Main Frame ---
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Sangat gelap agar neon terlihat jelas
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
 MainFrame.Size = UDim2.new(0, 500, 0, 350)
 MainFrame.Active = true
-MainFrame.Draggable = true -- Bisa digeser
+MainFrame.Draggable = true 
 
--- Pinggiran Membulat
 local UICornerMain = Instance.new("UICorner")
-UICornerMain.CornerRadius = UDim.new(0, 10)
+UICornerMain.CornerRadius = UDim.new(0, 12)
 UICornerMain.Parent = MainFrame
 
--- --- 2. Efek Neon RGB di Pinggiran (UIStroke) ---
+-- Efek Neon RGB
 local UIStroke = Instance.new("UIStroke")
 UIStroke.Parent = MainFrame
-UIStroke.Thickness = 3 -- Ketebalan garis neon
-UIStroke.LineJoinMode = Enum.LineJoinMode.Round
--- Warna awal (biru)
+UIStroke.Thickness = 3.5
 UIStroke.Color = Color3.fromRGB(0, 150, 255) 
+
+-- --- 2. LOGO (Tengah Atas) ---
+local Logo = Instance.new("ImageLabel")
+Logo.Name = "Logo"
+Logo.Parent = MainFrame
+-- Ganti ID di bawah ini dengan ID Image Gurita kamu
+Logo.Image = "rbxassetid://6031075929" -- Ini contoh ID icon bulat, ganti sesuai keinginan
+Logo.BackgroundTransparency = 1
+Logo.Size = UDim2.new(0, 60, 0, 60)
+Logo.Position = UDim2.new(0.5, -30, 0, -30) -- Posisi melayang di tengah atas
+Logo.ZIndex = 5 -- Biar paling depan
 
 -- --- 3. Sidebar Kiri ---
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
 Sidebar.Parent = MainFrame
-Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 10) -- Lebih gelap dari main frame
-Sidebar.Size = UDim2.new(0, 120, 1, 0)
-Sidebar.Position = UDim2.new(0, 0, 0, 0)
+Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+Sidebar.Size = UDim2.new(0, 130, 1, 0)
 
--- Membulatkan sidebar di sisi kiri saja
 local UICornerSidebar = Instance.new("UICorner")
-UICornerSidebar.CornerRadius = UDim.new(0, 10)
+UICornerSidebar.CornerRadius = UDim.new(0, 12)
 UICornerSidebar.Parent = Sidebar
 
--- --- 4. Judul di Atas Sidebar ---
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Parent = Sidebar
-Title.BackgroundTransparency = 1
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Position = UDim2.new(0, 0, 0, 10)
-Title.Font = Enum.Font.GothamBold
-Title.Text = "BRAINROT"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 18
-Title.TextWrapped = true
+-- --- 4. Nama Hub (GURITA-HUB-V1) ---
+local HubName = Instance.new("TextLabel")
+HubName.Name = "HubName"
+HubName.Parent = Sidebar
+HubName.BackgroundTransparency = 1
+HubName.Size = UDim2.new(1, 0, 0, 50)
+HubName.Position = UDim2.new(0, 0, 0, 15)
+HubName.Font = Enum.Font.GothamBold
+HubName.Text = "GURITA-HUB-V1"
+HubName.TextColor3 = Color3.fromRGB(255, 255, 255)
+HubName.TextSize = 14
+HubName.TextWrapped = true
 
--- --- 5. Area untuk Tombol Kategori (Kiri) ---
+-- --- 5. Container Tombol Sidebar ---
 local ButtonContainer = Instance.new("Frame")
 ButtonContainer.Name = "ButtonContainer"
 ButtonContainer.Parent = Sidebar
 ButtonContainer.BackgroundTransparency = 1
-ButtonContainer.Size = UDim2.new(1, -10, 1, -60)
-ButtonContainer.Position = UDim2.new(0, 5, 0, 50)
+ButtonContainer.Size = UDim2.new(1, -15, 1, -80)
+ButtonContainer.Position = UDim2.new(0, 7, 0, 70)
 
--- List Layout untuk menyusun tombol otomatis ke bawah
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = ButtonContainer
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 5)
+UIListLayout.Padding = UDim.new(0, 6)
 
--- Fungsi untuk membuat Tombol Sidebar
-local function createSidebarButton(name, layoutOrder)
-    local button = Instance.new("TextButton")
-    button.Name = name.."Btn"
-    button.Parent = ButtonContainer
-    button.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- Warna tombol
-    button.Size = UDim2.new(1, 0, 0, 35)
-    button.Font = Enum.Font.Gotham
-    button.Text = name
-    button.TextColor3 = Color3.fromRGB(200, 200, 200)
-    button.TextSize = 14
-    button.LayoutOrder = layoutOrder
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = button
+local function createSidebarButton(name)
+    local btn = Instance.new("TextButton")
+    btn.Name = name.."Btn"
+    btn.Parent = ButtonContainer
+    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    btn.Size = UDim2.new(1, 0, 0, 32)
+    btn.Font = Enum.Font.GothamMedium
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.TextSize = 13
     
-    -- Efek Hover
-    button.MouseEnter:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    end)
-    button.MouseLeave:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    end)
-
-    return button
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 6)
+    c.Parent = btn
+    return btn
 end
 
--- Membuat Tombol Kategori (seperti contoh gambar)
-createSidebarButton("Features", 1)
-local espButton = createSidebarButton("ESP", 2)
-createSidebarButton("Protection", 3)
-createSidebarButton("Utilities", 4)
-createSidebarButton("Customize", 5)
+createSidebarButton("Features")
+createSidebarButton("ESP")
+createSidebarButton("Protection")
+createSidebarButton("Customize")
 
--- --- LOGIKA ANIMASI WARNA NEON ---
--- Daftar warna yang akan berganti (Biru, Oranye, Kuning, Ungu)
+-- --- ANIMASI RGB NEON ---
 local colors = {
-    Color3.fromRGB(0, 150, 255),  -- Biru Neon
-    Color3.fromRGB(255, 100, 0),  -- Oranye Neon
-    Color3.fromRGB(255, 200, 0),  -- Kuning Neon
-    Color3.fromRGB(150, 0, 255)   -- Ungu Neon
+    Color3.fromRGB(0, 150, 255),  -- Biru
+    Color3.fromRGB(255, 100, 0),  -- Oranye
+    Color3.fromRGB(255, 200, 0),  -- Kuning
+    Color3.fromRGB(150, 0, 255)   -- Ungu
 }
 
 local colorIndex = 1
 local nextColorIndex = 2
-local transitionTime = 2 -- Waktu perpindahan antar warna (detik)
+local transitionTime = 2 
 local currentTime = 0
 
--- Menjalankan animasi setiap frame
 RunService.Heartbeat:Connect(function(dt)
     currentTime = currentTime + dt
     local percent = currentTime / transitionTime
-
-    -- Ambil warna saat ini dan warna tujuan
-    local startColor = colors[colorIndex]
-    local endColor = colors[nextColorIndex]
-
-    -- Lakukan transisi warna secara halus (Lerp)
-    UIStroke.Color = startColor:Lerp(endColor, percent)
-
-    -- Jika transisi selesai, ganti ke warna berikutnya
+    UIStroke.Color = colors[colorIndex]:Lerp(colors[nextColorIndex], percent)
+    
     if percent >= 1 then
         currentTime = 0
         colorIndex = nextColorIndex
         nextColorIndex = nextColorIndex + 1
-        
-        -- Reset loop warna jika sudah sampai ujung
-        if nextColorIndex > #colors then
-            nextColorIndex = 1
-        end
-    end
-end)
-
--- Tombol ESP untuk aktivasi/deaktivasi (Tombol toggle sederhana)
-local espActive = false
-espButton.MouseButton1Click:Connect(function()
-    espActive = not espActive
-    if espActive then
-        espButton.TextColor3 = Color3.fromRGB(0, 255, 100) -- Hijau saat aktif
-        print("ESP Diaktifkan dari Menu")
-        -- Panggil fungsi ESP di sini
-    else
-        espButton.TextColor3 = Color3.fromRGB(200, 200, 200) -- Kembali normal
-        print("ESP Dimatikan dari Menu")
-        -- Matikan fungsi ESP di sini
+        if nextColorIndex > #colors then nextColorIndex = 1 end
     end
 end)
