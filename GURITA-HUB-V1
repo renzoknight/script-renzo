@@ -1,4 +1,4 @@
--- [[ GURITA HUB V6.4.16 - XRAY ANTI-JATUH & FULL FEATURES ]] --
+-- [[ GURITA HUB V6.4.18 - ABSOLUTE STABLE & ANTI-JATUH ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -40,38 +40,34 @@ local function CreateESP(obj, text, color)
     end
 end
 
-local function RemoveESP(obj)
-    if obj:FindFirstChild("GHS_ESP") then obj.GHS_ESP:Destroy() end
-    if obj:FindFirstChild("GHS_Tag") then obj.GHS_Tag:Destroy() end
-end
-
 local function UpdateESP()
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            if _G.GH_Config.ESP_Player_GH then CreateESP(p.Character, p.Name, Color3.fromRGB(0, 255, 255)) else RemoveESP(p.Character) end
+            if _G.GH_Config.ESP_Player_GH then CreateESP(p.Character, p.Name, Color3.fromRGB(0, 255, 255)) 
+            elseif p.Character:FindFirstChild("GHS_ESP") then p.Character.GHS_ESP:Destroy(); p.Character.GHS_Tag:Destroy() end
         end
     end
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") and table.find(AllowedEggs, v.Name:lower()) then
-            if _G.GH_Config.ESP_Egg_GH then CreateESP(v, v.Name, Color3.fromRGB(255, 255, 0)) else RemoveESP(v) end
+            if _G.GH_Config.ESP_Egg_GH then CreateESP(v, v.Name, Color3.fromRGB(255, 255, 0)) 
+            elseif v:FindFirstChild("GHS_ESP") then v.GHS_ESP:Destroy(); v.GHS_Tag:Destroy() end
         end
     end
 end
 
--- [[ 3. FIXED X-RAY (TEMBUS TAPI GAK JATUH) ]] --
+-- [[ 3. X-RAY ANTI-FALL ENGINE ]] --
 local function ForceXray()
     pcall(function()
         local is_on = _G.GH_Config.Xray_GH
         for _, v in pairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
                 local n = v.Name:lower()
-                -- Target map/lantai/bangunan
-                if n:find("base") or n:find("floor") or n:find("ground") or n:find("plate") or n:find("wall") then
-                    -- PAKAI LocalTransparencyModifier BIAR GAK JATUH KE VOID
-                    v.LocalTransparencyModifier = is_on and 0.7 or 0
+                -- Target semua bagian map & gedung
+                if n:find("base") or n:find("floor") or n:find("wall") or n:find("plate") or n:find("ground") then
+                    -- PAKAI LocalTransparencyModifier (Hanya visual, Fisik tetap keras)
+                    v.LocalTransparencyModifier = is_on and 0.75 or 0
                 end
             end
-            if _ % 2000 == 0 then task.wait() end 
         end
     end)
 end
@@ -90,6 +86,7 @@ end
 if CG:FindFirstChild("GHS_MainUI") then CG.GHS_MainUI:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI"
 
+-- LOGO G H NEON RGB
 local LogoBtn = Instance.new("TextButton", SG)
 LogoBtn.Size = UDim2.new(0, 65, 0, 65); LogoBtn.Position = UDim2.new(0, 15, 0.3, 0); LogoBtn.BackgroundColor3 = Color3.new(0, 0, 0); LogoBtn.Text = "G H"; LogoBtn.TextColor3 = Color3.new(1, 1, 1); LogoBtn.Font = Enum.Font.GothamBlack; LogoBtn.TextSize = 22; LogoBtn.Draggable = true; LogoBtn.Active = true
 Instance.new("UICorner", LogoBtn); local LogoStroke = Instance.new("UIStroke", LogoBtn); LogoStroke.Thickness = 4
@@ -103,6 +100,7 @@ task.spawn(function()
     end
 end)
 
+-- MENU INTERFACE
 local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 440, 0, 260); Main.Position = UDim2.new(0.5, -220, 0.5, -130); Main.BackgroundColor3 = Color3.new(0,0,0); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
 LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
@@ -132,7 +130,7 @@ CreateToggle(P1, "ESP Egg", "ESP_Egg_GH", function() UpdateESP() end)
 CreateToggle(P2, "ESP Player", "ESP_Player_GH", function() UpdateESP() end)
 CreateToggle(P2, "X-Ray", "Xray_GH", function() ForceXray() end)
 
--- [[ 5. MAIN LOOP ]] --
+-- [[ 5. ENGINE LOOP ]] --
 task.spawn(function()
     for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
     workspace.DescendantAdded:Connect(ApplyFlat)
