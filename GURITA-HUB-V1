@@ -1,75 +1,73 @@
--- [[ GURITA HUB - ULTRA FLAT MAP EDITION ]] --
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- [[ FLAT COLOR ONLY - ANTI LAG SYSTEM ]] --
 
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local CG = game:GetService("CoreGui")
+local _G = getgenv and getgenv() or _G
+_G.FlatColorActive = false
 
--- [[ FUNGSI FLAT COLOR RUMPUT & MAP (OTOMATIS) ]] --
-local function MakeMapFlat()
-    -- Mengubah Terrain (Rumput asli Roblox) jadi flat
-    local terrain = Workspace:FindFirstChildOfClass("Terrain")
-    if terrain then
-        terrain.WaterWaveSize = 0
-        terrain.WaterWaveSpeed = 0
-        terrain.WaterReflectance = 0
-        terrain.WaterTransparency = 0
-        -- Memaksa tekstur rumput hilang
-        sethiddenproperty(terrain, "Decoration", false) 
-    end
-
-    -- Mencari semua Part di Map (Lantai/Rumput buatan)
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            -- Jika objek berwarna hijau (biasanya rumput) atau bagian dari map
-            -- Kita buat materialnya jadi SmoothPlastic supaya FLAT
-            obj.Material = Enum.Material.SmoothPlastic
+-- [[ 1. LOGIKA FLAT COLOR (ANTI-LAG) ]] --
+local function ApplyFlat(v)
+    pcall(function()
+        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+            -- Ubah material jadi Plastic (Paling Ringan)
+            v.Material = Enum.Material.Plastic
+            v.CastShadow = false
             
-            -- Menghapus tekstur/decal yang nempel di tanah
-            if obj:IsA("Texture") or obj:IsA("Decal") then
-                obj:Destroy()
+            -- Hapus tekstur kalau ada
+            if v:IsA("MeshPart") then v.TextureID = "" end
+            for _, child in pairs(v:GetChildren()) do 
+                if child:IsA("Texture") or child:IsA("Decal") then 
+                    child:Destroy() 
+                end 
             end
+        end
+    end)
+end
+
+-- Fungsi Scan Map dengan Jeda (Anti-Lag)
+local function ScanMap()
+    local descendants = workspace:GetDescendants()
+    for i, v in pairs(descendants) do
+        if _G.FlatColorActive then
+            ApplyFlat(v)
+            -- Jeda setiap 50 objek biar HP gak nge-freeze
+            if i % 50 == 0 then task.wait() end
         end
     end
 end
 
--- Langsung jalankan pas execute
-MakeMapFlat()
+-- [[ 2. UI SIMPEL (CUMAN ON/OFF) ]] --
+if CG:FindFirstChild("FlatOnlyUI") then CG.FlatOnlyUI:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "FlatOnlyUI"
 
--- [[ UI & LOGO SETUP ]] --
-local Window = Rayfield:CreateWindow({
-   Name = "🐙 GURITA HUB | Steal A Brainrot",
-   LoadingTitle = "Flat Map Mode Active...",
-   LoadingSubtitle = "By Gurita Team",
-})
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 140, 0, 70); Main.Position = UDim2.new(0.1, 0, 0.4, 0)
+Main.BackgroundColor3 = Color3.new(0,0,0); Main.Draggable = true; Main.Active = true
+Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 255, 150)
 
--- LOGO GURITA (Klik buat buka menu)
-local Gui = Instance.new("ScreenGui", game.CoreGui)
-local LogoBtn = Instance.new("TextButton", Gui)
+local Btn = Instance.new("TextButton", Main)
+Btn.Size = UDim2.new(0.9, 0, 0.7, 0); Btn.Position = UDim2.new(0.05, 0, 0.15, 0)
+Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 12; Instance.new("UICorner", Btn)
 
-LogoBtn.Name = "GuritaLogo"
-LogoBtn.Size = UDim2.new(0, 60, 0, 60)
-LogoBtn.Position = UDim2.new(0, 20, 0.45, 0) -- Pas di atas Shop/Rebirth
-LogoBtn.Text = "🐙"
-LogoBtn.TextSize = 35
-LogoBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-LogoBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
-LogoBtn.Draggable = true -- Biar bisa digeser kalo ganggu tombol lain
-Instance.new("UICorner", LogoBtn).CornerRadius = UDim.new(0, 20)
+local function UpdateUI()
+    Btn.Text = _G.FlatColorActive and "FLAT COLOR: ON" or "FLAT COLOR: OFF"
+    Btn.BackgroundColor3 = _G.FlatColorActive and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
+    Btn.TextColor3 = Color3.new(1,1,1)
+end
 
-LogoBtn.MouseButton1Click:Connect(function()
-    game.CoreGui.Rayfield.Enabled = not game.CoreGui.Rayfield.Enabled
+Btn.MouseButton1Click:Connect(function()
+    _G.FlatColorActive = not _G.FlatColorActive
+    UpdateUI()
+    if _G.FlatColorActive then
+        ScanMap()
+    end
 end)
 
--- [[ TAB MAIN ]] --
-local Tab = Window:CreateTab("Main")
-Tab:CreateSection("Flat Color Map: PERMANENT ✅")
-Tab:CreateLabel("Rumput dan tanah sekarang sudah flat/polos.")
+UpdateUI()
 
--- Tombol refresh kalo ada map baru yang belum flat
-Tab:CreateButton({
-   Name = "🔄 Refresh Flat Map",
-   Callback = function()
-       MakeMapFlat()
-       Rayfield:Notify({Title = "Success", Content = "Map dipaksa jadi flat lagi!", Duration = 2})
-   end
-})
+-- [[ 3. AUTO-FLAT UNTUK OBJEK BARU ]] --
+workspace.DescendantAdded:Connect(function(new)
+    if _G.FlatColorActive then
+        task.wait(0.1)
+        ApplyFlat(new)
+    end
+end)
