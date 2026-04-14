@@ -1,4 +1,4 @@
--- [[ GURITA HUB V4.8 - CHROMA TEXT & AUTO SAVE EDITION ]] --
+-- [[ GURITA HUB V4.9 - GHS TOP MENU EDITION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -7,7 +7,7 @@ local CG = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 
 -- 1. DATABASE & CONFIG
-local ConfigFile = "GuritaHubV48_Config.json"
+local ConfigFile = "GHS_ConfigV49.json"
 local EggNames = {"Hydra Bunny", "Noo my Eggs", "Bunny Sahur", "Easter", "Eggdin", "Buntteo", "Baskito", "Churrito", "Tralala", "Bunny Bunny", "Dun Egg", "Quackini Snackini", "Hopilikalika Hopilikalako"}
 
 _G.GH_Config = {
@@ -17,7 +17,7 @@ _G.GH_Config = {
     ESP_Egg_GH = false
 }
 
--- [[ AUTO SAVE & LOAD SYSTEM ]] --
+-- [[ AUTO SAVE & LOAD ]] --
 local function SaveData()
     pcall(function()
         writefile(ConfigFile, HttpService:JSONEncode(_G.GH_Config))
@@ -33,7 +33,6 @@ local function LoadData()
         end
     end
 end
-
 LoadData()
 
 -- 2. BACKEND LOGIC
@@ -90,41 +89,46 @@ local function CreatePlayerESP(p)
     end)
 end
 
--- 4. UI CONSTRUCTION (NEW TEXT LOGO)
-if CG:FindFirstChild("GuritaHub_BlueV48") then CG.GuritaHub_BlueV48:Destroy() end
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHub_BlueV48"
+-- 4. UI CONSTRUCTION (GHS TOP CENTER)
+if CG:FindFirstChild("GHS_MainUI") then CG.GHS_MainUI:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI"
 
--- TEXT LOGO (Ganti Logo Jadi Tulisan)
-local TextLogo = Instance.new("TextButton", SG)
-TextLogo.Size = UDim2.new(0, 120, 0, 35); TextLogo.Position = UDim2.new(0, 20, 0.4, 0); TextLogo.BackgroundColor3 = Color3.fromRGB(15, 15, 25); TextLogo.Font = Enum.Font.GothamBold; TextLogo.Text = "GURITA HUB"; TextLogo.TextSize = 14; TextLogo.TextColor3 = Color3.new(1, 1, 1); TextLogo.Active = true; TextLogo.Draggable = true
-Instance.new("UICorner", TextLogo)
-local LogoStroke = Instance.new("UIStroke", TextLogo); LogoStroke.Thickness = 2; LogoStroke.Color = Color3.fromRGB(0, 150, 255)
+-- TOMBOL GHS DI ATAS TENGAH
+local GHSBtn = Instance.new("TextButton", SG)
+GHSBtn.Size = UDim2.new(0, 80, 0, 30)
+GHSBtn.Position = UDim2.new(0.5, -40, 0, 10) -- Tengah Atas
+GHSBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+GHSBtn.Font = Enum.Font.GothamBold
+GHSBtn.Text = "GHS"
+GHSBtn.TextSize = 16
+GHSBtn.TextColor3 = Color3.new(1, 1, 1)
+GHSBtn.ZIndex = 10
+Instance.new("UICorner", GHSBtn).CornerRadius = UDim.new(0, 6)
+local GHSStroke = Instance.new("UIStroke", GHSBtn); GHSStroke.Thickness = 2; GHSStroke.Color = Color3.fromRGB(0, 150, 255)
 
--- ANIMASI WARNA (Biru, Ungu, Kuning, Oranye)
+-- ANIMASI WARNA GHS (Biru, Ungu, Kuning, Oranye)
 task.spawn(function()
     local Colors = {
-        Color3.fromRGB(0, 150, 255),  -- Biru
-        Color3.fromRGB(170, 0, 255),  -- Ungu
-        Color3.fromRGB(255, 220, 0),  -- Kuning
-        Color3.fromRGB(255, 100, 0)   -- Oranye
+        Color3.fromRGB(0, 150, 255), Color3.fromRGB(170, 0, 255), 
+        Color3.fromRGB(255, 220, 0), Color3.fromRGB(255, 100, 0)
     }
     local i = 1
     while true do
         local nextColor = Colors[i]
-        TweenService:Create(TextLogo, TweenInfo.new(2), {TextColor3 = nextColor}):Play()
-        TweenService:Create(LogoStroke, TweenInfo.new(2), {Color = nextColor}):Play()
+        TweenService:Create(GHSBtn, TweenInfo.new(1.5), {TextColor3 = nextColor}):Play()
+        TweenService:Create(GHSStroke, TweenInfo.new(1.5), {Color = nextColor}):Play()
         i = i % #Colors + 1
-        task.wait(2)
+        task.wait(1.5)
     end
 end)
 
--- Main Menu
+-- Main Frame Menu
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 420, 0, 260); Main.Position = UDim2.new(0.5, -210, 0.5, -130); Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main)
 local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fromRGB(0, 150, 255); MainStroke.Thickness = 2
 
-TextLogo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+GHSBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
 local Sidebar = Instance.new("Frame", Main)
 Sidebar.Size = UDim2.new(0, 120, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 28); Sidebar.BorderSizePixel = 0; Instance.new("UICorner", Sidebar)
@@ -160,13 +164,10 @@ local function CreateToggle(parent, txt, var, callback)
         b.TextColor3 = state and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
         s.Color = state and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 60)
     end
-    
     UpdateUI()
-    
     b.MouseButton1Click:Connect(function()
         _G.GH_Config[var] = not _G.GH_Config[var]
-        UpdateUI()
-        SaveData()
+        UpdateUI(); SaveData()
         if callback then callback() end
     end)
 end
@@ -204,7 +205,7 @@ end)
 CreateToggle(PageESP, "ESP Player", "ESP_Player_GH")
 CreateToggle(PageESP, "X-Ray Bening", "Xray_GH", function() RefreshXray() end)
 
--- [[ AUTO RUNNERS & LOOPS ]] --
+-- [[ AUTO RUNNERS ]] --
 for _, p in pairs(Players:GetPlayers()) do CreatePlayerESP(p) end
 Players.PlayerAdded:Connect(CreatePlayerESP)
 
