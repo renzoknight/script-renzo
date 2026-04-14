@@ -13,7 +13,93 @@ _G.GH_Config = {
     ESP_Egg_GH = false
 }
 
--- [[ 2. AUTO FLAT COLOR ENGINE (OTOMATIS AKTIF) ]] --
+-- [[ 2. AUTO FLAT COLOR ENGINE (OTOMATIS AKTIF) ]] ---- [[ GURITA HUB V6.4.29 - FIXED EGG NAMES ]] --
+
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local CG = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+
+-- 1. CONFIG & TARGETS
+local AllowedEggs = {
+    "hydra bunny", "noo my eggs", "baskito", 
+    "churrito", "quackini snackini", 
+    "hopilikalika hopilikalako", "bunny sahur"
+}
+
+_G.GH_Config = {
+    ESP_Player_GH = false,
+    AutoCollect_GH = false,
+    ESP_Egg_GH = false
+}
+
+-- [[ 2. AUTO FLAT COLOR ]] --
+local function ApplyFlat(v)
+    pcall(function()
+        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") and not v:IsDescendantOf(lp.Character) then
+            v.Material = Enum.Material.Plastic; v.CastShadow = false
+            if v:IsA("MeshPart") then v.TextureID = "" end
+            for _, child in pairs(v:GetChildren()) do if child:IsA("Texture") or child:IsA("Decal") then child:Destroy() end end
+        end
+    end)
+end
+
+-- [[ 3. PERBAIKAN ESP ENGINE (BIAR NAMA MUNCUL) ]] --
+local function CreateESP(obj, text, color)
+    -- Hapus dulu kalau sudah ada biar gak tumpuk
+    if obj:FindFirstChild("GHS_ESP") then obj.GHS_ESP:Destroy() end
+    if obj:FindFirstChild("GHS_Tag") then obj.GHS_Tag:Destroy() end
+
+    local h = Instance.new("Highlight", obj); h.Name = "GHS_ESP"; h.FillColor = color; h.FillTransparency = 0.5
+    local b = Instance.new("BillboardGui", obj); b.Name = "GHS_Tag"; b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
+    local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.Text = text:upper(); t.TextColor3 = color; t.Font = Enum.Font.GothamBold; t.TextSize = 14; t.TextStrokeTransparency = 0
+end
+
+local function UpdateESP()
+    -- Scan Players
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            if _G.GH_Config.ESP_Player_GH then CreateESP(p.Character, p.Name, Color3.fromRGB(0, 255, 255)) 
+            else if p.Character:FindFirstChild("GHS_ESP") then p.Character.GHS_ESP:Destroy(); p.Character.GHS_Tag:Destroy() end end
+        end
+    end
+    -- Scan Eggs (TELITI: Cek semua objek di workspace)
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and table.find(AllowedEggs, v.Name:lower()) then
+            if _G.GH_Config.ESP_Egg_GH then 
+                CreateESP(v, v.Name, Color3.fromRGB(255, 255, 0)) 
+            else 
+                if v:FindFirstChild("GHS_ESP") then v.GHS_ESP:Destroy(); v.GHS_Tag:Destroy() end 
+            end
+        end
+    end
+end
+
+-- [[ 4. UI GURITA HUB ]] --
+if CG:FindFirstChild("GHS_MainUI") then CG.GHS_MainUI:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI"
+
+local LogoBtn = Instance.new("TextButton", SG)
+LogoBtn.Size = UDim2.new(0, 65, 0, 65); LogoBtn.Position = UDim2.new(0, 15, 0.3, 0); LogoBtn.BackgroundColor3 = Color3.new(0,0,0); LogoBtn.Text = "G H"; LogoBtn.TextColor3 = Color3.new(1,1,1); LogoBtn.Font = Enum.Font.GothamBlack; LogoBtn.TextSize = 22; LogoBtn.Draggable = true; LogoBtn.Active = true; Instance.new("UICorner", LogoBtn); local LS = Instance.new("UIStroke", LogoBtn); LS.Thickness = 4
+
+task.spawn(function()
+    local c = {Color3.fromRGB(0, 150, 255), Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 220, 0)}
+    local i = 1
+    while true do TweenService:Create(LS, TweenInfo.new(1.5), {Color = c[i]}):Play(); task.wait(2); i = (i % #c) + 1 end
+end)
+
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 440, 0, 260); Main.Position = UDim2.new(0.5, -220, 0.5, -130); Main.BackgroundColor3 = Color3.new(0,0,0); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
+LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+
+local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 130, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Instance.new("UICorner", Sidebar); local SL = Instance.new("UIListLayout", Sidebar); SL.HorizontalAlignment = Enum.HorizontalAlignment.Center; SL.Padding = UDim.new(0, 5)
+local Pages = Instance.new("Frame", Main); Pages.Size = UDim2.new(1, -145, 1, -20); Pages.Position = UDim2.new(0, 135, 0, 10); Pages.BackgroundTransparency = 1
+
+local function CreatePage(name)
+    local p = Instance.new("ScrollingFrame", Pages); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 0; Instance.new("UIListLayout", p).Padding = UDim.new(0, 8); return p
+end
+local P1 = CreatePage("PASKA EVENT"); local P2 = CreatePage("ESP"); P1.Visible = true
+
+local function CreateSideBtn
 local function ApplyFlat(v)
     pcall(function()
         if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") and not v:IsDescendantOf(lp.Character) then
