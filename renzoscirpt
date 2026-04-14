@@ -1,28 +1,23 @@
--- [[ GURITA HUB V3.9 - SUPER SMOOTH & LOW LAG ]] --
+-- [[ GURITA HUB V4.0 - CINEMATIC SKY & FLAT WORLD ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local Lighting = game:GetService("Lighting")
 
--- 1. PROTEKSI (Biar Ezra & Sky tetep aman)
+-- 1. PROTEKSI (Biar Ezra & Awan tetep aman)
 local function IsProtected(v)
     if v:IsDescendantOf(lp.Character) then return true end
     if v:IsA("Sky") or v:IsA("Clouds") or v:IsA("Atmosphere") then return true end
     return false
 end
 
--- 2. FLAT COLOR YANG ENTENG
+-- 2. FLAT COLOR (Mode Paling Enteng)
 local function ApplyFlat(v)
-    -- Kita cuma eksekusi kalau part-nya lumayan gede (Lantai/Dinding)
-    -- Biar gak nge-lag ngerubah ribuan part kecil
     if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsProtected(v) then
         pcall(function()
             v.Material = Enum.Material.Plastic
             v.CastShadow = false
-            
             if v:IsA("MeshPart") then v.TextureID = "" end
-            
-            -- Hapus tekstur tapi pelan-pelan
             for _, child in pairs(v:GetChildren()) do
                 if child:IsA("Texture") or child:IsA("Decal") then
                     child:Destroy()
@@ -32,12 +27,14 @@ local function ApplyFlat(v)
     end
 end
 
--- 3. HD SKY (Set Sekali Aja)
-local function SetHDSky()
+-- 3. SHADER-STYLE SKY (Bagus tapi GAK BERAT)
+local function SetCinematicSky()
+    -- Bersihkan langit lama
     for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("Sky") then v:Destroy() end
+        if v:IsA("Sky") or v:IsA("Atmosphere") then v:Destroy() end
     end
 
+    -- Skybox HD Cerah
     local Sky = Instance.new("Sky", Lighting)
     Sky.SkyboxBk = "rbxassetid://151165214"
     Sky.SkyboxDn = "rbxassetid://151165191"
@@ -45,36 +42,49 @@ local function SetHDSky()
     Sky.SkyboxLf = "rbxassetid://151165231"
     Sky.SkyboxRt = "rbxassetid://151165274"
     Sky.SkyboxUp = "rbxassetid://151165281"
-    
+    Sky.SunAngularSize = 15
+
+    -- Awan ala Shader (Volumetric Clouds)
     local terrain = workspace:FindFirstChildOfClass("Terrain")
     if terrain then
         local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds", terrain)
         clouds.Enabled = true
-        clouds.Cover = 0.5
+        clouds.Cover = 0.6    -- Awan lumayan banyak
+        clouds.Density = 0.4  -- Gak terlalu padet biar gak leg
+        clouds.Color = Color3.new(1, 1, 1)
     end
+
+    -- Atmosphere biar efek cahayanya kayak Shaders
+    local atmo = Instance.new("Atmosphere", Lighting)
+    atmo.Density = 0.25
+    atmo.Offset = 0.1
+    atmo.Color = Color3.fromRGB(190, 190, 190)
+    atmo.Decay = Color3.fromRGB(100, 100, 100)
+    atmo.Glare = 0.1
+    atmo.Haze = 0.5 -- Efek kabut tipis cinematic
     
     Lighting.ClockTime = 14
+    Lighting.Brightness = 2.5
+    Lighting.ExposureCompensation = 0.2
 end
 
--- 4. RUNNER DENGAN LIMITER (Biar Gak Frame Drop)
+-- 4. RUNNER (Anti-Lag System)
 task.spawn(function()
-    SetHDSky()
+    SetCinematicSky()
     
     local d = workspace:GetDescendants()
     for i = 1, #d do 
         ApplyFlat(d[i]) 
-        -- Setiap 100 part, kita kasih istirahat 1 frame
-        if i % 100 == 0 then 
-            task.wait() 
-        end 
+        -- Jeda per 200 part biar gak kaget CPU-nya
+        if i % 200 == 0 then task.wait() end 
     end
 end)
 
--- Biar pas jalan gak lag, kita kasih delay pas ada part baru
+-- Delay 2 detik buat part baru biar gak tarik FPS pas jalan
 workspace.DescendantAdded:Connect(function(v)
-    task.delay(1, function()
+    task.delay(2, function()
         ApplyFlat(v)
     end)
 end)
 
-print("Gurita V3.9: Low Lag Edition Ready!")
+print("Gurita V4.0: Cinematic Sky & No Lag!")
