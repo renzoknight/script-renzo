@@ -1,90 +1,115 @@
--- [[ GURITA HUB - ONLY NOTIFIER ]] --
+-- [[ GURITA HUB: VISUAL UPGRADE EDITION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 local StarterGui = game:GetService("StarterGui")
 
--- 1. LIST TARGET (SESUAI REQUEST ABANG)
-local TargetEggs = {
-    "hydra bunny", "noo my eggs", "baskito", "churrito", 
-    "quackini snackini", "hopilikalika hopilikalako", "bunny sahur"
-}
+-- [[ 1. CONFIG ]] --
+local TargetEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako", "bunny sahur"}
+_G.EggESP_Master = false
+_G.Notif_Master = true
 
-_G.NotifStatus = false -- Awalnya mati (OFF)
+-- [[ 2. UPGRADED ESP (LEBIH JELAS) ]] --
+local function ApplyUltimateESP(obj)
+    if not obj:FindFirstChild("Marker") then
+        local h = Instance.new("Highlight", obj)
+        h.Name = "Marker"; h.FillColor = Color3.fromRGB(255, 255, 0)
+        h.OutlineColor = Color3.new(1, 1, 1); h.FillTransparency = 0.4
+        
+        local b = Instance.new("BillboardGui", obj)
+        b.Name = "Tag"; b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
+        
+        local t = Instance.new("TextLabel", b)
+        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0)
+        t.Font = Enum.Font.GothamBlack; t.TextSize = 14; t.TextStrokeTransparency = 0
+        t.TextStrokeColor3 = Color3.new(0,0,0) -- Stroke item biar teks nampak di mana saja
 
--- 2. FUNGSI KIRIM NOTIFIKASI
-local function KirimNotif(namaTelur)
-    -- Pop-up di layar
-    StarterGui:SetCore("SendNotification", {
-        Title = "🥚 EGG SPAWNED!";
-        Text = "Ketemu: " .. namaTelur:upper();
-        Duration = 5;
-    })
-    
-    -- Efek Suara Ping
-    local s = Instance.new("Sound", workspace)
-    s.SoundId = "rbxassetid://4590662762"
-    s.Volume = 1
-    s:Play()
-    task.wait(2)
-    s:Destroy()
+        task.spawn(function()
+            while obj and obj.Parent and _G.EggESP_Master do
+                if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                    local dist = (obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude
+                    t.Text = "✨ " .. obj.Name:upper() .. " ✨\n[" .. math.floor(dist) .. "m]"
+                end
+                task.wait(0.5)
+            end
+        end)
+    end
 end
 
--- 3. UI MENU & LOGO (WAJIB)
-if PlayerGui:FindFirstChild("GHS_NotifOnly") then PlayerGui.GHS_NotifOnly:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GHS_NotifOnly"; SG.ResetOnSpawn = false
+-- [[ 3. AUTO FLAT COLOR & LOOP ]] --
+local function SikatJadiFlat(v)
+    pcall(function()
+        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+            v.Material = Enum.Material.Plastic; v.CastShadow = false
+            if v:IsA("MeshPart") then v.TextureID = "" end
+        end
+    end)
+end
 
--- Tombol Logo G H
+task.spawn(function()
+    while true do
+        for i, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and v.Material ~= Enum.Material.Plastic then SikatJadiFlat(v) end
+            if _G.EggESP_Master and table.find(TargetEggs, v.Name:lower()) then ApplyUltimateESP(v) end
+            if i % 200 == 0 then task.wait() end 
+        end
+        task.wait(5)
+    end
+end)
+
+workspace.DescendantAdded:Connect(function(v)
+    task.wait(0.1)
+    SikatJadiFlat(v)
+    if table.find(TargetEggs, v.Name:lower()) then
+        if _G.Notif_Master then
+            StarterGui:SetCore("SendNotification", {Title = "🥚 EGG DETECTED!", Text = v.Name:upper(), Duration = 5})
+            local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
+        end
+        if _G.EggESP_Master then ApplyUltimateESP(v) end
+    end
+end)
+
+-- [[ 4. UPGRADED UI (MENU "G H" GLOWING) ]] --
+if PlayerGui:FindFirstChild("GURITA_V3_UPGRADE") then PlayerGui.GURITA_V3_UPGRADE:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V3_UPGRADE"
+
 local Logo = Instance.new("TextButton", SG)
-Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 10, 0.5, 0)
+Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
 Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "G H"; Logo.TextColor3 = Color3.new(1, 1, 0)
-Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 20; Logo.Draggable = true; Logo.Active = true
-Instance.new("UICorner", Logo); Instance.new("UIStroke", Logo).Thickness = 2
+Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 22; Logo.Draggable = true; Logo.Active = true
+Instance.new("UICorner", Logo).CornerRadius = UDim.new(0, 10)
+local LStroke = Instance.new("UIStroke", Logo); LStroke.Thickness = 2; LStroke.Color = Color3.new(1, 1, 0)
 
--- Frame Menu
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 150); Main.Position = UDim2.new(0.5, -100, 0.5, -75)
+Main.Size = UDim2.new(0, 220, 0, 200); Main.Position = UDim2.new(0.5, -110, 0.5, -100)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main)
-Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
+local MStroke = Instance.new("UIStroke", Main); MStroke.Thickness = 2; MStroke.Color = Color3.new(1, 1, 0)
 
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
--- Judul
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "NOTIF DETECTOR"; Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Font = Enum.Font.GothamBold; Title.BackgroundTransparency = 1; Title.TextSize = 14
+Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "GURITA HUB PREMIUM"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 15
 
--- TOMBOL ON/OFF (MANUAL)
-local Tgl = Instance.new("TextButton", Main)
-Tgl.Size = UDim2.new(0.85, 0, 0, 50); Tgl.Position = UDim2.new(0.075, 0, 0.45, 0)
-Tgl.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Tgl.Font = Enum.Font.GothamBold; Tgl.TextSize = 14
-Instance.new("UICorner", Tgl)
-
-local function UpdateUI()
-    Tgl.Text = _G.NotifStatus and "STATUS: ON" or "STATUS: OFF"
-    Tgl.TextColor3 = _G.NotifStatus and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+local function CreateBtn(name, pos)
+    local b = Instance.new("TextButton", Main)
+    b.Size = UDim2.new(0.9, 0, 0, 50); b.Position = UDim2.new(0.05, 0, pos, 0)
+    b.BackgroundColor3 = Color3.fromRGB(25, 25, 25); b.Font = Enum.Font.GothamBold; b.TextSize = 13; Instance.new("UICorner", b)
+    Instance.new("UIStroke", b).Color = Color3.fromRGB(50, 50, 50)
+    return b
 end
-UpdateUI()
 
-Tgl.MouseButton1Click:Connect(function()
-    _G.NotifStatus = not _G.NotifStatus
-    UpdateUI()
-    if _G.NotifStatus then
-        print("Notifikasi diaktifkan.")
-    else
-        print("Notifikasi dimatikan.")
-    end
+local BtnESP = CreateBtn("ESP EGG: OFF", 0.3)
+local BtnNotif = CreateBtn("NOTIF: ON", 0.6)
+
+local function Refresh()
+    BtnESP.Text = _G.EggESP_Master and "ESP EGG: ON" or "ESP EGG: OFF"; BtnESP.TextColor3 = _G.EggESP_Master and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+    BtnNotif.Text = _G.Notif_Master and "NOTIF: ON" or "NOTIF: OFF"; BtnNotif.TextColor3 = _G.Notif_Master and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+end
+Refresh()
+
+BtnESP.MouseButton1Click:Connect(function() 
+    _G.EggESP_Master = not _G.EggESP_Master; Refresh() 
+    if not _G.EggESP_Master then for _, v in pairs(workspace:GetDescendants()) do if v.Name == "Marker" or v.Name == "Tag" then v:Destroy() end end end
 end)
-
--- 4. DETEKSI OTOMATIS (HANYA JALAN JIKA STATUS: ON)
-workspace.DescendantAdded:Connect(function(v)
-    if _G.NotifStatus then
-        local nameLower = v.Name:lower()
-        if table.find(TargetEggs, nameLower) then
-            KirimNotif(v.Name)
-        end
-    end
-end)
-
-print("Gurita Hub: Notifier Only Loaded!")
+BtnNotif.MouseButton1Click:Connect(function() _G.Notif_Master = not _G.Notif_Master; Refresh() end)
