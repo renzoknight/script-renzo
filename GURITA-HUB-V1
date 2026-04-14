@@ -1,4 +1,5 @@
--- [[ GURITA HUB: V8 UNIVERSAL HUNTER - EMERGENCY FIX ]] --
+-- [[ GURITA HUB: V12 - ANTI-LAG & STRICT FILTER ]] --
+-- Update: Filter diperketat, cuma cari target spesifik (No more Spam ESP)
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -9,11 +10,18 @@ local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- [[ 1. CONFIG ]] --
-local FileName = "GuritaHub_v8.json"
-local EggKeywords = {
-    "egg", "hydra", "bunny", "noo", "baskito", "churrito", 
-    "quackini", "snackini", "hopilikalika", "sahur", "tralala"
+-- [[ 1. CONFIG & STRICT TARGET LIST ]] --
+local FileName = "GuritaHub_v12.json"
+-- Di sini kita cuma masukin nama yang bener-bener target, "egg" umum dihapus
+local StrictTargets = {
+    "tralala", 
+    "egg dun", 
+    "egg pedas",
+    "baskito", 
+    "churrito", 
+    "quackini", 
+    "snackini", 
+    "sahur"
 }
 
 _G.Settings = {
@@ -42,7 +50,7 @@ lp.Idled:Connect(function()
     VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
--- [[ 3. MOVEMENT ]] --
+-- [[ 3. MOVEMENT ENGINE ]] --
 task.spawn(function()
     while true do
         pcall(function()
@@ -61,7 +69,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- [[ 4. LIGHTING (SOFT NIGHT) ]] --
+-- [[ 4. VISUAL: NORMAL-BRIGHT NIGHT ]] --
 task.spawn(function()
     while true do
         Lighting.ClockTime = 0
@@ -73,59 +81,49 @@ task.spawn(function()
     end
 end)
 
--- [[ 5. NEW ULTIMATE ESP ENGINE ]] --
+-- [[ 5. OPTIMIZED ESP ENGINE ]] --
 local function CreateESP(target)
     if not target:FindFirstChild("GuritaMarker") then
-        -- Highlight
         local h = Instance.new("Highlight")
-        h.Name = "GuritaMarker"
-        h.FillColor = Color3.fromRGB(255, 255, 0)
-        h.OutlineColor = Color3.fromRGB(255, 255, 255)
-        h.FillTransparency = 0.3
+        h.Name = "GuritaMarker"; h.FillColor = Color3.fromRGB(255, 255, 0)
+        h.OutlineColor = Color3.fromRGB(255, 255, 255); h.FillTransparency = 0.3
         h.Parent = target
         
-        -- Billboard
         local b = Instance.new("BillboardGui")
-        b.Name = "GuritaTag"
-        b.Size = UDim2.new(0, 200, 0, 50)
-        b.AlwaysOnTop = true
-        b.ExtentsOffset = Vector3.new(0, 3, 0)
+        b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50)
+        b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
         b.Parent = target
         
         local t = Instance.new("TextLabel")
-        t.Parent = b
-        t.Size = UDim2.new(1, 0, 1, 0)
-        t.BackgroundTransparency = 1
-        t.TextColor3 = Color3.new(1, 1, 0)
-        t.TextStrokeTransparency = 0
-        t.Font = Enum.Font.GothamBlack
-        t.TextSize = 14
+        t.Parent = b; t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1
+        t.TextColor3 = Color3.new(1, 1, 0); t.TextStrokeTransparency = 0
+        t.Font = Enum.Font.GothamBlack; t.TextSize = 14
 
         task.spawn(function()
             while target and target.Parent and _G.Settings.EggESP do
                 local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-                if root and (target:IsA("BasePart") or target:FindFirstChildWhichIsA("BasePart")) then
-                    local pos = target:IsA("BasePart") and target.Position or target:FindFirstChildWhichIsA("BasePart").Position
-                    local dist = (pos - root.Position).Magnitude
-                    t.Text = "⭐ " .. target.Name:upper() .. " ⭐\n[" .. math.floor(dist) .. "m]"
-                else
-                    t.Text = "⭐ " .. target.Name:upper() .. " ⭐"
+                if root then
+                    local pos = target:IsA("BasePart") and target.Position or (target:FindFirstChildWhichIsA("BasePart") and target:FindFirstChildWhichIsA("BasePart").Position)
+                    if pos then
+                        local dist = (pos - root.Position).Magnitude
+                        t.Text = "⭐ " .. target.Name:upper() .. " ⭐\n[" .. math.floor(dist) .. "m]"
+                    end
                 end
-                task.wait(0.3)
+                task.wait(0.5) -- Scan rate diturunkan biar ringan
             end
-            if b then b:Destroy() end
-            if h then h:Destroy() end
+            if b then b:Destroy() end; if h then h:Destroy() end
         end)
     end
 end
 
--- [[ 6. SCANNER ]] --
+-- [[ 6. STRICT SCANNER ]] --
 local function Scan(v)
     local name = v.Name:lower()
-    for _, key in pairs(EggKeywords) do
+    for _, key in pairs(StrictTargets) do
+        -- Sekarang pakai logika: Nama harus mengandung kata target spesifik
         if name:find(key) then
             if _G.Settings.Notif then
-                StarterGui:SetCore("SendNotification", {Title = "🥚 DETECTED!", Text = v.Name, Duration = 3})
+                StarterGui:SetCore("SendNotification", {Title = "🥚 TARGET FOUND!", Text = v.Name, Duration = 3})
             end
             if _G.Settings.EggESP then CreateESP(v) end
             break
@@ -137,19 +135,23 @@ task.spawn(function()
     while true do
         for _, v in pairs(workspace:GetDescendants()) do
             if _G.Settings.EggESP then Scan(v) end
+            -- Flat color tetap jalan biar enteng
+            if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+                v.Material = Enum.Material.Plastic; v.CastShadow = false
+            end
         end
-        task.wait(5)
+        task.wait(8) -- Scan per 8 detik biar CPU nggak meledak
     end
 end)
 
 workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.5)
+    task.wait(1)
     if _G.Settings.EggESP then Scan(v) end
 end)
 
--- [[ 7. UI ]] --
-if PlayerGui:FindFirstChild("GURITA_V8") then PlayerGui.GURITA_V8:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V8"; SG.ResetOnSpawn = false
+-- [[ 7. UI CONSTRUCTION ]] --
+if PlayerGui:FindFirstChild("GURITA_V12") then PlayerGui.GURITA_V12:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V12"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
@@ -172,7 +174,15 @@ local function CreateBtn(text, func)
     b.MouseButton1Click:Connect(func); return b
 end
 
-local BtnESP = CreateBtn("ESP: OFF", function() _G.Settings.EggESP = not _G.Settings.EggESP; SaveData() end)
+local BtnESP = CreateBtn("ESP: OFF", function() 
+    _G.Settings.EggESP = not _G.Settings.EggESP; 
+    SaveData() 
+    if not _G.Settings.EggESP then
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v.Name == "GuritaMarker" or v.Name == "GuritaTag" then v:Destroy() end
+        end
+    end
+end)
 local BtnNotif = CreateBtn("NOTIF: OFF", function() _G.Settings.Notif = not _G.Settings.Notif; SaveData() end)
 local BtnSpeed = CreateBtn("SPEED: 16", function() 
     _G.Settings.WalkSpeed = (_G.Settings.WalkSpeed == 16 and 60 or (_G.Settings.WalkSpeed == 60 and 120 or 16))
