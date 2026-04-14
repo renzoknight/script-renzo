@@ -1,4 +1,4 @@
--- [[ GURITA HUB V1 - ULTIMATE SMOOTH FIXED XRAY V3 ]] --
+-- [[ GURITA HUB V1 - ULTIMATE SMOOTH FIXED AUTO-FLAT ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -10,22 +10,33 @@ _G.GH_Settings = {
     ESP_Player_GH = false,
     Xray_GH = false,
     AutoCollect_GH = false,
-    ESP_Egg_GH = false
+    ESP_Egg_GH = false,
+    FlatColor_GH = true -- TETAP AUTO ON
 }
 
--- 2. FIX XRAY (ANTI STACKING & ANTI ABU-ABU)
+-- 2. FIX FLAT COLOR (AUTO RUN SETIAP DETIK)
+local function ApplyFlatColor()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not v:IsA("Terrain") then
+            -- Pastikan bukan bagian dari karakter player agar tidak aneh
+            if not v:FindFirstChildOfClass("Humanoid") and not v.Parent:FindFirstChildOfClass("Humanoid") then
+                v.Material = Enum.Material.Plastic
+                v.CastShadow = false
+            end
+        end
+    end
+end
+
+-- 3. FIX XRAY (ANTI STACKING)
 local function UpdateXray()
     task.spawn(function()
         for _, v in pairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
                 local n = v.Name:lower()
-                -- Target spesifik: Tembok, Base, Lantai, Pilar
                 if n:find("wall") or n:find("base") or n:find("floor") or n:find("pillar") or n:find("part") then
                     if _G.GH_Settings.Xray_GH then
-                        -- Pakai LocalTransparencyModifier supaya warna asli tidak rusak/abu-abu
                         v.LocalTransparencyModifier = 0.7
                     else
-                        -- Balikin ke 0 (Normal) tanpa ganggu Material
                         v.LocalTransparencyModifier = 0
                     end
                 end
@@ -34,7 +45,7 @@ local function UpdateXray()
     end)
 end
 
--- 3. ESP PLAYER (SMOOTH)
+-- 4. ESP PLAYER
 local function UpdateESP()
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= lp then
@@ -55,11 +66,10 @@ local function UpdateESP()
     end
 end
 
--- 4. UI CONSTRUCTION
+-- 5. UI CONSTRUCTION
 if CG:FindFirstChild("GuritaHubV1_Smooth") then CG.GuritaHubV1_Smooth:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHubV1_Smooth"
 
--- LOGO ANIMASI
 local GHTxtBtn = Instance.new("TextButton", SG)
 GHTxtBtn.Size = UDim2.new(0, 180, 0, 35); GHTxtBtn.Position = UDim2.new(0.5, -90, 0.05, 0)
 GHTxtBtn.BackgroundTransparency = 1; GHTxtBtn.Text = "GURITA HUB V1"; GHTxtBtn.Font = Enum.Font.GothamBold; GHTxtBtn.TextSize = 22; GHTxtBtn.TextStrokeTransparency = 0.6
@@ -73,7 +83,6 @@ task.spawn(function()
     end
 end)
 
--- MAIN FRAME
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 450, 0, 320); Main.Position = UDim2.new(0.5, -225, 0.5, -160); Main.BackgroundColor3 = Color3.fromRGB(15, 15, 22); Main.Visible = false
 local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fromRGB(0, 150, 255); MainStroke.Thickness = 2
@@ -84,7 +93,6 @@ CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0
 CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
 GHTxtBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
--- SIDEBAR
 local Sidebar = Instance.new("Frame", Main)
 Sidebar.Size = UDim2.new(0, 130, 1, -60); Sidebar.Position = UDim2.new(0, 10, 0, 45); Sidebar.BackgroundTransparency = 1
 Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 8)
@@ -129,12 +137,24 @@ CreateToggle(PagePaska, "ESP Egg Hunt", "ESP_Egg_GH")
 CreateToggle(PageESP, "X-Ray Base", "Xray_GH", UpdateXray)
 CreateToggle(PageESP, "ESP Player", "ESP_Player_GH", UpdateESP)
 
--- Loop Sinkronisasi (Jeda 2 detik biar ringan)
+-- LOOP UTAMA (SINKRONISASI SEMUA FITUR)
 task.spawn(function()
     while true do
-        if _G.GH_Settings.ESP_Player_GH then UpdateESP() end
-        -- Xray dipantau supaya kalau ada base baru otomatis ikutan tembus
-        if _G.GH_Settings.Xray_GH then UpdateXray() end
-        task.wait(2)
+        -- 1. Jalankan Flat Color Otomatis
+        if _G.GH_Settings.FlatColor_GH then
+            ApplyFlatColor()
+        end
+        
+        -- 2. Jalankan ESP Player
+        if _G.GH_Settings.ESP_Player_GH then 
+            UpdateESP() 
+        end
+        
+        -- 3. Jalankan Xray (Cek objek baru)
+        if _G.GH_Settings.Xray_GH then 
+            UpdateXray() 
+        end
+        
+        task.wait(2) -- Jeda 2 detik biar ringan
     end
 end)
