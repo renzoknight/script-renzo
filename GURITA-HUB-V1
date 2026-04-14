@@ -1,4 +1,4 @@
--- [[ GURITA HUB V5.2 - PRECISION TOP AREA EDITION ]] --
+-- [[ GURITA HUB V5.3 - PRECISION BLUE EDITION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -95,49 +95,40 @@ local function CreatePlayerESP(p)
     end)
 end
 
--- 4. UI CONSTRUCTION (PRECISION TOP AREA GHS)
-if CG:FindFirstChild("GHS_MainUI_V52") then CG.GHS_MainUI_V52:Destroy() end
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V52"
+-- 4. UI CONSTRUCTION (EXACT POSITION GHS)
+if CG:FindFirstChild("GHS_MainUI_V53") then CG.GHS_MainUI_V53:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI_V53"
 
--- TOMBOL GHS TANPA BACKGROUND - PRESISI DI AREA MERAH GAMBAR
+-- TOMBOL GHS - POSISI PRESISI SESUAI FOTO
 local GHSBtn = Instance.new("TextButton", SG)
-GHSBtn.Size = UDim2.new(0, 120, 0, 50)
--- Posisi diatur secara absolut di sela-sela UI standar (disesuaikan dari referensi gambar)
-GHSBtn.Position = UDim2.new(0.5, -60, 0, 5) 
-GHSBtn.BackgroundTransparency = 1 -- NO BACKGROUND
+GHSBtn.Size = UDim2.new(0, 100, 0, 40)
+GHSBtn.AnchorPoint = Vector2.new(0.5, 0)
+GHSBtn.Position = UDim2.new(0.42, 0, 0, 5) -- Digeser sedikit ke kiri dari tengah agar masuk ke sela-sela area merah
+GHSBtn.BackgroundTransparency = 1 
 GHSBtn.Font = Enum.Font.GothamBlack
 GHSBtn.Text = "GHS"
-GHSBtn.TextSize = 38 -- Sedikit diperbesar lagi biar makin gampang
-GHSBtn.TextColor3 = Color3.new(1, 1, 1) -- Warna dasar putih sebelum animasi
+GHSBtn.TextSize = 35 
+GHSBtn.TextColor3 = Color3.fromRGB(0, 200, 255) -- Warna Biru Bagus (Cyan)
 GHSBtn.Active = true
-GHSBtn.Draggable = true -- Tetap bisa digeser
+GHSBtn.Draggable = true
 
--- STROKE TEXT UNTUK VISIBILITAS (IKUT BERWARNA)
+-- STROKE BIAR NYALA
 local TextStroke = Instance.new("UIStroke", GHSBtn)
-TextStroke.Thickness = 2.8
-TextStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-TextStroke.Transparency = 0.1 -- Sedikit lebih pekat
+TextStroke.Thickness = 2
+TextStroke.Color = Color3.fromRGB(0, 100, 255)
+TextStroke.Transparency = 0.3
 
--- ANIMASI WARNA GHS SESUAI CODINGAN (Biru, Ungu, Kuning, Oranye)
+-- EFEK KEDIP HALUS (BIRU MUDA KE BIRU TUA)
 task.spawn(function()
-    local Colors = {
-        Color3.fromRGB(0, 170, 255),  -- Biru (Lebih cerah)
-        Color3.fromRGB(180, 0, 255),  -- Ungu (Lebih pekat)
-        Color3.fromRGB(255, 230, 0),  -- Kuning (Lebih terang)
-        Color3.fromRGB(255, 110, 0)   -- Oranye (Lebih menyala)
-    }
-    local i = 1
     while true do
-        local nextColor = Colors[i]
-        -- Animasi pada huruf dan Stroke sekaligus
-        TweenService:Create(GHSBtn, TweenInfo.new(1), {TextColor3 = nextColor}):Play()
-        TweenService:Create(TextStroke, TweenInfo.new(1), {Color = nextColor}):Play()
-        i = i % #Colors + 1
-        task.wait(1.2)
+        TweenService:Create(GHSBtn, TweenInfo.new(1.5), {TextColor3 = Color3.fromRGB(0, 255, 255)}):Play()
+        task.wait(1.5)
+        TweenService:Create(GHSBtn, TweenInfo.new(1.5), {TextColor3 = Color3.fromRGB(0, 150, 255)}):Play()
+        task.wait(1.5)
     end
 end)
 
--- Main Frame Menu (Tidak Berubah)
+-- Main Frame Menu
 local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 420, 0, 260); Main.Position = UDim2.new(0.5, -210, 0.5, -130); Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main)
