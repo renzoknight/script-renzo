@@ -1,58 +1,84 @@
--- [[ X-RAY KHUSUS GEDUNG MARKAS - BUKAN MAP ]] --
+-- [[ GURITA HUB V6.4.29 - UPDATED EGG LIST ]] --
 
-local _G = getgenv and getgenv() or _G
-_G.XrayMarkas = false
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local CG = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 
--- Fungsi untuk mengatur bening/tidaknya gedung
-local function UpdateVisual(obj, state)
+-- 1. CONFIG & TARGETS (TELITI: BUNNY SAHUR ADDED)
+local AllowedEggs = {
+    "hydra bunny", 
+    "noo my eggs", 
+    "baskito", 
+    "churrito", 
+    "quackini snackini", 
+    "hopilikalika hopilikalako",
+    "bunny sahur" -- Tambahan Telur Baru
+}
+
+_G.GH_Config = {
+    ESP_Player_GH = false,
+    AutoCollect_GH = false,
+    ESP_Egg_GH = false
+}
+
+-- [[ 2. AUTO FLAT COLOR ENGINE (OTOMATIS AKTIF) ]] --
+local function ApplyFlat(v)
     pcall(function()
-        if obj:IsA("BasePart") then
-            -- KUNCI TELITI: Cari apakah part ini milik folder "Base" atau "Tycoon"
-            -- Kita cek dari nama Parent-nya (Gedung Markas)
-            local isGedungMarkas = obj.Parent.Name:find("Base") or obj.Parent.Name:find("Tycoon")
-            local bukanOrang = obj.Parent:FindFirstChild("Humanoid") == nil
-            
-            if isGedungMarkas and bukanOrang then
-                -- Hanya bikin bening gedung markas
-                obj.LocalTransparencyModifier = state and 0.7 or 0
-            else
-                -- Selain gedung markas (rumput, jalan, pembatas map) TETAP PADAT
-                obj.LocalTransparencyModifier = 0
+        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") and not v:IsDescendantOf(lp.Character) then
+            v.Material = Enum.Material.Plastic
+            v.CastShadow = false
+            if v:IsA("MeshPart") then v.TextureID = "" end
+            for _, child in pairs(v:GetChildren()) do 
+                if child:IsA("Texture") or child:IsA("Decal") then child:Destroy() end 
             end
         end
     end)
 end
 
--- UI SIMPEL ON/OFF
-local CG = game:GetService("CoreGui")
-if CG:FindFirstChild("MarkasXrayUI") then CG.MarkasXrayUI:Destroy() end
-
-local SG = Instance.new("ScreenGui", CG); SG.Name = "MarkasXrayUI"
-local Btn = Instance.new("TextButton", SG)
-Btn.Size = UDim2.new(0, 140, 0, 50); Btn.Position = UDim2.new(0, 10, 0.5, 0); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 14; Btn.Draggable = true; Btn.Active = true
-Instance.new("UICorner", Btn)
-
-local function ToggleUI()
-    Btn.Text = _G.XrayMarkas and "X-RAY MARKAS: ON" or "X-RAY MARKAS: OFF"
-    Btn.BackgroundColor3 = _G.XrayMarkas and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
-    Btn.TextColor3 = Color3.new(1,1,1)
+-- [[ 3. ESP ENGINE ]] --
+local function CreateESP(obj, text, color)
+    if not obj:FindFirstChild("GHS_ESP") then
+        local h = Instance.new("Highlight", obj); h.Name = "GHS_ESP"; h.FillColor = color; h.OutlineColor = Color3.new(1, 1, 1); h.FillTransparency = 0.5
+        local b = Instance.new("BillboardGui", obj); b.Name = "GHS_Tag"; b.Size = UDim2.new(0, 100, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
+        local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.Text = text; t.TextColor3 = color; t.Font = Enum.Font.GothamBold; t.TextSize = 14
+    end
 end
 
-Btn.MouseButton1Click:Connect(function()
-    _G.XrayMarkas = not _G.XrayMarkas
-    ToggleUI()
-    -- Scan ulang semua objek biar efeknya ganti
+local function UpdateESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            if _G.GH_Config.ESP_Player_GH then CreateESP(p.Character, p.Name, Color3.fromRGB(0, 255, 255)) 
+            elseif p.Character:FindFirstChild("GHS_ESP") then p.Character.GHS_ESP:Destroy(); p.Character.GHS_Tag:Destroy() end
+        end
+    end
     for _, v in pairs(workspace:GetDescendants()) do
-        UpdateVisual(v, _G.XrayMarkas)
+        if v:IsA("BasePart") and table.find(AllowedEggs, v.Name:lower()) then
+            if _G.GH_Config.ESP_Egg_GH then CreateESP(v, v.Name, Color3.fromRGB(255, 255, 0)) 
+            elseif v:FindFirstChild("GHS_ESP") then v.GHS_ESP:Destroy(); v.GHS_Tag:Destroy() end
+        end
+    end
+end
+
+-- [[ 4. UI GURITA HUB (SIDEBAR RESTORED) ]] --
+if CG:FindFirstChild("GHS_MainUI") then CG.GHS_MainUI:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI"
+
+local LogoBtn = Instance.new("TextButton", SG)
+LogoBtn.Size = UDim2.new(0, 65, 0, 65); LogoBtn.Position = UDim2.new(0, 15, 0.3, 0); LogoBtn.BackgroundColor3 = Color3.new(0, 0, 0); LogoBtn.Text = "G H"; LogoBtn.TextColor3 = Color3.new(1, 1, 1); LogoBtn.Font = Enum.Font.GothamBlack; LogoBtn.TextSize = 22; LogoBtn.Draggable = true; LogoBtn.Active = true
+Instance.new("UICorner", LogoBtn); local LogoStroke = Instance.new("UIStroke", LogoBtn); LogoStroke.Thickness = 4
+
+task.spawn(function()
+    local colors = {Color3.fromRGB(0, 150, 255), Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 220, 0), Color3.fromRGB(160, 32, 240)}
+    local i = 1
+    while true do
+        TweenService:Create(LogoStroke, TweenInfo.new(1.5), {Color = colors[i]}):Play()
+        task.wait(2); i = (i % #colors) + 1
     end
 end)
 
-ToggleUI()
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 440, 0, 260); Main.Position = UDim2.new(0.5, -220, 0.5, -130); Main.BackgroundColor3 = Color3.new(0,0,0); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
+LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
--- SISTEM OTOMATIS (Biar pas beli gedung baru langsung bening)
-workspace.DescendantAdded:Connect(function(newPart)
-    if _G.XrayMarkas then
-        task.wait(0.2) -- Jeda biar part-nya muncul dulu
-        UpdateVisual(newPart, true)
-    end
-end)
+local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 130, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Instance.new("UICorner", Sidebar); local SL = Instance.new("UIListLayout", Sidebar); SL.HorizontalAlignment = Enum.HorizontalAlignment.Center; SL.Padding = UDim.new(0, 5)
+local Pages = Instance.new("Frame", Main);
