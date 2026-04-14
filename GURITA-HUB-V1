@@ -1,4 +1,4 @@
--- [[ GURITA HUB V6.4.19 - PRECISION XRAY & FULL FEATURES ]] --
+-- [[ GURITA HUB V6.4.20 - STRICT BASE XRAY & FULL FEATURES ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -55,16 +55,16 @@ local function UpdateESP()
     end
 end
 
--- [[ 3. PRECISION X-RAY (HANYA LANTAI - GAK KENA RUMPUT/TEMBOK) ]] --
+-- [[ 3. STRICT X-RAY (ONLY BASEPLATE/BASE) ]] --
 local function ForceXray()
     pcall(function()
         local is_on = _G.GH_Config.Xray_GH
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+            if v:IsA("BasePart") then
                 local n = v.Name:lower()
-                -- FILTER KETAT: Hanya lantai utama, abaikan Grass (rumput) dan Border (pembatas)
-                if (n:find("floor") or n:find("baseplate") or n:find("ground")) 
-                and not (n:find("grass") or n:find("wall") or n:find("border") or n:find("fence")) then
+                -- LOGIKA KETAT: Hanya nyerang nama "baseplate" atau "base"
+                -- Rumput, tembok, dan jalanan (Floor/Ground) bakal diabaikan
+                if n == "baseplate" or n == "base" then
                     v.LocalTransparencyModifier = is_on and 0.75 or 0
                 end
             end
