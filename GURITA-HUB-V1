@@ -1,11 +1,11 @@
--- [[ GURITA-HUB-V1: SQUARE LOGO + SIDEBAR NAVIGATION ]] --
+-- [[ GURITA-HUB-V1 ANTI-LAG + REAL SIDEBAR LAYOUT ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Bersihkan versi lama
+-- Membersihkan GUI lama
 local old = PlayerGui:FindFirstChild("GuritaHub_Official")
 if old then old:Destroy() end
 
@@ -29,7 +29,7 @@ LogoButton.TextSize = 20
 LogoButton.ZIndex = 100
 
 local LogoCorner = Instance.new("UICorner")
-LogoCorner.CornerRadius = UDim.new(0, 8) -- Kotak dengan sedikit lengkungan
+LogoCorner.CornerRadius = UDim.new(0, 8)
 LogoCorner.Parent = LogoButton
 
 local LogoStroke = Instance.new("UIStroke")
@@ -55,47 +55,44 @@ local MainStroke = Instance.new("UIStroke")
 MainStroke.Parent = MainFrame
 MainStroke.Thickness = 2
 
--- --- 3. JUDUL TENGAH (GURITA-HUB) ---
-local CenterTitle = Instance.new("TextLabel")
-CenterTitle.Parent = MainFrame
-CenterTitle.BackgroundTransparency = 1
-CenterTitle.Size = UDim2.new(1, 0, 0, 40)
-CenterTitle.Position = UDim2.new(0, 0, 0, 5)
-CenterTitle.Font = Enum.Font.GothamBold
-CenterTitle.Text = "GURITA-HUB"
-CenterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-CenterTitle.TextSize = 16
-CenterTitle.ZIndex = 95
+-- --- 3. JUDUL TENGAH ATAS (GURITA-HUB) ---
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Parent = MainFrame
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Size = UDim2.new(1, 0, 0, 45)
+TitleLabel.Position = UDim2.new(0, 0, 0, 0)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Text = "GURITA-HUB"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 18
+TitleLabel.ZIndex = 95
 
--- --- 4. SIDEBAR MENU (KIRI) ---
+-- --- 4. SIDEBAR KIRI (NAVIGASI) ---
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
 Sidebar.Parent = MainFrame
-Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
-Sidebar.Size = UDim2.new(0, 130, 1, 0)
+Sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Sidebar.Size = UDim2.new(0, 130, 1, -50) -- Sisakan ruang untuk judul di atas
+Sidebar.Position = UDim2.new(0, 10, 0, 45)
+Sidebar.BackgroundTransparency = 0.5
 
-local UICornerSide = Instance.new("UICorner")
-UICornerSide.CornerRadius = UDim.new(0, 10)
-UICornerSide.Parent = Sidebar
+local SidebarCorner = Instance.new("UICorner")
+SidebarCorner.CornerRadius = UDim.new(0, 8)
+SidebarCorner.Parent = Sidebar
 
-local ButtonContainer = Instance.new("Frame")
-ButtonContainer.Parent = Sidebar
-ButtonContainer.BackgroundTransparency = 1
-ButtonContainer.Size = UDim2.new(1, -10, 1, -50)
-ButtonContainer.Position = UDim2.new(0, 5, 0, 45)
+local ButtonList = Instance.new("UIListLayout")
+ButtonList.Parent = Sidebar
+ButtonList.Padding = UDim.new(0, 5)
+ButtonList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Parent = ButtonContainer
-UIListLayout.Padding = UDim.new(0, 5)
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
--- Fungsi untuk buat tombol sidebar seperti di foto
+-- Fungsi Membuat Tombol Sidebar
 local function createNavButton(name)
     local btn = Instance.new("TextButton")
     btn.Name = name.."Btn"
-    btn.Parent = ButtonContainer
-    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    btn.Size = UDim2.new(1, 0, 0, 32)
+    btn.Parent = Sidebar
+    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
     btn.Font = Enum.Font.GothamBold
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -104,17 +101,36 @@ local function createNavButton(name)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 6)
     c.Parent = btn
+    
+    -- Efek Hover (Warna berubah saat disentuh mouse)
+    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40) end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25) end)
+    
     return btn
 end
 
--- Tombol-tombol sesuai foto
 createNavButton("Features")
 createNavButton("Protection")
 createNavButton("ESP")
 createNavButton("Utilities")
 createNavButton("Customize")
 
--- --- 5. CLOSE BUTTON ---
+-- --- 5. AREA FITUR (KANAN) ---
+local ContentArea = Instance.new("ScrollingFrame")
+ContentArea.Name = "ContentArea"
+ContentArea.Parent = MainFrame
+ContentArea.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+ContentArea.Position = UDim2.new(0, 150, 0, 45)
+ContentArea.Size = UDim2.new(1, -160, 1, -55)
+ContentArea.ScrollBarThickness = 4
+ContentArea.CanvasSize = UDim2.new(0, 0, 2, 0) -- Bisa di-scroll ke bawah
+ContentArea.BackgroundTransparency = 0.5
+
+local ContentCorner = Instance.new("UICorner")
+ContentCorner.CornerRadius = UDim.new(0, 8)
+ContentCorner.Parent = ContentArea
+
+-- --- 6. CLOSE BUTTON (X) ---
 local CloseButton = Instance.new("TextButton")
 CloseButton.Parent = MainFrame
 CloseButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
@@ -128,7 +144,7 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 4)
 CloseCorner.Parent = CloseButton
 
--- --- 6. DRAGGING & RGB (OPTIMIZED) ---
+-- --- 7. LOGIKA DRAGGING & RGB (ANTI-LAG) ---
 local function MakeDraggable(ui)
     local dragging, dragInput, dragStart, startPos
     ui.InputBegan:Connect(function(input)
