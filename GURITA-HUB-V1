@@ -1,4 +1,4 @@
--- [[ GURITA HUB V6.4.20 - STRICT BASE XRAY & FULL FEATURES ]] --
+-- [[ GURITA HUB V6.4.21 - FINAL REPAIR: ONLY BASEPLATE ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -55,17 +55,19 @@ local function UpdateESP()
     end
 end
 
--- [[ 3. STRICT X-RAY (ONLY BASEPLATE/BASE) ]] --
+-- [[ 3. ULTRA STRICT X-RAY (HANYA BASEPLATE DASAR) ]] --
 local function ForceXray()
     pcall(function()
         local is_on = _G.GH_Config.Xray_GH
         for _, v in pairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") then
-                local n = v.Name:lower()
-                -- LOGIKA KETAT: Hanya nyerang nama "baseplate" atau "base"
-                -- Rumput, tembok, dan jalanan (Floor/Ground) bakal diabaikan
-                if n == "baseplate" or n == "base" then
-                    v.LocalTransparencyModifier = is_on and 0.75 or 0
+                -- FILTER SANGAT KETAT
+                -- Hanya objek bernama "Baseplate" atau objek besar yang posisinya sangat bawah
+                if v.Name == "Baseplate" or (v.Name == "Base" and v.Size.Y < 2) then
+                    v.LocalTransparencyModifier = is_on and 0.8 or 0
+                else
+                    -- Selain itu, pastikan tetap normal (tidak transparan)
+                    v.LocalTransparencyModifier = 0
                 end
             end
         end
