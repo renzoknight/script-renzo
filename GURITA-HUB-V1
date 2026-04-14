@@ -1,6 +1,5 @@
--- [[ GURITA HUB: V22 - BUG FIX & CLEAN TARGET ]] --
--- Fix: Hapus total 'tatata sahur' dan semua unsur 'sahur' (kecuali Bunny Bunny Sahur)
--- Layout: Kiri (Paska Event), Kanan (General)
+-- [[ GURITA HUB: V23 - FLAT COLOR & BUG FIX ]] --
+-- Update: Fix Flat Color Visual, Remove Speed/Jump, Dual Menu
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -11,19 +10,11 @@ local HttpService = game:GetService("HttpService")
 local VirtualUser = game:GetService("VirtualUser")
 
 -- [[ 1. CONFIG ]] --
-local FileName = "GuritaHub_v22.json"
--- LIST TARGET BERSIH
+local FileName = "GuritaHub_v23.json"
 local StrictTargets = {
-    "egg pedas", 
-    "baskito", 
-    "churrito", 
-    "quackini", 
-    "snackini",
-    "bunny bunny sahur"
+    "egg pedas", "baskito", "churrito", 
+    "quackini", "snackini", "bunny bunny sahur"
 }
-
--- LIST BLOKIR (Biar nggak bug nyasar ke tatata sahur dkk)
-local BlockedKeywords = {"tatata", "easter", "sahur "} -- "sahur " dengan spasi biar nggak bentrok sama bunny bunny sahur
 
 local MIN_HEIGHT = 50 
 local NotifiedEggs = {} 
@@ -33,32 +24,32 @@ _G.Settings = {
     Notif = false
 }
 
-local function SaveData()
-    if writefile then pcall(function() writefile(FileName, HttpService:JSONEncode(_G.Settings)) end) end
-end
-
-local function LoadData()
-    if isfile and isfile(FileName) then
-        pcall(function() _G.Settings = HttpService:JSONDecode(readfile(FileName)) end)
+-- [[ 2. FLAT COLOR & VISUAL OPTIMIZER (FITUR YANG TADI KELUPAAN) ]] --
+local function ApplyFlatColor()
+    -- Reset Lighting biar rata
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9e9
+    Lighting.Brightness = 2
+    Lighting.ClockTime = 12
+    Lighting.Ambient = Color3.fromRGB(150, 150, 150)
+    Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150)
+    
+    -- Ngilangin efek yang bikin berat & warna nggak rata
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("SunRaysEffect") then
+            v.Enabled = false
+        end
     end
 end
-LoadData()
 
--- [[ 2. ANTI-AFK ]] --
+-- Panggil Flat Color pas awal run
+ApplyFlatColor()
+
+-- [[ 3. ANTI-AFK ]] --
 lp.Idled:Connect(function()
     VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
     task.wait(1)
     VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-end)
-
--- [[ 3. VISUAL OPTIMIZER ]] --
-task.spawn(function()
-    while true do
-        Lighting.ClockTime = 0
-        Lighting.Brightness = 2
-        Lighting.Ambient = Color3.fromRGB(127, 127, 127)
-        task.wait(3)
-    end
 end)
 
 -- [[ 4. ESP ENGINE ]] --
@@ -93,11 +84,11 @@ local function CreateESP(target)
     end
 end
 
--- [[ 5. SCANNER (FIXED) ]] --
+-- [[ 5. SCANNER ]] --
 local function Scan(v)
     local name = v.Name:lower()
     
-    -- Filter Bug: Cek apakah ada kata terlarang (tatata/easter)
+    -- Filter Bug Tatata & Sahur Nyasar
     if name:find("tatata") or name:find("easter") then return end
     if name:find("sahur") and not name:find("bunny bunny sahur") then return end
 
@@ -138,8 +129,8 @@ task.spawn(function()
 end)
 
 -- [[ 6. UI CONSTRUCTION ]] --
-if PlayerGui:FindFirstChild("GURITA_V22") then PlayerGui.GURITA_V22:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V22"; SG.ResetOnSpawn = false
+if PlayerGui:FindFirstChild("GURITA_V23") then PlayerGui.GURITA_V23:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V23"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
@@ -150,7 +141,7 @@ local Main = Instance.new("Frame", SG)
 Main.Size = UDim2.new(0, 420, 0, 150); Main.Position = UDim2.new(0.5, -210, 0.5, -75)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
--- LEFT PANEL
+-- LEFT PANEL (PASKA EVENT)
 local LeftFrame = Instance.new("Frame", Main)
 LeftFrame.Size = UDim2.new(0.5, -10, 1, -20); LeftFrame.Position = UDim2.new(0, 10, 0, 10); LeftFrame.BackgroundTransparency = 1
 local UIListL = Instance.new("UIListLayout", LeftFrame); UIListL.Padding = UDim.new(0, 5)
@@ -158,7 +149,7 @@ local UIListL = Instance.new("UIListLayout", LeftFrame); UIListL.Padding = UDim.
 local TitleL = Instance.new("TextLabel", LeftFrame)
 TitleL.Size = UDim2.new(1, 0, 0, 30); TitleL.BackgroundTransparency = 1; TitleL.Text = "PASKA EVENT"; TitleL.TextColor3 = Color3.new(1, 0, 0); TitleL.Font = Enum.Font.GothamBlack; TitleL.TextSize = 14
 
--- RIGHT PANEL
+-- RIGHT PANEL (GENERAL)
 local RightFrame = Instance.new("Frame", Main)
 RightFrame.Size = UDim2.new(0.5, -10, 1, -20); RightFrame.Position = UDim2.new(0.5, 0, 0, 10); RightFrame.BackgroundTransparency = 1
 local UIListR = Instance.new("UIListLayout", RightFrame); UIListR.Padding = UDim.new(0, 5)
@@ -175,13 +166,13 @@ local function CreateBtn(parent, text, func)
 end
 
 local BtnEggESP = CreateBtn(LeftFrame, "ESP TARGET: OFF", function() 
-    _G.Settings.EggESP = not _G.Settings.EggESP; SaveData() 
+    _G.Settings.EggESP = not _G.Settings.EggESP
     if not _G.Settings.EggESP then
         for _, v in pairs(workspace:GetDescendants()) do if v.Name == "GuritaMarker" or v.Name == "GuritaTag" then v:Destroy() end end
     end
 end)
 
-local BtnNotif = CreateBtn(RightFrame, "NOTIF: OFF", function() _G.Settings.Notif = not _G.Settings.Notif; SaveData() end)
+local BtnNotif = CreateBtn(RightFrame, "NOTIF: OFF", function() _G.Settings.Notif = not _G.Settings.Notif end)
 
 task.spawn(function()
     while true do
