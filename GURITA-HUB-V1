@@ -1,5 +1,5 @@
--- [[ GURITA HUB: CONTRAST EDITION ]] --
--- Fitur: Langit Malam + Map Terang (Rumput/Karpet Jelas) + Flat Color + ESP
+-- [[ GURITA HUB: MIDNIGHT CLEAR EDITION ]] --
+-- Fitur: Langit Malam + Map Terang Benderang (No Shadow) + Flat Color + Save System
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -32,20 +32,16 @@ local function LoadData()
 end
 LoadData()
 
--- [[ 2. FEATURE: BRIGHT GROUND & DARK SKY ]] --
+-- [[ 2. FEATURE: MIDNIGHT CLEAR (LANGIT MALAM, MAP TERANG) ]] --
 task.spawn(function()
     while true do
-        Lighting.ClockTime = 0 -- Langit Malam (Gelap)
-        Lighting.Brightness = 3 -- Booster cahaya objek
-        Lighting.GlobalShadows = false -- Hilangkan bayangan biar rumput makin terang
-        
-        -- Paksa Ambient jadi Putih Terang (Biar Rumput & Karpet Markas tetap nampak siang)
-        Lighting.Ambient = Color3.fromRGB(255, 255, 255) 
-        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-        
-        -- Jaga Exposure agar tetap stabil terang
-        Lighting.ExposureCompensation = 1
-        task.wait(2)
+        Lighting.ClockTime = 0 -- Langit Malam
+        Lighting.Brightness = 2 -- Jaga intensitas cahaya
+        Lighting.GlobalShadows = false -- MATIKAN BAYANGAN (Biar rumput/karpet nampak jelas semua)
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255) -- Paksa warna objek jadi terang
+        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255) -- Paksa area luar jadi terang
+        Lighting.ExposureCompensation = 1 -- Tambahan booster penglihatan
+        task.wait(3)
     end
 end)
 
@@ -103,7 +99,7 @@ workspace.DescendantAdded:Connect(function(v)
     SikatJadiFlat(v)
     if table.find(TargetEggs, v.Name:lower()) then
         if _G.Settings.Notif then
-            StarterGui:SetCore("SendNotification", {Title = "🥚 EGG DETECTED!", Text = v.Name:upper(), Duration = 5})
+            StarterGui:SetCore("SendNotification", {Title = "🥚 EGG SPAWNED!", Text = v.Name:upper(), Duration = 5})
             local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
             s.Ended:Connect(function() s:Destroy() end)
         end
@@ -112,8 +108,8 @@ workspace.DescendantAdded:Connect(function(v)
 end)
 
 -- [[ 5. UI ]] --
-if PlayerGui:FindFirstChild("GURITA_CONTRAST") then PlayerGui.GURITA_CONTRAST:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_CONTRAST"; SG.ResetOnSpawn = false
+if PlayerGui:FindFirstChild("GURITA_CLEAR_NIGHT") then PlayerGui.GURITA_CLEAR_NIGHT:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_CLEAR_NIGHT"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
@@ -129,7 +125,7 @@ Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "GURITA BRIGHT-MAP"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 14
+Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "GURITA HUB NIGHT"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 14
 
 local function CreateBtn(pos)
     local b = Instance.new("TextButton", Main)
