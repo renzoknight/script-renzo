@@ -1,4 +1,4 @@
--- [[ GURITA-HUB-V1: TAB SYSTEM REPAIRED ]] --
+-- [[ GURITA-HUB-V1: WORKING SIDEBAR TABS ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -14,10 +14,14 @@ ScreenGui.Name = "GuritaHub_Official"
 ScreenGui.Parent = PlayerGui
 ScreenGui.ResetOnSpawn = false
 
--- --- DATA ---
-local EasterList = {"Hydra Bunny", "Hopilikalika Hopilikalako", "Churrito Bunnito", "Baskito", "Los Bunitos", "Easter Easter Easter Sahur", "Eggdin Egg Egg Dun", "Bunny Tralala", "Buntteo", "Bunny Bunny Bunny Sahur", "Noo my Eggs"}
+-- --- DATA LIST PASKAH ---
+local EasterList = {
+    "Hydra Bunny", "Hopilikalika Hopilikalako", "Churrito Bunnito", 
+    "Baskito", "Los Bunitos", "Easter Easter Easter Sahur", 
+    "Eggdin Egg Egg Dun", "Bunny Tralala", "Buntteo", 
+    "Bunny Bunny Bunny Sahur", "Noo my Eggs"
+}
 local ESP_Enabled = false
-local CurrentTab = "Features GH"
 
 -- --- 1. LOGO & MAIN FRAME ---
 local LogoButton = Instance.new("TextButton", ScreenGui)
@@ -52,7 +56,7 @@ CenterTitle.Font = Enum.Font.GothamBold
 CenterTitle.TextSize = 18
 CenterTitle.ZIndex = 150
 
--- --- 2. SIDEBAR ---
+-- --- 2. SIDEBAR (KIRI) ---
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
 Sidebar.Position = UDim2.new(0, 10, 0, 45)
@@ -64,15 +68,15 @@ local SidebarLayout = Instance.new("UIListLayout", Sidebar)
 SidebarLayout.Padding = UDim.new(0, 5)
 SidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- --- 3. TAB CONTAINER (Area Kanan) ---
-local Tabs = Instance.new("Frame", MainFrame)
-Tabs.Name = "TabContainer"
-Tabs.Position = UDim2.new(0, 150, 0, 45)
-Tabs.Size = UDim2.new(1, -160, 0, 225)
-Tabs.BackgroundTransparency = 1
+-- --- 3. CONTAINER TAB (KANAN) ---
+local TabPages = Instance.new("Frame", MainFrame)
+TabPages.Name = "Pages"
+TabPages.Position = UDim2.new(0, 150, 0, 45)
+TabPages.Size = UDim2.new(1, -160, 0, 225)
+TabPages.BackgroundTransparency = 1
 
-local function createTabPage(name)
-    local page = Instance.new("ScrollingFrame", Tabs)
+local function createPage(name)
+    local page = Instance.new("ScrollingFrame", TabPages)
     page.Name = name
     page.Size = UDim2.new(1, 0, 1, 0)
     page.BackgroundTransparency = 1
@@ -84,62 +88,66 @@ local function createTabPage(name)
     return page
 end
 
--- Membuat Halaman per Tab
-local PageFeatures = createTabPage("Features GH")
-local PageProtection = createTabPage("Protection GH")
-local PageESP = createTabPage("ESP GH")
-local PagePaskah = createTabPage("Paskah Event GH")
+-- Buat Halaman per Menu
+local PageFeatures = createPage("Features GH")
+local PageProtection = createPage("Protection GH")
+local PageESP = createPage("ESP GH")
+local PagePaskah = createPage("Paskah Event GH")
 
--- --- 4. LOGIKA PINDAH TAB ---
+-- --- 4. LOGIKA TOMBOL SIDEBAR ---
 local function showTab(tabName)
-    for _, child in pairs(Tabs:GetChildren()) do
-        child.Visible = (child.Name == tabName)
+    for _, p in pairs(TabPages:GetChildren()) do
+        if p:IsA("ScrollingFrame") then
+            p.Visible = (p.Name == tabName)
+        end
     end
 end
 
-local function addSideBtn(name)
-    local b = Instance.new("TextButton", Sidebar)
-    b.Size = UDim2.new(0.9, 0, 0, 35)
-    b.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    b.Text = name
-    b.TextColor3 = Color3.fromRGB(200, 200, 200)
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 10
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+local function addNavBtn(name)
+    local btn = Instance.new("TextButton", Sidebar)
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 10
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     
-    b.MouseButton1Click:Connect(function()
+    btn.MouseButton1Click:Connect(function()
         showTab(name)
     end)
 end
 
-addSideBtn("Features GH")
-addSideBtn("Protection GH")
-addSideBtn("ESP GH")
-addSideBtn("Paskah Event GH")
+addNavBtn("Features GH")
+addNavBtn("Protection GH")
+addNavBtn("ESP GH")
+addNavBtn("Paskah Event GH")
 
-showTab("Features GH") -- Default awal
+-- Tampilan Awal
+showTab("Features GH")
 
--- --- 5. ISI FITUR PASKAH ---
-local function createToggle(parent, text, callback)
-    local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(0.9, 0, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.Text = text .. " GH: OFF"
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+-- --- 5. FITUR DI DALAM TAB PASKAH ---
+local function addToggle(parent, text, callback)
+    local tgl = Instance.new("TextButton", parent)
+    tgl.Size = UDim2.new(0.9, 0, 0, 40)
+    tgl.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    tgl.Text = text .. " GH: OFF"
+    tgl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tgl.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", tgl).CornerRadius = UDim.new(0, 6)
     
-    local state = false
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.Text = text .. " GH: " .. (state and "ON" or "OFF")
-        btn.TextColor3 = state and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 255, 255)
-        callback(state)
+    local active = false
+    tgl.MouseButton1Click:Connect(function()
+        active = not active
+        tgl.Text = text .. " GH: " .. (active and "ON" or "OFF")
+        tgl.TextColor3 = active and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 255, 255)
+        callback(active)
     end)
 end
 
-createToggle(PagePaskah, "Easter ESP", function(val)
-    ESP_Enabled = val
+-- Tambahkan Fitur ESP ke Tab Paskah
+addToggle(PagePaskah, "Easter ESP", function(state)
+    ESP_Enabled = state
 end)
 
 -- --- 6. ESP LOGIC ---
@@ -147,16 +155,14 @@ task.spawn(function()
     while task.wait(1) do
         if ESP_Enabled then
             for _, obj in pairs(workspace:GetDescendants()) do
-                for _, egg in pairs(EasterList) do
-                    if obj.Name == egg and (obj:IsA("BasePart") or obj:IsA("Model")) then
-                        local target = obj:IsA("Model") and obj.PrimaryPart or obj
-                        if target and not target:FindFirstChild("GH_ESP") then
-                            local b = Instance.new("BillboardGui", target)
-                            b.Name = "GH_ESP"
-                            b.AlwaysOnTop = true
-                            b.Size = UDim2.new(0, 100, 0, 50)
-                            local t = Instance.new("TextLabel", b)
-                            t.BackgroundTransparency = 1; t.Size = UDim2.new(1,0,1,0); t.Text = egg.." GH"; t.TextColor3 = Color3.fromRGB(255,255,0); t.Font = Enum.Font.GothamBold; t.TextSize = 12
+                for _, name in pairs(EasterList) do
+                    if obj.Name == name and (obj:IsA("BasePart") or obj:IsA("Model")) then
+                        local t = obj:IsA("Model") and obj.PrimaryPart or obj
+                        if t and not t:FindFirstChild("GH_ESP") then
+                            local b = Instance.new("BillboardGui", t)
+                            b.Name = "GH_ESP"; b.AlwaysOnTop = true; b.Size = UDim2.new(0,100,0,50)
+                            local l = Instance.new("TextLabel", b)
+                            l.BackgroundTransparency = 1; l.Size = UDim2.new(1,0,1,0); l.Text = name.." GH"; l.TextColor3 = Color3.fromRGB(255,255,0); l.Font = Enum.Font.GothamBold; l.TextSize = 10
                         end
                     end
                 end
@@ -167,7 +173,7 @@ task.spawn(function()
     end
 end)
 
--- --- 7. EXTRA (DRAG, RGB, CLOSE) ---
+-- --- 7. UTILS (DRAG, RGB, CLOSE) ---
 local function Drag(ui)
     local d, i, s, sp
     ui.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then d = true; s = inp.Position; sp = ui.Position end end)
