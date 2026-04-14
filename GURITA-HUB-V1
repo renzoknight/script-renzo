@@ -1,95 +1,97 @@
+-- [[ GURITA HUB - PERMANENT FLAT COLOR EDITION ]] --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- [[ OPTIMASI ANTI-LAG ]] --
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-_G.ESP_Enabled = false
 
--- Fungsi untuk memberikan Flat Color tanpa beban CPU tinggi
-local function ApplyFlatESP(player)
-    if player == LocalPlayer then return end -- Jangan warnai diri sendiri (biar gak ganggu pandangan)
+-- [[ FUNGSI FLAT COLOR PERMANEN & OTOMATIS ]] --
+local function MakeFlat(char)
+    -- Pastikan karakter ada
+    if not char then return end
     
-    local function setup(char)
-        if not _G.ESP_Enabled then return end
-        
-        -- Tunggu sampai karakter lengkap agar tidak error
-        local hrp = char:WaitForChild("HumanoidRootPart", 5)
-        if hrp then
-            -- Cek apakah sudah ada Highlight, jika ada jangan buat lagi (Ini kunci anti-lag)
-            local existing = char:FindFirstChild("GuritaHighlight")
-            if not existing then
+    -- Tunggu sebentar sampai part karakter muncul
+    task.wait(0.5)
+    
+    -- Cari semua bagian tubuh (Part) pemain
+    for _, v in pairs(char:GetDescendants()) do
+        if v:IsA("BasePart") then
+            -- Menerapkan Flat Color
+            v.Material = Enum.Material.SmoothPlastic -- Membuat tekstur rata/flat
+            v.Color = Color3.fromRGB(0, 255, 127) -- Warna hijau flat yang soft (tidak mencolok)
+            
+            -- Menambahkan Highlight tipis (ESP) agar permanen tembus pandang
+            if not char:FindFirstChild("GuritaVisual") then
                 local highlight = Instance.new("Highlight")
-                highlight.Name = "GuritaHighlight"
+                highlight.Name = "GuritaVisual"
                 highlight.Parent = char
-                highlight.FillColor = Color3.fromRGB(0, 255, 0) -- Hijau Flat
-                highlight.FillTransparency = 0.7 -- Transparan agar tidak mencolok
-                highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Putih tipis
-                highlight.OutlineTransparency = 0
+                highlight.FillColor = Color3.fromRGB(0, 255, 127)
+                highlight.FillTransparency = 0.7 -- Transparan agar halus
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                highlight.OutlineTransparency = 0.5
                 highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
             end
         end
     end
-
-    if player.Character then setup(player.Character) end
-    player.CharacterAdded:Connect(setup) -- Hanya jalan pas player respawn
 end
 
--- [[ WINDOW SETUP ]] --
+-- Otomatis jalan untuk semua pemain yang masuk
+local function OnPlayerAdded(player)
+    if player ~= LocalPlayer then
+        player.CharacterAdded:Connect(function(char)
+            MakeFlat(char)
+        end)
+        if player.Character then
+            MakeFlat(player.Character)
+        end
+    end
+end
+
+-- Menjalankan fungsi otomatis saat script di-execute
+for _, player in pairs(Players:GetPlayers()) do
+    OnPlayerAdded(player)
+end
+Players.PlayerAdded:Connect(OnPlayerAdded)
+
+-- [[ UI SETUP ]] --
 local Window = Rayfield:CreateWindow({
-   Name = "🐙 GURITA HUB | Anti-Lag Edition",
-   LoadingTitle = "Loading Smooth Script...",
-   LoadingSubtitle = "by Gurita Team",
+   Name = "🐙 GURITA HUB | Steal A Brainrot",
+   LoadingTitle = "Mengaktifkan Gurita Hub...",
+   LoadingSubtitle = "Flat Color: PERMANENT ACTIVE",
 })
 
--- [[ TOMBOL OPEN (POSISI AMAN) ]] --
+-- [[ LOGO TOMBOL BUKA/TUTUP ]] --
 local OpenGui = Instance.new("ScreenGui")
-local btn = Instance.new("TextButton")
+local ToggleButton = Instance.new("TextButton")
 OpenGui.Parent = game.CoreGui
-btn.Parent = OpenGui
-btn.Text = "🐙"
-btn.Size = UDim2.new(0, 50, 0, 50)
-btn.Position = UDim2.new(0, 10, 0.5, 0) -- Sebelah kiri tengah
-btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+ToggleButton.Parent = OpenGui
+ToggleButton.Name = "GuritaBtn"
+ToggleButton.Text = "🐙"
+ToggleButton.Size = UDim2.new(0, 55, 0, 55)
+ToggleButton.Position = UDim2.new(0, 15, 0.5, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleButton.TextColor3 = Color3.fromRGB(0, 255, 255)
+ToggleButton.TextSize = 30
+Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 15)
+ToggleButton.Draggable = true
 
-btn.MouseButton1Click:Connect(function()
+ToggleButton.MouseButton1Click:Connect(function()
     game:GetService("CoreGui").Rayfield.Enabled = not game:GetService("CoreGui").Rayfield.Enabled
 end)
 
--- [[ TAB VISUAL ]] --
-local VisualTab = Window:CreateTab("Visuals")
+-- [[ TAB INFO ]] --
+local MainTab = Window:CreateTab("Main")
+MainTab:CreateSection("Status: Flat Color Is Permanently ON")
+MainTab:CreateLabel("GURITA HUB - Version 1.0 (Auto-Flat)")
 
-VisualTab:CreateToggle({
-   Name = "Flat Color ESP (Anti-Lag)",
-   CurrentValue = false,
-   Flag = "ESP_Toggle",
+-- Tambahan Fitur Movement agar lebih lengkap
+local MoveTab = Window:CreateTab("Movement")
+MoveTab:CreateSlider({
+   Name = "WalkSpeed",
+   Range = {16, 200},
+   Increment = 1,
+   CurrentValue = 16,
    Callback = function(Value)
-      _G.ESP_Enabled = Value
-      if Value then
-          -- Jalankan ke semua pemain yang sudah ada
-          for _, player in pairs(Players:GetPlayers()) do
-              ApplyFlatESP(player)
-          end
-      else
-          -- Hapus semua warna jika dimatikan agar FPS naik lagi
-          for _, player in pairs(Players:GetPlayers()) do
-              if player.Character and player.Character:FindFirstChild("GuritaHighlight") then
-                  player.Character.GuritaHighlight:Destroy()
-              end
-          end
-      end
-   end,
-})
-
--- Tambahkan fitur FPS Booster sederhana
-VisualTab:CreateButton({
-   Name = "🚀 Boost FPS (Hapus Tekstur Dunia)",
-   Callback = function()
-       for _, v in pairs(game:GetDescendants()) do
-           if v:IsA("BasePart") and not v:IsA("MeshPart") then
-               v.Material = Enum.Material.SmoothPlastic
-           end
-       end
-       Rayfield:Notify({Title = "Boosted", Content = "Tekstur dunia telah disederhanakan!", Duration = 2})
+      LocalPlayer.Character.Humanoid.WalkSpeed = Value
    end,
 })
