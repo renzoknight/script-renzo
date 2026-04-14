@@ -1,4 +1,4 @@
--- [[ GURITA HUB: TRUE NIGHT & FLAT COLOR EDITION ]] --
+-- [[ GURITA HUB: NIGHT SKY EDITION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -31,16 +31,15 @@ local function LoadData()
 end
 LoadData()
 
--- [[ 2. FEATURE: TRUE DARKNESS (MAP GELAP TOTAL) ]] --
+-- [[ 2. FEATURE: NIGHT SKY ONLY (MAP TETAP TERANG) ]] --
 task.spawn(function()
     while true do
-        Lighting.ClockTime = 0
-        Lighting.Brightness = 0
+        Lighting.ClockTime = 0 -- Langit jadi Malam (Bintang-bintang)
+        Lighting.Brightness = 2 -- Jaga Brightness tetap tinggi biar map terang
         Lighting.GlobalShadows = false
-        Lighting.Ambient = Color3.new(0, 0, 0) -- Tanah & Ruangan jadi Gelap
-        Lighting.OutdoorAmbient = Color3.new(0, 0, 0) -- Luar ruangan jadi Gelap
-        Lighting.ExposureCompensation = -1 -- Menghilangkan cahaya sisa
-        Lighting.FogEnd = 999999
+        Lighting.Ambient = Color3.fromRGB(150, 150, 150) -- Biar map gak gelap gulita
+        Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150)
+        Lighting.ExposureCompensation = 0.5 -- Tambahan cahaya biar objek nampak jelas
         task.wait(2)
     end
 end)
@@ -79,9 +78,6 @@ local function SikatJadiFlat(v)
         if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
             v.Material = Enum.Material.Plastic; v.CastShadow = false
             if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, anak in pairs(v:GetChildren()) do 
-                if anak:IsA("Texture") or anak:IsA("Decal") then anak:Destroy() end 
-            end
         end
     end)
 end
@@ -110,9 +106,9 @@ workspace.DescendantAdded:Connect(function(v)
     end
 end)
 
--- [[ 5. UI CONSTRUCTION ]] --
-if PlayerGui:FindFirstChild("GURITA_FINAL_NIGHT") then PlayerGui.GURITA_FINAL_NIGHT:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_FINAL_NIGHT"; SG.ResetOnSpawn = false
+-- [[ 5. UI ]] --
+if PlayerGui:FindFirstChild("GURITA_NIGHT_SKY") then PlayerGui.GURITA_NIGHT_SKY:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_NIGHT_SKY"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
@@ -128,7 +124,7 @@ Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "GURITA HUB DARK"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 14
+Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "GURITA SKY EDITION"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 14
 
 local function CreateBtn(pos)
     local b = Instance.new("TextButton", Main)
@@ -152,5 +148,3 @@ BtnESP.MouseButton1Click:Connect(function()
     if not _G.Settings.EggESP then for _, v in pairs(workspace:GetDescendants()) do if v.Name == "Marker" or v.Name == "Tag" then v:Destroy() end end end
 end)
 BtnNotif.MouseButton1Click:Connect(function() _G.Settings.Notif = not _G.Settings.Notif; SaveData(); Refresh() end)
-
-print("Gurita Hub: True Night Mode & Save System Loaded!")
