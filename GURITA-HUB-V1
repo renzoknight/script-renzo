@@ -1,28 +1,25 @@
--- [[ GURITA HUB V6.4.28 - STABLE & CLEAN ]] --
+-- [[ GURITA HUB V6.4.29 - RESTORED SIDEBAR ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local CG = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 
--- 1. CONFIG & EGG TARGETS
+-- 1. CONFIG & TARGETS
 local AllowedEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako"}
-
 _G.GH_Config = {
     ESP_Player_GH = false,
     AutoCollect_GH = false,
     ESP_Egg_GH = false
 }
 
--- [[ 2. AUTO FLAT COLOR ENGINE (ALWAYS ON) ]] --
+-- [[ 2. AUTO FLAT COLOR ENGINE (OTOMATIS AKTIF) ]] --
 local function ApplyFlat(v)
     pcall(function()
-        -- Mengubah material jadi plastik polos agar FPS naik dan ringan
         if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") and not v:IsDescendantOf(lp.Character) then
             v.Material = Enum.Material.Plastic
             v.CastShadow = false
             if v:IsA("MeshPart") then v.TextureID = "" end
-            -- Hapus tekstur/decal yang bikin berat
             for _, child in pairs(v:GetChildren()) do 
                 if child:IsA("Texture") or child:IsA("Decal") then child:Destroy() end 
             end
@@ -30,7 +27,7 @@ local function ApplyFlat(v)
     end)
 end
 
--- [[ 3. ESP ENGINE (PLAYER & EGGS) ]] --
+-- [[ 3. ESP ENGINE ]] --
 local function CreateESP(obj, text, color)
     if not obj:FindFirstChild("GHS_ESP") then
         local h = Instance.new("Highlight", obj); h.Name = "GHS_ESP"; h.FillColor = color; h.OutlineColor = Color3.new(1, 1, 1); h.FillTransparency = 0.5
@@ -54,7 +51,7 @@ local function UpdateESP()
     end
 end
 
--- [[ 4. UI GURITA HUB (CLEAN VERSION) ]] --
+-- [[ 4. UI GURITA HUB (SIDEBAR RESTORED) ]] --
 if CG:FindFirstChild("GHS_MainUI") then CG.GHS_MainUI:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI"
 
@@ -71,30 +68,42 @@ task.spawn(function()
     end
 end)
 
-local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 400, 0, 220); Main.Position = UDim2.new(0.5, -200, 0.5, -110); Main.BackgroundColor3 = Color3.new(0,0,0); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 440, 0, 260); Main.Position = UDim2.new(0.5, -220, 0.5, -130); Main.BackgroundColor3 = Color3.new(0,0,0); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
 LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
-local Content = Instance.new("Frame", Main); Content.Size = UDim2.new(1, -20, 1, -20); Content.Position = UDim2.new(0, 10, 0, 10); Content.BackgroundTransparency = 1; local list = Instance.new("UIListLayout", Content); list.Padding = UDim.new(0, 10); list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 130, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Instance.new("UICorner", Sidebar); local SL = Instance.new("UIListLayout", Sidebar); SL.HorizontalAlignment = Enum.HorizontalAlignment.Center; SL.Padding = UDim.new(0, 5)
+local Pages = Instance.new("Frame", Main); Pages.Size = UDim2.new(1, -145, 1, -20); Pages.Position = UDim2.new(0, 135, 0, 10); Pages.BackgroundTransparency = 1
 
-local function CreateToggle(txt, var, callback)
-    local b = Instance.new("TextButton", Content); b.Size = UDim2.new(0.9, 0, 0, 45); b.BackgroundColor3 = Color3.fromRGB(15, 15, 20); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b)
+local function CreatePage(name)
+    local p = Instance.new("ScrollingFrame", Pages); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 0; Instance.new("UIListLayout", p).Padding = UDim.new(0, 8); return p
+end
+
+local P1 = CreatePage("PASKA EVENT"); local P2 = CreatePage("ESP"); P1.Visible = true
+
+local function CreateSideBtn(txt, p)
+    local b = Instance.new("TextButton", Sidebar); b.Size = UDim2.new(0.9, 0, 0, 40); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.BackgroundColor3 = Color3.fromRGB(20, 20, 30); Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() for _, v in pairs(Pages:GetChildren()) do v.Visible = false end; p.Visible = true end)
+end
+
+CreateSideBtn("PASKA EVENT", P1); CreateSideBtn("ESP", P2)
+
+local function CreateToggle(parent, txt, var, callback)
+    local b = Instance.new("TextButton", parent); b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(15, 15, 20); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b)
     local function UpdateUI() b.Text = txt..(_G.GH_Config[var] and ": ON" or ": OFF"); b.TextColor3 = _G.GH_Config[var] and Color3.new(0,1,0) or Color3.new(1,0,0) end
     UpdateUI()
     b.MouseButton1Click:Connect(function() _G.GH_Config[var] = not _G.GH_Config[var]; UpdateUI(); if callback then callback() end end)
 end
 
-CreateToggle("Auto Collect", "AutoCollect_GH")
-CreateToggle("ESP Egg", "ESP_Egg_GH", function() UpdateESP() end)
-CreateToggle("ESP Player", "ESP_Player_GH", function() UpdateESP() end)
+-- Isi Menu PASKA EVENT
+CreateToggle(P1, "Auto Collect", "AutoCollect_GH")
+
+-- Isi Menu ESP
+CreateToggle(P2, "ESP Egg", "ESP_Egg_GH", function() UpdateESP() end)
+CreateToggle(P2, "ESP Player", "ESP_Player_GH", function() UpdateESP() end)
 
 -- [[ 5. ENGINE LOOP ]] --
 task.spawn(function()
-    -- Flat Color otomatis jalan untuk semua objek yang sudah ada
     for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
-    -- Flat Color otomatis jalan untuk objek baru (Tycoon yang diupgrade)
     workspace.DescendantAdded:Connect(ApplyFlat)
-    
-    while task.wait(5) do 
-        UpdateESP() 
-    end
+    while task.wait(5) do UpdateESP() end
 end)
