@@ -1,121 +1,65 @@
--- [[ GURITA HUB: ALL-IN-ONE EDITION ]] --
--- Fitur: Auto Flat Color (Always On) + Egg Hunt Menu (Toggle)
+-- [[ GURITA HUB - MANUAL NOTIFIER TESTER ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
+local StarterGui = game:GetService("StarterGui")
 
--- [[ Bagian 1: Konfigurasi Egg Hunt ]] --
+-- 1. LIST TARGET
 local TargetEggs = {
     "hydra bunny", "noo my eggs", "baskito", "churrito", 
     "quackini snackini", "hopilikalika hopilikalako", "bunny sahur"
 }
-_G.EggESP_Master = false
 
--- [[ Bagian 2: Fungsi Flat Color (Otomatis Aktif) ]] --
-local function SikatJadiFlat(v)
-    pcall(function()
-        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
-            v.Material = Enum.Material.Plastic
-            v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, anak in pairs(v:GetChildren()) do 
-                if anak:IsA("Texture") or anak:IsA("Decal") then anak:Destroy() end 
-            end
-        end
-    end)
+_G.ManualScanActive = false
+
+-- 2. FUNGSI NOTIFIKASI
+local function KirimNotif(namaTelur)
+    StarterGui:SetCore("SendNotification", {
+        Title = "🥚 EGG DETECTED!";
+        Text = "Ditemukan: " .. namaTelur:upper();
+        Duration = 5;
+    })
+    
+    local s = Instance.new("Sound", workspace)
+    s.SoundId = "rbxassetid://4590662762"
+    s.Volume = 1
+    s:Play()
+    task.wait(2)
+    s:Destroy()
 end
 
--- [[ Bagian 3: Fungsi ESP Egg ]] --
-local function ApplyUltimateESP(obj)
-    if not obj:FindFirstChild("Marker") then
-        local h = Instance.new("Highlight", obj)
-        h.Name = "Marker"; h.FillColor = Color3.fromRGB(255, 255, 0); h.FillTransparency = 0.5
-        
-        local b = Instance.new("BillboardGui", obj)
-        b.Name = "Tag"; b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
-        
-        local t = Instance.new("TextLabel", b)
-        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 1)
-        t.Font = Enum.Font.GothamBold; t.TextSize = 13; t.TextStrokeTransparency = 0
+-- 3. UI MENU & LOGO
+if PlayerGui:FindFirstChild("GHS_ManualNotif") then PlayerGui.GHS_ManualNotif:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GHS_ManualNotif"; SG.ResetOnSpawn = false
 
-        task.spawn(function()
-            while obj and obj.Parent and _G.EggESP_Master do
-                if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                    local dist = (obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude
-                    t.Text = obj.Name:upper() .. "\n[" .. math.floor(dist) .. "m]"
-                end
-                task.wait(0.5)
-            end
-        end)
-    end
-end
-
--- [[ Bagian 4: Sistem Otomatisasi (Looping) ]] --
-task.spawn(function()
-    print("GURITA HUB: Memulai Optimasi Flat Color & Scan...")
-    while true do
-        local all = workspace:GetDescendants()
-        for i, v in pairs(all) do
-            -- Jalankan Flat Color
-            if v:IsA("BasePart") and v.Material ~= Enum.Material.Plastic then
-                SikatJadiFlat(v)
-            end
-            
-            -- Jalankan ESP (Hanya jika ON)
-            if _G.EggESP_Master and v:IsA("BasePart") and table.find(TargetEggs, v.Name:lower()) then
-                ApplyUltimateESP(v)
-            end
-            
-            if i % 150 == 0 then task.wait() end -- Anti-Lag
-        end
-        task.wait(5) -- Ulangi setiap 5 detik
-    end
-end)
-
-workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.5)
-    SikatJadiFlat(v) -- Benda baru langsung jadi flat
-    if _G.EggESP_Master and table.find(TargetEggs, v.Name:lower()) then
-        ApplyUltimateESP(v)
-    end
-end)
-
--- [[ Bagian 5: UI MENU ]] --
-if PlayerGui:FindFirstChild("GHS_Final") then PlayerGui.GHS_Final:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GHS_Final"; SG.ResetOnSpawn = false
-
+-- Logo G H (Bisa Digeser)
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 10, 0.5, 0)
-Logo.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Logo.Text = "G H"; Logo.TextColor3 = Color3.new(1, 1, 0)
+Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "G H"; Logo.TextColor3 = Color3.new(1, 1, 0)
 Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 20; Logo.Draggable = true; Logo.Active = true
 Instance.new("UICorner", Logo); Instance.new("UIStroke", Logo).Thickness = 2
 
+-- Frame Menu
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 150); Main.Position = UDim2.new(0.5, -100, 0.5, -75)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10); Main.Visible = false; Instance.new("UICorner", Main)
+Main.Size = UDim2.new(0, 220, 0, 180); Main.Position = UDim2.new(0.5, -110, 0.5, -90)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main)
 Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
-local Tgl = Instance.new("TextButton", Main)
-Tgl.Size = UDim2.new(0.8, 0, 0, 50); Tgl.Position = UDim2.new(0.1, 0, 0.4, 0)
-Tgl.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Tgl.Font = Enum.Font.GothamBold; Tgl.TextSize = 14; Instance.new("UICorner", Tgl)
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "MANUAL SCANNER"; Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBold; Title.BackgroundTransparency = 1; Title.TextSize = 14
 
-local function UpdateUI()
-    Tgl.Text = _G.EggESP_Master and "ESP EGG: ON" or "ESP EGG: OFF"
-    Tgl.TextColor3 = _G.EggESP_Master and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-end
-UpdateUI()
+-- TOMBOL SCAN MANUAL (Sekali Klik, Sekali Scan)
+local BtnScan = Instance.new("TextButton", Main)
+BtnScan.Size = UDim2.new(0.9, 0, 0, 50); BtnScan.Position = UDim2.new(0.05, 0, 0.3, 0)
+BtnScan.BackgroundColor3 = Color3.fromRGB(0, 85, 255); BtnScan.Text = "SCAN MAP SEKARANG"; BtnScan.TextColor3 = Color3.new(1,1,1)
+BtnScan.Font = Enum.Font.GothamBold; BtnScan.TextSize = 12; Instance.new("UICorner", BtnScan)
 
-Tgl.MouseButton1Click:Connect(function()
-    _G.EggESP_Master = not _G.EggESP_Master
-    UpdateUI()
-    if not _G.EggESP_Master then
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v.Name == "Marker" or v.Name == "Tag" then v:Destroy() end
-        end
-    end
-end)
-
-print("GURITA HUB: Flat Color Aktif & Menu Egg Ready!")
+-- TOMBOL TES NOTIF (Hanya untuk Tes Suara/Pop-up)
+local BtnTest = Instance.new("TextButton", Main)
+BtnTest.Size = UDim2.new(0.9, 0, 0, 40); BtnTest.Position = UDim2.new(0.05, 0, 0.65, 0)
+BtnTest.BackgroundColor3 = Color3.fromRGB(40, 40, 40); BtnTest.Text = "TES NOTIF (SIMULASI)"; BtnTest.TextColor3 = Color3.new(1,1,1)
+BtnTest.Font = Enum.Font.GothamBold
