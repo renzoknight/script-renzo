@@ -1,4 +1,4 @@
--- [[ GURITA HUB V4.1 - DOUBLE MENU EDITION ]] --
+-- [[ GURITA HUB V4.2 - STABLE EDITION ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -41,17 +41,40 @@ local function CustomNotif(eggName)
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local stroke = Instance.new("UIStroke", frame); stroke.Color = Color3.fromRGB(0, 150, 255); stroke.Thickness = 2
     local txt = Instance.new("TextLabel", frame)
-    txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1; txt.Font = Enum.Font.GothamBold; txt.TextSize = 10; txt.TextColor3 = Color3.new(1, 1, 1); txt.Text = "📩 VIP FOUND: " .. eggName:upper()
+    txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1; txt.Font = Enum.Font.GothamBold; txt.TextSize = 10; txt.TextColor3 = Color3.new(1, 1, 1); txt.Text = "📩 FOUND: " .. eggName:upper()
     local sound = Instance.new("Sound", workspace); sound.SoundId = "rbxassetid://4835664299"; sound.Volume = 1; sound:Play()
     game:GetService("Debris"):AddItem(sound, 2)
     frame:TweenPosition(UDim2.new(0.5, -120, 0.05, 0), "Out", "Back", 0.5, true)
     task.delay(4, function() if frame then frame:TweenPosition(UDim2.new(0.5, -120, -0.2, 0), "In", "Linear", 0.5, true); task.wait(0.5); frame:Destroy() end end)
 end
 
--- 3. UI CONSTRUCTION
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHub_BlueV41"
+-- 3. ESP PLAYER LOGIC (FIXED)
+local function CreatePlayerESP(p)
+    task.spawn(function()
+        while p and p.Parent do
+            if _G.ESP_Player_GH and p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
+                local head = p.Character.Head
+                if not head:FindFirstChild("ESP_PlayerTag") then
+                    local bg = Instance.new("BillboardGui", head)
+                    bg.Name = "ESP_PlayerTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 200, 0, 50); bg.ExtentsOffset = Vector3.new(0, 3, 0)
+                    local lbl = Instance.new("TextLabel", bg)
+                    lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.TextColor3 = Color3.new(1, 1, 1)
+                    lbl.Text = p.Name; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 16; lbl.TextStrokeTransparency = 0.5
+                end
+            else
+                if p.Character and p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESP_PlayerTag") then
+                    p.Character.Head.ESP_PlayerTag:Destroy()
+                end
+            end
+            task.wait(1)
+        end
+    end)
+end
 
--- Floating Button (GH)
+-- 4. UI CONSTRUCTION
+if CG:FindFirstChild("GuritaHub_BlueV42") then CG.GuritaHub_BlueV42:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHub_BlueV42"
+
 local LogoFrame = Instance.new("Frame", SG)
 LogoFrame.Size = UDim2.new(0, 50, 0, 50); LogoFrame.Position = UDim2.new(0, 15, 0.45, 0)
 LogoFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 20); LogoFrame.Active = true; LogoFrame.Draggable = true
@@ -60,55 +83,39 @@ local LogoStroke = Instance.new("UIStroke", LogoFrame); LogoStroke.Color = Color
 local LogoBtn = Instance.new("TextButton", LogoFrame)
 LogoBtn.Size = UDim2.new(1, 0, 1, 0); LogoBtn.BackgroundTransparency = 1; LogoBtn.Text = "GH"; LogoBtn.TextColor3 = Color3.new(1, 1, 1); LogoBtn.Font = Enum.Font.GothamBold; LogoBtn.TextSize = 18
 
--- Main Menu
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 420, 0, 260); Main.Position = UDim2.new(0.5, -210, 0.5, -130)
-Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true
+Main.Size = UDim2.new(0, 420, 0, 260); Main.Position = UDim2.new(0.5, -210, 0.5, -130); Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main)
 local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fromRGB(0, 150, 255); MainStroke.Thickness = 2
 
 LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
--- Sidebar (Left)
 local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0, 120, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 28); Sidebar.BorderSizePixel = 0
-Instance.new("UICorner", Sidebar)
+Sidebar.Size = UDim2.new(0, 120, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 28); Sidebar.BorderSizePixel = 0; Instance.new("UICorner", Sidebar)
 local SideLayout = Instance.new("UIListLayout", Sidebar); SideLayout.Padding = UDim.new(0, 5); SideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- Content Area (Right)
 local Pages = Instance.new("Frame", Main)
 Pages.Size = UDim2.new(1, -130, 1, -20); Pages.Position = UDim2.new(0, 125, 0, 10); Pages.BackgroundTransparency = 1
 
 local function CreatePage(name)
-    local p = Instance.new("ScrollingFrame", Pages)
-    p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 2
+    local p = Instance.new("ScrollingFrame", Pages); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 2
     Instance.new("UIListLayout", p).Padding = UDim.new(0, 8)
     return p
 end
 
-local PagePaska = CreatePage("PASKA")
-local PageESP = CreatePage("ESP")
-PagePaska.Visible = true -- Default page
+local PagePaska = CreatePage("PASKA"); local PageESP = CreatePage("ESP")
+PagePaska.Visible = true
 
--- Sidebar Buttons
 local function CreateSideBtn(txt, page)
     local b = Instance.new("TextButton", Sidebar)
-    b.Size = UDim2.new(0.9, 0, 0, 35); b.BackgroundColor3 = Color3.fromRGB(25, 25, 40); b.Text = txt
-    b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.TextSize = 11; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function()
-        for _, v in pairs(Pages:GetChildren()) do v.Visible = false end
-        page.Visible = true
-    end)
+    b.Size = UDim2.new(0.9, 0, 0, 35); b.BackgroundColor3 = Color3.fromRGB(25, 25, 40); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.TextSize = 11; Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function() for _, v in pairs(Pages:GetChildren()) do v.Visible = false end; page.Visible = true end)
 end
+CreateSideBtn("PASKA EVENT", PagePaska); CreateSideBtn("ESP", PageESP)
 
-CreateSideBtn("PASKA EVENT", PagePaska)
-CreateSideBtn("ESP", PageESP)
-
--- Toggle Function
 local function CreateToggle(parent, txt, var, callback)
     local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(22, 22, 35); b.Text = txt..": OFF"
-    b.TextColor3 = Color3.new(1, 0, 0); b.Font = Enum.Font.GothamBold; b.TextSize = 10; Instance.new("UICorner", b)
+    b.Size = UDim2.new(0.95, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(22, 22, 35); b.Text = txt..": OFF"; b.TextColor3 = Color3.new(1, 0, 0); b.Font = Enum.Font.GothamBold; b.TextSize = 10; Instance.new("UICorner", b)
     local s = Instance.new("UIStroke", b); s.Color = Color3.fromRGB(40, 40, 60); s.Thickness = 1
     b.MouseButton1Click:Connect(function()
         _G[var] = not _G[var]
@@ -119,23 +126,20 @@ local function CreateToggle(parent, txt, var, callback)
     end)
 end
 
--- [[ ISI FITUR ]] --
-
--- Page 1: PASKA EVENT
+-- [[ FITUR ]] --
 CreateToggle(PagePaska, "Auto Collect Koin Paska GH", "AutoCollect_GH", function()
     task.spawn(function()
         while _G.AutoCollect_GH do
             local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-            if hrp and _G.AutoCollect_GH then
+            if hrp then
                 for _, v in ipairs(workspace:GetChildren()) do
                     if v:IsA("BasePart") and v.Name:lower():find("coin") and not (v.Parent and v.Parent.Name:lower():find("base")) then
                         hrp.CFrame = v.CFrame
                         firetouchinterest(hrp, v, 0); task.wait(); firetouchinterest(hrp, v, 1)
-                        task.wait(0.12)
                     end
                 end
             end
-            task.wait(0.5)
+            task.wait(0.3)
         end
     end)
 end)
@@ -146,24 +150,26 @@ CreateToggle(PagePaska, "ESP EGG HUNT GH", "ESP_Egg_GH", function()
     end
 end)
 
--- Page 2: ESP
-CreateToggle(PageESP, "ESC Player GH", "ESP_Player_GH", function() end)
+CreateToggle(PageESP, "ESP Player GH", "ESP_Player_GH", function() end)
 
-CreateToggle(PageESP, "X-Rey GH", "Xray_GH", function()
+CreateToggle(PageESP, "X-Ray GH", "Xray_GH", function()
     for _, v in ipairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") and not IsPlayer(v) then
             local n = v.Name:lower()
-            if n:find("wall") or n:find("base") or n:find("door") then
+            if n:find("wall") or n:find("base") or n:find("door") or n:find("floor") then
                 v.Transparency = _G.Xray_GH and 0.6 or 0
             end
         end
     end
 end)
 
--- 4. AUTO RUNNERS
+-- [[ AUTO RUNNERS ]] --
+for _, p in pairs(Players:GetPlayers()) do CreatePlayerESP(p) end
+Players.PlayerAdded:Connect(CreatePlayerESP)
+
 task.spawn(function()
     local d = workspace:GetDescendants()
-    for i = 1, #d do ApplyFlat(d[i]); if i % 300 == 0 then task.wait() end end
+    for i = 1, #d do ApplyFlat(d[i]); if i % 400 == 0 then task.wait() end end
     workspace.DescendantAdded:Connect(ApplyFlat)
     
     while true do
@@ -176,13 +182,13 @@ task.spawn(function()
                         if t and not t:FindFirstChild("EHSTag") then
                             local bg = Instance.new("BillboardGui", t); bg.Name = "EHSTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 150, 0, 40); bg.ExtentsOffset = Vector3.new(0, 3, 0)
                             local lbl = Instance.new("TextLabel", bg); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.RichText = true
-                            lbl.Text = "<b>[VIP] "..egg.."</b>"; lbl.TextColor3 = Color3.fromRGB(0, 220, 255); lbl.TextSize = 12; lbl.Font = Enum.Font.GothamBold
+                            lbl.Text = "<b>"..egg.."</b>"; lbl.TextColor3 = Color3.fromRGB(0, 220, 255); lbl.TextSize = 13; lbl.Font = Enum.Font.GothamBold
                             if Inceran[egg] then CustomNotif(egg) end
                         end
                     end
                 end
             end
         end
-        task.wait(6)
+        task.wait(5)
     end
 end)
