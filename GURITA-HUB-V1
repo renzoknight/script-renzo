@@ -1,10 +1,8 @@
--- [[ GURITA-HUB-V1 ANTI-LAG EDITION ]] --
+-- [[ GURITA-HUB-V1: SQUARE LOGO + SIDEBAR NAVIGATION ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-
--- Pastikan PlayerGui tersedia
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Bersihkan versi lama
@@ -17,7 +15,7 @@ ScreenGui.Parent = PlayerGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 
--- --- 1. LOGO GH (OPTIMIZED) ---
+-- --- 1. LOGO GH (KOTAK) ---
 local LogoButton = Instance.new("TextButton")
 LogoButton.Name = "GH_Trigger"
 LogoButton.Parent = ScreenGui
@@ -31,7 +29,7 @@ LogoButton.TextSize = 20
 LogoButton.ZIndex = 100
 
 local LogoCorner = Instance.new("UICorner")
-LogoCorner.CornerRadius = UDim.new(1, 0)
+LogoCorner.CornerRadius = UDim.new(0, 8) -- Kotak dengan sedikit lengkungan
 LogoCorner.Parent = LogoButton
 
 local LogoStroke = Instance.new("UIStroke")
@@ -44,45 +42,83 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -125)
-MainFrame.Size = UDim2.new(0, 400, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -225, 0.5, -140)
+MainFrame.Size = UDim2.new(0, 450, 0, 280)
 MainFrame.Visible = false
 MainFrame.ZIndex = 90
 
 local UICornerMain = Instance.new("UICorner")
-UICornerMain.CornerRadius = UDim.new(0, 8)
+UICornerMain.CornerRadius = UDim.new(0, 10)
 UICornerMain.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Parent = MainFrame
 MainStroke.Thickness = 2
 
--- --- 3. SIDEBAR ---
+-- --- 3. JUDUL TENGAH (GURITA-HUB) ---
+local CenterTitle = Instance.new("TextLabel")
+CenterTitle.Parent = MainFrame
+CenterTitle.BackgroundTransparency = 1
+CenterTitle.Size = UDim2.new(1, 0, 0, 40)
+CenterTitle.Position = UDim2.new(0, 0, 0, 5)
+CenterTitle.Font = Enum.Font.GothamBold
+CenterTitle.Text = "GURITA-HUB"
+CenterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+CenterTitle.TextSize = 16
+CenterTitle.ZIndex = 95
+
+-- --- 4. SIDEBAR MENU (KIRI) ---
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
 Sidebar.Parent = MainFrame
 Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
-Sidebar.Size = UDim2.new(0, 120, 1, 0)
+Sidebar.Size = UDim2.new(0, 130, 1, 0)
 
 local UICornerSide = Instance.new("UICorner")
-UICornerSide.CornerRadius = UDim.new(0, 8)
+UICornerSide.CornerRadius = UDim.new(0, 10)
 UICornerSide.Parent = Sidebar
 
-local SidebarTitle = Instance.new("TextLabel")
-SidebarTitle.Parent = Sidebar
-SidebarTitle.Size = UDim2.new(1, 0, 0, 40)
-SidebarTitle.BackgroundTransparency = 1
-SidebarTitle.Text = "GURITA-HUB-V1"
-SidebarTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-SidebarTitle.Font = Enum.Font.GothamBold
-SidebarTitle.TextSize = 12
+local ButtonContainer = Instance.new("Frame")
+ButtonContainer.Parent = Sidebar
+ButtonContainer.BackgroundTransparency = 1
+ButtonContainer.Size = UDim2.new(1, -10, 1, -50)
+ButtonContainer.Position = UDim2.new(0, 5, 0, 45)
 
--- --- 4. CLOSE BUTTON ---
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = ButtonContainer
+UIListLayout.Padding = UDim.new(0, 5)
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- Fungsi untuk buat tombol sidebar seperti di foto
+local function createNavButton(name)
+    local btn = Instance.new("TextButton")
+    btn.Name = name.."Btn"
+    btn.Parent = ButtonContainer
+    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    btn.Size = UDim2.new(1, 0, 0, 32)
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.TextSize = 12
+    
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 6)
+    c.Parent = btn
+    return btn
+end
+
+-- Tombol-tombol sesuai foto
+createNavButton("Features")
+createNavButton("Protection")
+createNavButton("ESP")
+createNavButton("Utilities")
+createNavButton("Customize")
+
+-- --- 5. CLOSE BUTTON ---
 local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "Close"
 CloseButton.Parent = MainFrame
 CloseButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-CloseButton.Position = UDim2.new(1, -30, 0, 8)
+CloseButton.Position = UDim2.new(1, -30, 0, 10)
 CloseButton.Size = UDim2.new(0, 22, 0, 22)
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -92,14 +128,12 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 4)
 CloseCorner.Parent = CloseButton
 
--- --- 5. LITE DRAGGING (ANTI-LAG) ---
+-- --- 6. DRAGGING & RGB (OPTIMIZED) ---
 local function MakeDraggable(ui)
     local dragging, dragInput, dragStart, startPos
     ui.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = ui.Position
+            dragging = true; dragStart = input.Position; startPos = ui.Position
         end
     end)
     ui.InputChanged:Connect(function(input)
@@ -118,34 +152,24 @@ end
 MakeDraggable(MainFrame)
 MakeDraggable(LogoButton)
 
--- --- 6. RGB ANIMATION (LOW CPU USAGE) ---
 local colors = {
-    Color3.fromRGB(0, 160, 255), -- Biru
-    Color3.fromRGB(255, 120, 0), -- Oranye
-    Color3.fromRGB(255, 210, 0), -- Kuning
-    Color3.fromRGB(160, 0, 255)  -- Ungu
+    Color3.fromRGB(0, 160, 255), Color3.fromRGB(255, 120, 0),
+    Color3.fromRGB(255, 210, 0), Color3.fromRGB(160, 0, 255)
 }
 
 task.spawn(function()
     local cIndex = 1
     while true do
         local nIndex = cIndex % #colors + 1
-        for i = 0, 1, 0.02 do -- Step 0.02 lebih ringan dari 0.01
+        for i = 0, 1, 0.02 do
             local lerpColor = colors[cIndex]:Lerp(colors[nIndex], i)
             MainStroke.Color = lerpColor
             LogoStroke.Color = lerpColor
-            task.wait(0.05) -- Delay kecil untuk menghemat CPU
+            task.wait(0.04)
         end
         cIndex = nIndex
     end
 end)
 
--- --- 7. TOGGLE ---
-LogoButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-CloseButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-end)
-
-print("GURITA-HUB-V1: Berhasil dimuat (Mode Ringan)")
+LogoButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+CloseButton.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
