@@ -1,6 +1,11 @@
--- [[ GURITA HUB - CORE ESP EGG HUNT V1 ]] --
--- LIST FIX: Hydra Bunny, Noo My Eggs, Baskito, Churrito, Quackini Snackini, Hopilikalika, Bunny Sahur
+-- [[ GURITA HUB V6.5 - EGG HUNT ONLY ]] --
 
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local CG = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+
+-- 1. CONFIG & LIST FIX (SESUAI PERINTAH)
 local TargetEggs = {
     "hydra bunny", 
     "noo my eggs", 
@@ -11,61 +16,111 @@ local TargetEggs = {
     "bunny sahur"
 }
 
--- [[ 1. FUNGSI PENANDA (HIGHLIGHT & TEXT) ]] --
-local function ApplyEggESP(obj)
-    -- Pastikan tidak double ESP
-    if obj:FindFirstChild("EGG_MARKER") then return end
+_G.EggESP_Active = false
 
-    -- A. Highlight (Biar telurnya nyala)
-    local h = Instance.new("Highlight")
-    h.Name = "EGG_MARKER"
-    h.Parent = obj
-    h.FillColor = Color3.fromRGB(255, 255, 0) -- Kuning Terang
-    h.FillTransparency = 0.4
-    h.OutlineColor = Color3.fromRGB(255, 255, 255) -- Garis Putih
+-- [[ 2. ENGINE ESP (ANTI-LAG) ]] --
+local function ApplyESP(obj)
+    if not obj:FindFirstChild("EGG_TAG") then
+        -- Highlight Glow
+        local h = Instance.new("Highlight", obj)
+        h.Name = "EGG_TAG"
+        h.FillColor = Color3.fromRGB(255, 255, 0)
+        h.OutlineColor = Color3.fromRGB(255, 255, 255)
+        h.FillTransparency = 0.5
 
-    -- B. BillboardGui (Biar nama tembus tembok)
-    local bg = Instance.new("BillboardGui")
-    bg.Name = "EGG_NAME"
-    bg.Parent = obj
-    bg.AlwaysOnTop = true
-    bg.Size = UDim2.new(0, 200, 0, 50)
-    bg.ExtentsOffset = Vector3.new(0, 3, 0)
+        -- Nama Tembus Tembok
+        local b = Instance.new("BillboardGui", obj)
+        b.Name = "EGG_NAME"
+        b.Size = UDim2.new(0, 150, 0, 50)
+        b.AlwaysOnTop = true
+        b.ExtentsOffset = Vector3.new(0, 3, 0)
 
-    local tl = Instance.new("TextLabel")
-    tl.Parent = bg
-    tl.Size = UDim2.new(1, 0, 1, 0)
-    tl.BackgroundTransparency = 1
-    tl.Text = obj.Name:upper()
-    tl.TextColor3 = Color3.fromRGB(255, 255, 255)
-    tl.TextStrokeTransparency = 0
-    tl.Font = Enum.Font.GothamBlack
-    tl.TextSize = 16
-end
-
--- [[ 2. SISTEM SCANNING (ANTI-LAG) ]] --
-local function ScanForEggs()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") or v:IsA("Model") then
-            if table.find(TargetEggs, v.Name:lower()) then
-                ApplyEggESP(v)
-            end
-        end
-        -- Jeda dikit biar gak freeze pas scan map gede
-        if _ % 100 == 0 then task.wait() end
+        local t = Instance.new("TextLabel", b)
+        t.Size = UDim2.new(1, 0, 1, 0)
+        t.BackgroundTransparency = 1
+        t.Text = obj.Name:upper()
+        t.TextColor3 = Color3.fromRGB(255, 255, 255)
+        t.Font = Enum.Font.GothamBlack
+        t.TextSize = 14
+        t.TextStrokeTransparency = 0
     end
 end
 
--- [[ 3. OTOMATISASI ]] --
--- Sikat telur yang sudah ada
-task.spawn(ScanForEggs)
+local function RemoveESP()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v.Name == "EGG_TAG" or v.Name == "EGG_NAME" then
+            v:Destroy()
+        end
+    end
+end
 
--- Sikat telur yang baru muncul (spawn)
-workspace.DescendantAdded:Connect(function(newObj)
-    task.wait(0.5) -- Tunggu bentar biar ke-load sempurna
-    if table.find(TargetEggs, newObj.Name:lower()) then
-        ApplyEggESP(newObj)
+local function UpdateESP()
+    if not _G.EggESP_Active then 
+        RemoveESP()
+        return 
+    end
+    
+    local count = 0
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and table.find(TargetEggs, v.Name:lower()) then
+            ApplyESP(v)
+            count = count + 1
+            if count % 50 == 0 then task.wait() end -- Anti-Lag
+        end
+    end
+end
+
+-- [[ 3. UI GURITA HUB (MINI VERSION) ]] --
+if CG:FindFirstChild("GHS_EggUI") then CG.GHS_EggUI:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_EggUI"
+
+-- Tombol Logo
+local LogoBtn = Instance.new("TextButton", SG)
+LogoBtn.Size = UDim2.new(0, 60, 0, 60); LogoBtn.Position = UDim2.new(0, 20, 0.4, 0)
+LogoBtn.BackgroundColor3 = Color3.new(0,0,0); LogoBtn.Text = "EGG"; LogoBtn.TextColor3 = Color3.new(1,1,1)
+LogoBtn.Font = Enum.Font.GothamBlack; LogoBtn.TextSize = 18; LogoBtn.Draggable = true; LogoBtn.Active = true
+Instance.new("UICorner", LogoBtn)
+local Stroke = Instance.new("UIStroke", LogoBtn); Stroke.Thickness = 3; Stroke.Color = Color3.fromRGB(255, 255, 0)
+
+-- Main Frame
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 200, 0, 120); Main.Position = UDim2.new(0.5, -100, 0.5, -60)
+Main.BackgroundColor3 = Color3.new(0,0,0); Main.Visible = false; Instance.new("UICorner", Main)
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(255, 255, 0)
+
+LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+
+-- Title
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 30); Title.Text = "EGG HUNT MENU"; Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold; Title.BackgroundTransparency = 1; Title.TextSize = 14
+
+-- Toggle Button
+local Tgl = Instance.new("TextButton", Main)
+Tgl.Size = UDim2.new(0.8, 0, 0, 40); Tgl.Position = UDim2.new(0.1, 0, 0.45, 0)
+Tgl.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Tgl.Font = Enum.Font.GothamBold; Tgl.TextSize = 12
+Instance.new("UICorner", Tgl)
+
+local function RefreshBtn()
+    Tgl.Text = _G.EggESP_Active and "ESP EGG: ON" or "ESP EGG: OFF"
+    Tgl.TextColor3 = _G.EggESP_Active and Color3.new(0,1,0) or Color3.new(1,0,0)
+end
+RefreshBtn()
+
+Tgl.MouseButton1Click:Connect(function()
+    _G.EggESP_Active = not _G.EggESP_Active
+    RefreshBtn()
+    UpdateESP()
+end)
+
+-- [[ 4. AUTO REFRESH ]] --
+workspace.DescendantAdded:Connect(function(v)
+    if _G.EggESP_Active then
+        task.wait(0.5)
+        if table.find(TargetEggs, v.Name:lower()) then
+            ApplyESP(v)
+        end
     end
 end)
 
-print("ESP EGG HUNT AKTIF: Mencari target...")
+print("GURITA HUB LOADED - MENU READY")
