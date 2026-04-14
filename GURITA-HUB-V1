@@ -1,4 +1,4 @@
--- [[ GURITA HUB: PASKA PRO V7 - ESP FIXED ]] --
+-- [[ GURITA HUB: V8 UNIVERSAL HUNTER - EMERGENCY FIX ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -9,10 +9,10 @@ local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- [[ 1. CONFIG & SAVE SYSTEM ]] --
-local FileName = "GuritaHub_v7_Fixed.json"
-local TargetEggs = {
-    "hydra", "bunny", "noo", "baskito", "churrito", 
+-- [[ 1. CONFIG ]] --
+local FileName = "GuritaHub_v8.json"
+local EggKeywords = {
+    "egg", "hydra", "bunny", "noo", "baskito", "churrito", 
     "quackini", "snackini", "hopilikalika", "sahur", "tralala"
 }
 
@@ -42,13 +42,15 @@ lp.Idled:Connect(function()
     VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
--- [[ 3. MOVEMENT ENGINE ]] --
+-- [[ 3. MOVEMENT ]] --
 task.spawn(function()
     while true do
-        if lp.Character and lp.Character:FindFirstChild("Humanoid") then
-            lp.Character.Humanoid.WalkSpeed = _G.Settings.WalkSpeed
-            lp.Character.Humanoid.JumpPower = _G.Settings.JumpPower
-        end
+        pcall(function()
+            if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+                lp.Character.Humanoid.WalkSpeed = _G.Settings.WalkSpeed
+                lp.Character.Humanoid.JumpPower = _G.Settings.JumpPower
+            end
+        end)
         task.wait(0.5)
     end
 end)
@@ -67,55 +69,49 @@ task.spawn(function()
         Lighting.GlobalShadows = false
         Lighting.Ambient = Color3.fromRGB(127, 127, 127)
         Lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
-        Lighting.FogEnd = 100000
         task.wait(3)
     end
 end)
 
--- [[ 5. ENGINE ESP (FIXED) ]] --
-local function CheckIsEgg(name)
-    name = name:lower()
-    for _, target in pairs(TargetEggs) do
-        if name:find(target) then return true end
-    end
-    return false
-end
-
-local function ApplyUltimateESP(obj)
-    if not obj:FindFirstChild("Marker") then
-        -- Create Highlight
+-- [[ 5. NEW ULTIMATE ESP ENGINE ]] --
+local function CreateESP(target)
+    if not target:FindFirstChild("GuritaMarker") then
+        -- Highlight
         local h = Instance.new("Highlight")
-        h.Name = "Marker"
+        h.Name = "GuritaMarker"
         h.FillColor = Color3.fromRGB(255, 255, 0)
-        h.OutlineColor = Color3.new(1, 1, 1)
-        h.FillTransparency = 0.4
-        h.Parent = obj
+        h.OutlineColor = Color3.fromRGB(255, 255, 255)
+        h.FillTransparency = 0.3
+        h.Parent = target
         
-        -- Create Tag
+        -- Billboard
         local b = Instance.new("BillboardGui")
-        b.Name = "Tag"
-        b.Size = UDim2.new(0, 150, 0, 50)
+        b.Name = "GuritaTag"
+        b.Size = UDim2.new(0, 200, 0, 50)
         b.AlwaysOnTop = true
         b.ExtentsOffset = Vector3.new(0, 3, 0)
-        b.Parent = obj
+        b.Parent = target
         
         local t = Instance.new("TextLabel")
         t.Parent = b
         t.Size = UDim2.new(1, 0, 1, 0)
         t.BackgroundTransparency = 1
         t.TextColor3 = Color3.new(1, 1, 0)
+        t.TextStrokeTransparency = 0
         t.Font = Enum.Font.GothamBlack
         t.TextSize = 14
-        t.TextStrokeTransparency = 0
-        t.TextStrokeColor3 = Color3.new(0,0,0)
 
         task.spawn(function()
-            while obj and obj.Parent and _G.Settings.EggESP do
-                if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                    local dist = (obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude
-                    t.Text = "✨ " .. obj.Name:upper() .. " ✨\n[" .. math.floor(dist) .. "m]"
+            while target and target.Parent and _G.Settings.EggESP do
+                local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+                if root and (target:IsA("BasePart") or target:FindFirstChildWhichIsA("BasePart")) then
+                    local pos = target:IsA("BasePart") and target.Position or target:FindFirstChildWhichIsA("BasePart").Position
+                    local dist = (pos - root.Position).Magnitude
+                    t.Text = "⭐ " .. target.Name:upper() .. " ⭐\n[" .. math.floor(dist) .. "m]"
+                else
+                    t.Text = "⭐ " .. target.Name:upper() .. " ⭐"
                 end
-                task.wait(0.2)
+                task.wait(0.3)
             end
             if b then b:Destroy() end
             if h then h:Destroy() end
@@ -123,47 +119,37 @@ local function ApplyUltimateESP(obj)
     end
 end
 
--- [[ 6. AUTO SCAN & FLAT COLOR ]] --
-local function SikatJadiFlat(v)
-    pcall(function()
-        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
-            v.Material = Enum.Material.Plastic; v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end
+-- [[ 6. SCANNER ]] --
+local function Scan(v)
+    local name = v.Name:lower()
+    for _, key in pairs(EggKeywords) do
+        if name:find(key) then
+            if _G.Settings.Notif then
+                StarterGui:SetCore("SendNotification", {Title = "🥚 DETECTED!", Text = v.Name, Duration = 3})
+            end
+            if _G.Settings.EggESP then CreateESP(v) end
+            break
         end
-    end)
+    end
 end
 
 task.spawn(function()
     while true do
-        for i, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") then
-                SikatJadiFlat(v)
-                if _G.Settings.EggESP and CheckIsEgg(v.Name) then
-                    ApplyUltimateESP(v)
-                end
-            end
-            if i % 300 == 0 then task.wait() end 
+        for _, v in pairs(workspace:GetDescendants()) do
+            if _G.Settings.EggESP then Scan(v) end
         end
-        task.wait(3) -- Re-scan every 3s
+        task.wait(5)
     end
 end)
 
 workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.1)
-    if v:IsA("BasePart") then
-        SikatJadiFlat(v)
-        if CheckIsEgg(v.Name) then
-            if _G.Settings.Notif then
-                StarterGui:SetCore("SendNotification", {Title = "🥚 EGG FOUND!", Text = v.Name:upper(), Duration = 5})
-            end
-            if _G.Settings.EggESP then ApplyUltimateESP(v) end
-        end
-    end
+    task.wait(0.5)
+    if _G.Settings.EggESP then Scan(v) end
 end)
 
--- [[ 7. UI CONSTRUCTION ]] --
-if PlayerGui:FindFirstChild("GURITA_V7") then PlayerGui.GURITA_V7:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V7"; SG.ResetOnSpawn = false
+-- [[ 7. UI ]] --
+if PlayerGui:FindFirstChild("GURITA_V8") then PlayerGui.GURITA_V8:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V8"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
@@ -172,52 +158,34 @@ Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 22; Logo.Draggable = true; Lo
 Instance.new("UICorner", Logo); Instance.new("UIStroke", Logo).Thickness = 2; Logo.UIStroke.Color = Color3.new(1,1,0)
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 240, 0, 300); Main.Position = UDim2.new(0.5, -120, 0.5, -150)
+Main.Size = UDim2.new(0, 240, 0, 280); Main.Position = UDim2.new(0.5, -120, 0.5, -140)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main)
 Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
-
-local UIList = Instance.new("UIListLayout", Main)
-UIList.Padding = UDim.new(0, 5); UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "GURITA HUB - ESP FIXED"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 12
+local UIList = Instance.new("UIListLayout", Main); UIList.Padding = UDim.new(0, 5); UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 local function CreateBtn(text, func)
     local b = Instance.new("TextButton", Main)
-    b.Size = UDim2.new(0.9, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    b.Font = Enum.Font.GothamBold; b.TextSize = 11; b.TextColor3 = Color3.new(1,1,1); b.Text = text
+    b.Size = UDim2.new(0.9, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(25, 25, 25); b.Font = Enum.Font.GothamBold; b.TextSize = 11; b.TextColor3 = Color3.new(1,1,1); b.Text = text
     Instance.new("UICorner", b); Instance.new("UIStroke", b).Color = Color3.fromRGB(50, 50, 50)
-    b.MouseButton1Click:Connect(func)
-    return b
+    b.MouseButton1Click:Connect(func); return b
 end
 
-local BtnESP = CreateBtn("ESP: OFF", function() 
-    _G.Settings.EggESP = not _G.Settings.EggESP; 
-    SaveData() 
-    if not _G.Settings.EggESP then
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v.Name == "Marker" or v.Name == "Tag" then v:Destroy() end
-        end
-    end
-end)
+local BtnESP = CreateBtn("ESP: OFF", function() _G.Settings.EggESP = not _G.Settings.EggESP; SaveData() end)
 local BtnNotif = CreateBtn("NOTIF: OFF", function() _G.Settings.Notif = not _G.Settings.Notif; SaveData() end)
 local BtnSpeed = CreateBtn("SPEED: 16", function() 
-    if _G.Settings.WalkSpeed == 16 then _G.Settings.WalkSpeed = 60 elseif _G.Settings.WalkSpeed == 60 then _G.Settings.WalkSpeed = 120 else _G.Settings.WalkSpeed = 16 end
+    _G.Settings.WalkSpeed = (_G.Settings.WalkSpeed == 16 and 60 or (_G.Settings.WalkSpeed == 60 and 120 or 16))
     SaveData() 
 end)
 local BtnJump = CreateBtn("INF JUMP: OFF", function() _G.Settings.InfJump = not _G.Settings.InfJump; SaveData() end)
 
 task.spawn(function()
     while true do
-        BtnESP.Text = "ESP: " .. (_G.Settings.EggESP and "ON" or "OFF")
-        BtnESP.TextColor3 = _G.Settings.EggESP and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        BtnNotif.Text = "NOTIF: " .. (_G.Settings.Notif and "ON" or "OFF")
-        BtnNotif.TextColor3 = _G.Settings.Notif and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        BtnESP.Text = "ESP: " .. (_G.Settings.EggESP and "ON" or "OFF"); BtnESP.TextColor3 = _G.Settings.EggESP and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        BtnNotif.Text = "NOTIF: " .. (_G.Settings.Notif and "ON" or "OFF"); BtnNotif.TextColor3 = _G.Settings.Notif and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
         BtnSpeed.Text = "SPEED: " .. _G.Settings.WalkSpeed
-        BtnJump.Text = "INF JUMP: " .. (_G.Settings.InfJump and "ON" or "OFF")
-        BtnJump.TextColor3 = _G.Settings.InfJump and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        BtnJump.Text = "INF JUMP: " .. (_G.Settings.InfJump and "ON" or "OFF"); BtnJump.TextColor3 = _G.Settings.InfJump and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
         task.wait(0.5)
     end
 end)
