@@ -1,4 +1,4 @@
--- [[ GURITA HUB V6.4.13 - XRAY FORCE & FULL FEATURES ]] --
+-- [[ GURITA HUB V6.4.15 - ABSOLUTE FINAL FULL MERGE ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -6,7 +6,7 @@ local CG = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 
--- 1. DATABASE & CONFIG
+-- 1. DATABASE & CONFIG (SAVE/LOAD SYSTEM)
 local ConfigFile = "GHS_Config_Final.json"
 local AllowedEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako"}
 
@@ -31,7 +31,7 @@ local function LoadData()
 end
 LoadData()
 
--- [[ 2. CORE ESP ENGINE ]] --
+-- [[ 2. CORE ESP ENGINE (PLAYER & EGG) ]] --
 local function CreateESP(obj, text, color)
     if not obj:FindFirstChild("GHS_ESP") then
         local h = Instance.new("Highlight", obj); h.Name = "GHS_ESP"; h.FillColor = color; h.OutlineColor = Color3.new(1, 1, 1); h.FillTransparency = 0.5
@@ -58,24 +58,24 @@ local function UpdateESP()
     end
 end
 
--- [[ 3. FIXED X-RAY ENGINE (FORCE MODE) ]] --
-local function ForceXray()
+-- [[ 3. ABSOLUTE X-RAY ENGINE (TEMBUS SEGALA LANTAI/MAP) ]] --
+local function ForceAbsoluteXray()
     pcall(function()
         local is_on = _G.GH_Config.Xray_GH
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") then
-                local n = v.Name:lower()
-                -- Target spesifik Base/Lantai
-                if n == "baseplate" or n == "base" or n == "floor" or n == "ground" then
-                    -- Gunakan Transparency murni agar lebih stabil di semua executor
-                    v.Transparency = is_on and 0.6 or 0
-                end
+            -- Abaikan pemain dan telur penting agar tetap terlihat jelas
+            if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") and not table.find(AllowedEggs, v.Name:lower()) then
+                -- Logika Transparency paksa untuk semua objek bangunan/lantai
+                v.Transparency = is_on and 0.6 or 0
+                -- Pas X-Ray aktif, karakter juga bisa nembus objek (No-Clip ringan)
+                v.CanCollide = not is_on
             end
+            if _ % 2000 == 0 then task.wait() end 
         end
     end)
 end
 
--- [[ 4. FLAT COLOR ]] --
+-- [[ 4. FLAT COLOR & UI CONSTRUCTION ]] --
 local function ApplyFlat(v)
     pcall(function()
         if (v:IsA("BasePart") or v:IsA("MeshPart")) and not (v.Parent:FindFirstChild("Humanoid") or v:IsDescendantOf(lp.Character)) then
@@ -86,10 +86,10 @@ local function ApplyFlat(v)
     end)
 end
 
--- [[ 5. UI CONSTRUCTION ]] --
 if CG:FindFirstChild("GHS_MainUI") then CG.GHS_MainUI:Destroy() end
 local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI"
 
+-- LOGO G H (BORDER RGB NEON)
 local LogoBtn = Instance.new("TextButton", SG)
 LogoBtn.Size = UDim2.new(0, 65, 0, 65); LogoBtn.Position = UDim2.new(0, 15, 0.3, 0); LogoBtn.BackgroundColor3 = Color3.new(0, 0, 0); LogoBtn.Text = "G H"; LogoBtn.TextColor3 = Color3.new(1, 1, 1); LogoBtn.Font = Enum.Font.GothamBlack; LogoBtn.TextSize = 22; LogoBtn.Draggable = true; LogoBtn.Active = true
 Instance.new("UICorner", LogoBtn); local LogoStroke = Instance.new("UIStroke", LogoBtn); LogoStroke.Thickness = 4
@@ -103,9 +103,11 @@ task.spawn(function()
     end
 end)
 
+-- MAIN FRAME
 local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 440, 0, 260); Main.Position = UDim2.new(0.5, -220, 0.5, -130); Main.BackgroundColor3 = Color3.new(0,0,0); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
 LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
+-- SIDEBAR & PAGES
 local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 130, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Instance.new("UICorner", Sidebar); Instance.new("UIListLayout", Sidebar).HorizontalAlignment = Enum.HorizontalAlignment.Center
 local Pages = Instance.new("Frame", Main); Pages.Size = UDim2.new(1, -145, 1, -20); Pages.Position = UDim2.new(0, 135, 0, 10); Pages.BackgroundTransparency = 1
 
@@ -130,14 +132,15 @@ end
 CreateToggle(P1, "Auto Collect", "AutoCollect_GH")
 CreateToggle(P1, "ESP Egg", "ESP_Egg_GH", function() UpdateESP() end)
 CreateToggle(P2, "ESP Player", "ESP_Player_GH", function() UpdateESP() end)
-CreateToggle(P2, "X-Ray", "Xray_GH", function() ForceXray() end)
+CreateToggle(P2, "X-Ray", "Xray_GH", function() ForceAbsoluteXray() end)
 
--- [[ 6. MAIN LOOP ]] --
+-- [[ 5. MAIN LOOP ]] --
 task.spawn(function()
     for _, v in pairs(workspace:GetDescendants()) do ApplyFlat(v) end
     workspace.DescendantAdded:Connect(ApplyFlat)
+    if _G.GH_Config.Xray_GH then ForceAbsoluteXray() end
     while task.wait(3) do 
         UpdateESP() 
-        if _G.GH_Config.Xray_GH then ForceXray() end -- Terus paksa Xray biar gak balik normal
+        if _G.GH_Config.Xray_GH then ForceAbsoluteXray() end
     end
 end)
