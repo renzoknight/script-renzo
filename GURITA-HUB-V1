@@ -1,13 +1,14 @@
--- [[ GURITA-HUB-V1: EASTER EVENT GH EDITION ]] --
+-- [[ GURITA-HUB-V1: FINAL FIXED SIDEBAR & CENTER TITLE ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Pembersihan GUI lama
-local old = PlayerGui:FindFirstChild("GuritaHub_Official")
-if old then old:Destroy() end
+-- Hapus GUI lama agar tidak double
+if PlayerGui:FindFirstChild("GuritaHub_Official") then
+    PlayerGui.GuritaHub_Official:Destroy()
+end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GuritaHub_Official"
@@ -15,7 +16,7 @@ ScreenGui.Parent = PlayerGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 
--- Daftar Unit untuk ESP
+-- Daftar Unit Paskah untuk ESP
 local EasterUnits = {
     "Hydra Bunny", "Hopilikalika Hopilikalako", "Churrito Bunnito",
     "Baskito", "Los Bunitos", "Easter Easter Easter Sahur",
@@ -25,18 +26,18 @@ local EasterUnits = {
 
 local ESP_Enabled = false
 
--- --- 1. LOGO GH (KOTAK) ---
+-- --- 1. LOGO GH KOTAK (Pemicu) ---
 local LogoButton = Instance.new("TextButton")
 LogoButton.Name = "GH_Trigger"
 LogoButton.Parent = ScreenGui
 LogoButton.Size = UDim2.new(0, 50, 0, 50)
-LogoButton.Position = UDim2.new(0.5, -25, 0, 45)
+LogoButton.Position = UDim2.new(0.5, -25, 0, 50)
 LogoButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 LogoButton.Text = "GH"
 LogoButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 LogoButton.Font = Enum.Font.GothamBold
 LogoButton.TextSize = 20
-LogoButton.ZIndex = 100
+LogoButton.ZIndex = 500
 
 local LogoCorner = Instance.new("UICorner")
 LogoCorner.CornerRadius = UDim.new(0, 8)
@@ -47,19 +48,19 @@ LogoStroke.Parent = LogoButton
 LogoStroke.Thickness = 2
 LogoStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
--- --- 2. MAIN FRAME ---
+-- --- 2. MAIN FRAME (Menu Utama) ---
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MainFrame.Position = UDim2.new(0.5, -225, 0.5, -140)
 MainFrame.Size = UDim2.new(0, 450, 0, 280)
 MainFrame.Visible = false
-MainFrame.ZIndex = 90
+MainFrame.ZIndex = 100
 
-local UICornerMain = Instance.new("UICorner")
-UICornerMain.CornerRadius = UDim.new(0, 10)
-UICornerMain.Parent = MainFrame
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Parent = MainFrame
@@ -67,164 +68,152 @@ MainStroke.Thickness = 2
 
 -- --- 3. JUDUL TENGAH ATAS (GURITA-HUB) ---
 local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleHeader"
 TitleLabel.Parent = MainFrame
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Size = UDim2.new(1, 0, 0, 45)
-TitleLabel.Position = UDim2.new(0, 0, 0, 0)
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Text = "GURITA-HUB"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 18
-TitleLabel.ZIndex = 95
+TitleLabel.ZIndex = 110
 
--- --- 4. SIDEBAR & CONTENT ---
+-- --- 4. SIDEBAR KIRI ---
 local Sidebar = Instance.new("Frame")
+Sidebar.Name = "SidebarFrame"
 Sidebar.Parent = MainFrame
-Sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Sidebar.Size = UDim2.new(0, 130, 1, -50)
+Sidebar.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+Sidebar.Size = UDim2.new(0, 130, 1, -55)
 Sidebar.Position = UDim2.new(0, 10, 0, 45)
-Sidebar.BackgroundTransparency = 0.5
+Sidebar.ZIndex = 105
 
-local SidebarCorner = Instance.new("UICorner")
-SidebarCorner.CornerRadius = UDim.new(0, 8)
-SidebarCorner.Parent = Sidebar
+local SideCorner = Instance.new("UICorner")
+SideCorner.CornerRadius = UDim.new(0, 8)
+SideCorner.Parent = Sidebar
 
 local SidebarList = Instance.new("UIListLayout")
 SidebarList.Parent = Sidebar
-SidebarList.Padding = UDim.new(0, 5)
+SidebarList.Padding = UDim.new(0, 6)
 SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
 
-local ContentArea = Instance.new("ScrollingFrame")
-ContentArea.Parent = MainFrame
-ContentArea.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-ContentArea.Position = UDim2.new(0, 150, 0, 45)
-ContentArea.Size = UDim2.new(1, -160, 1, -55)
-ContentArea.CanvasSize = UDim2.new(0, 0, 2, 0)
-ContentArea.ScrollBarThickness = 2
-ContentArea.BackgroundTransparency = 0.5
-
-local UIListContent = Instance.new("UIListLayout")
-UIListContent.Parent = ContentArea
-UIListContent.Padding = UDim.new(0, 8)
-UIListContent.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
--- --- 5. FUNGSI SIDEBAR & FITUR ---
-local function createSideButton(name)
+-- Fungsi Tombol Sidebar
+local function createSideBtn(text)
     local btn = Instance.new("TextButton")
     btn.Parent = Sidebar
-    btn.Size = UDim2.new(0.9, 0, 0, 30)
-    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    btn.Text = name
+    btn.Size = UDim2.new(0.9, 0, 0, 32)
+    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    btn.Text = text
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 10
+    btn.ZIndex = 110
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     return btn
 end
 
--- Menu Sidebar sesuai permintaan
-createSideButton("Features GH")
-createSideButton("Protection GH")
-createSideButton("ESP GH")
-createSideButton("Paskah Event GH") -- Menu yang kamu minta
+-- Kategori Sidebar (Setiap nama ada GH nya)
+createSideBtn("Features GH")
+createSideBtn("Protection GH")
+createSideBtn("ESP GH")
+createSideBtn("Paskah Event GH")
 
--- Fungsi ESP
+-- --- 5. AREA KONTEN (KANAN) ---
+local Content = Instance.new("ScrollingFrame")
+Content.Name = "ContentArea"
+Content.Parent = MainFrame
+Content.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Content.Position = UDim2.new(0, 150, 0, 45)
+Content.Size = UDim2.new(1, -160, 1, -55)
+Content.CanvasSize = UDim2.new(0, 0, 2, 0)
+Content.ScrollBarThickness = 2
+Content.ZIndex = 105
+
+Instance.new("UICorner", Content).CornerRadius = UDim.new(0, 8)
+local ContentList = Instance.new("UIListLayout")
+ContentList.Parent = Content
+ContentList.Padding = UDim.new(0, 8)
+ContentList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- --- 6. FITUR ESP PASKAH ---
 local function CreateESP(part, name)
     if part:FindFirstChild("EggESP") then return end
-    local Billboard = Instance.new("BillboardGui")
-    Billboard.Name = "EggESP"
-    Billboard.AlwaysOnTop = true
-    Billboard.Size = UDim2.new(0, 100, 0, 50)
-    Billboard.Adornee = part
-    Billboard.Parent = part
-    local TextLabel = Instance.new("TextLabel")
-    TextLabel.Parent = Billboard
-    TextLabel.BackgroundTransparency = 1
-    TextLabel.Size = UDim2.new(1, 0, 1, 0)
-    TextLabel.Text = name .. " GH" -- Nama fitur di ESP juga pakai GH
-    TextLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-    TextLabel.Font = Enum.Font.GothamBold
-    TextLabel.TextSize = 12
-    TextLabel.TextStrokeTransparency = 0
+    local bgui = Instance.new("BillboardGui", part)
+    bgui.Name = "EggESP"
+    bgui.AlwaysOnTop = true
+    bgui.Size = UDim2.new(0, 100, 0, 50)
+    local tl = Instance.new("TextLabel", bgui)
+    tl.BackgroundTransparency = 1
+    tl.Size = UDim2.new(1, 0, 1, 0)
+    tl.Text = name .. " GH"
+    tl.TextColor3 = Color3.fromRGB(255, 255, 0)
+    tl.Font = Enum.Font.GothamBold
+    tl.TextSize = 12
 end
 
--- Loop ESP (Anti-Lag)
 task.spawn(function()
     while task.wait(1) do
-        if not ESP_Enabled then 
+        if not ESP_Enabled then
             for _, v in pairs(workspace:GetDescendants()) do
-                if v:IsA("BillboardGui") and v.Name == "EggESP" then v:Destroy() end
+                if v.Name == "EggESP" then v:Destroy() end
             end
-            continue 
+            continue
         end
         for _, obj in pairs(workspace:GetDescendants()) do
-            for _, eggName in pairs(EasterUnits) do
-                if obj.Name == eggName and (obj:IsA("BasePart") or obj:IsA("Model")) then
+            for _, egg in pairs(EasterUnits) do
+                if obj.Name == egg and (obj:IsA("BasePart") or obj:IsA("Model")) then
                     local target = obj:IsA("Model") and obj.PrimaryPart or obj
-                    if target then CreateESP(target, eggName) end
+                    if target then CreateESP(target, egg) end
                 end
             end
         end
     end
 end)
 
--- --- 6. TOMBOL FITUR DI KANAN ---
-local function createFeatureButton(name)
-    local btn = Instance.new("TextButton")
-    btn.Parent = ContentArea
-    btn.Size = UDim2.new(0.9, 0, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.Text = name .. " GH: OFF" -- Setiap fitur ada akhiran GH
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    return btn
-end
+-- Tombol Fitur di Konten
+local EasterBtn = Instance.new("TextButton", Content)
+EasterBtn.Size = UDim2.new(0.9, 0, 0, 40)
+EasterBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+EasterBtn.Text = "Easter ESP GH: OFF"
+EasterBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+EasterBtn.Font = Enum.Font.GothamBold
+EasterBtn.TextSize = 12
+EasterBtn.ZIndex = 110
+Instance.new("UICorner", EasterBtn).CornerRadius = UDim.new(0, 6)
 
-local EasterESPBtn = createFeatureButton("Easter ESP")
-EasterESPBtn.MouseButton1Click:Connect(function()
+EasterBtn.MouseButton1Click:Connect(function()
     ESP_Enabled = not ESP_Enabled
-    EasterESPBtn.Text = "Easter ESP GH: " .. (ESP_Enabled and "ON" or "OFF")
-    EasterESPBtn.TextColor3 = ESP_Enabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 255, 255)
+    EasterBtn.Text = "Easter ESP GH: " .. (ESP_Enabled and "ON" or "OFF")
+    EasterBtn.TextColor3 = ESP_Enabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 255, 255)
 end)
 
--- --- 7. LOGIKA DASAR (DRAG, RGB, TOGGLE) ---
-local function MakeDraggable(ui)
-    local dragging, dragInput, dragStart, startPos
-    ui.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true; dragStart = input.Position; startPos = ui.Position
-        end
-    end)
-    ui.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
-    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-    RunService.Heartbeat:Connect(function()
-        if dragging and dragInput then
-            local delta = dragInput.Position - dragStart
-            ui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
+-- --- 7. SISTEM DRAG & RGB (ANTI LAG) ---
+local function Drag(ui)
+    local drag, input, start, startPos
+    ui.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = true; start = i.Position; startPos = ui.Position end end)
+    ui.InputChanged:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement then input = i end end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end end)
+    RunService.Heartbeat:Connect(function() if drag and input then local delta = input.Position - start; ui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
 end
-MakeDraggable(MainFrame)
-MakeDraggable(LogoButton)
+Drag(MainFrame); Drag(LogoButton)
 
 local colors = {Color3.fromRGB(0, 160, 255), Color3.fromRGB(255, 120, 0), Color3.fromRGB(255, 210, 0), Color3.fromRGB(160, 0, 255)}
 task.spawn(function()
-    local cIndex = 1
+    local c = 1
     while true do
-        local nIndex = cIndex % #colors + 1
-        for i = 0, 1, 0.02 do
-            local lerpColor = colors[cIndex]:Lerp(colors[nIndex], i)
-            MainStroke.Color = lerpColor; LogoStroke.Color = lerpColor
+        local n = c % #colors + 1
+        for i = 0, 1, 0.05 do
+            local lerp = colors[c]:Lerp(colors[n], i)
+            MainStroke.Color = lerp; LogoStroke.Color = lerp
             task.wait(0.05)
         end
-        cIndex = nIndex
+        c = n
     end
 end)
 
 LogoButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-local CloseButton = Instance.new("TextButton")
-CloseButton.Parent = MainFrame; CloseButton.Size = UDim2.new(0, 25, 0, 25); CloseButton.Position = UDim2.new(1, -30, 0, 10); CloseButton.Text = "X"; CloseButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0); CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
-Instance.new("UICorner", CloseButton).CornerRadius = UDim.new(0, 6)
+
+local Close = Instance.new("TextButton", MainFrame)
+Close.Size = UDim2.new(0, 25, 0, 25); Close.Position = UDim2.new(1, -30, 0, 10); Close.Text = "X"; Close.BackgroundColor3 = Color3.fromRGB(150, 0, 0); Close.TextColor3 = Color3.fromRGB(255, 255, 255); Close.ZIndex = 120
+Close.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
+Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 6)
