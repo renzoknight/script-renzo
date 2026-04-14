@@ -1,4 +1,4 @@
--- [[ GURITA-HUB-V1: AUTO-ACTIVE EDITION ]] --
+-- [[ GURITA-HUB-V1: CLEAN PASKA ONLY ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -22,7 +22,7 @@ local EasterList = {
     "Bunny Bunny Bunny Sahur", "Noo my Eggs"
 }
 
--- OTOMATIS AKTIF
+-- OTOMATIS AKTIF SAAT EXECUTOR DIJALANKAN
 local ESP_Active = true 
 local FlatColor_Active = true
 
@@ -46,7 +46,7 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
 Title.ZIndex = 110
 
--- --- SIDEBAR (KIRI) ---
+-- --- SIDEBAR (KIRI - HANYA PASKA EVENT) ---
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
 Sidebar.Position = UDim2.new(0, 10, 0, 45)
@@ -54,31 +54,20 @@ Sidebar.Size = UDim2.new(0, 130, 0, 225)
 Sidebar.ZIndex = 105
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
 
--- --- PAGE CONTAINER ---
 local PageFolder = Instance.new("Frame", MainFrame)
 PageFolder.Position = UDim2.new(0, 150, 0, 45)
 PageFolder.Size = UDim2.new(1, -160, 0, 225)
 PageFolder.BackgroundTransparency = 1
 
-local function createPage(name)
-    local p = Instance.new("ScrollingFrame", PageFolder)
-    p.Name = name
-    p.Size = UDim2.new(1, 0, 1, 0)
-    p.BackgroundTransparency = 1
-    p.Visible = false
-    p.ZIndex = 110
-    Instance.new("UIListLayout", p).Padding = UDim.new(0, 8)
-    return p
-end
+local PagePaska = Instance.new("ScrollingFrame", PageFolder)
+PagePaska.Name = "Paska Event"
+PagePaska.Size = UDim2.new(1, 0, 1, 0)
+PagePaska.BackgroundTransparency = 1
+PagePaska.Visible = true
+PagePaska.ZIndex = 110
+Instance.new("UIListLayout", PagePaska).Padding = UDim.new(0, 8)
 
--- Hanya buat menu yang ada isinya
-local PagePaska = createPage("Paska Event")
-
-local function showTab(name)
-    PagePaska.Visible = (PagePaska.Name == name)
-end
-
--- Hanya buat tombol Paska Event di Sidebar
+-- Tombol Tunggal di Sidebar
 local b = Instance.new("TextButton", Sidebar)
 b.Size = UDim2.new(0.9, 0, 0, 35)
 b.Position = UDim2.new(0.05, 0, 0, 10)
@@ -89,11 +78,8 @@ b.Font = Enum.Font.GothamBold
 b.TextSize = 10
 b.ZIndex = 120
 Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-b.MouseButton1Click:Connect(function() showTab("Paska Event") end)
 
-showTab("Paska Event")
-
--- --- FITUR TOGGLE DI DALAM ---
+-- --- FITUR TOGGLE ---
 local function createToggle(parent, text, default, callback)
     local btn = Instance.new("TextButton", parent)
     btn.Size = UDim2.new(0.9, 0, 0, 40)
@@ -115,7 +101,7 @@ end
 createToggle(PagePaska, "Easter ESP", true, function(v) ESP_Active = v end)
 createToggle(PagePaska, "Flat Color", true, function(v) FlatColor_Active = v end)
 
--- --- LOGIKA CORE ---
+-- --- CORE LOGIC (ESP & FLAT COLOR) ---
 task.spawn(function()
     while task.wait(0.5) do
         for _, obj in pairs(workspace:GetDescendants()) do
@@ -156,7 +142,7 @@ task.spawn(function()
     end
 end)
 
--- --- UTILS ---
+-- --- UI CONTROLS ---
 local Logo = Instance.new("TextButton", ScreenGui)
 Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0.5, -25, 0, 50); Logo.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Logo.Text = "GH"; Logo.TextColor3 = Color3.fromRGB(255, 255, 255); Logo.Font = Enum.Font.GothamBold; Logo.ZIndex = 1000; Instance.new("UICorner", Logo).CornerRadius = UDim.new(0, 8)
 Instance.new("UIStroke", Logo).Thickness = 2
