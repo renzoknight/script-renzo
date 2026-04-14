@@ -1,4 +1,4 @@
--- [[ GURITA HUB V1 - ULTIMATE SMOOTH FIXED AUTO-FLAT ]] --
+-- [[ GURITA-HUB-V1 - FINAL ALL-IN-ONE REVISED ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -11,15 +11,14 @@ _G.GH_Settings = {
     Xray_GH = false,
     AutoCollect_GH = false,
     ESP_Egg_GH = false,
-    FlatColor_GH = true -- TETAP AUTO ON
+    FlatColor_GH = true -- OTOMATIS JALAN
 }
 
--- 2. FIX FLAT COLOR (AUTO RUN SETIAP DETIK)
+-- 2. AUTO FLAT COLOR (Bikin Map Mulus & Enteng)
 local function ApplyFlatColor()
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") and not v:IsA("Terrain") then
-            -- Pastikan bukan bagian dari karakter player agar tidak aneh
-            if not v:FindFirstChildOfClass("Humanoid") and not v.Parent:FindFirstChildOfClass("Humanoid") then
+            if not v:IsDescendantOf(lp.Character) and not v.Parent:FindFirstChildOfClass("Humanoid") then
                 v.Material = Enum.Material.Plastic
                 v.CastShadow = false
             end
@@ -27,13 +26,14 @@ local function ApplyFlatColor()
     end
 end
 
--- 3. FIX XRAY (ANTI STACKING)
+-- 3. XRAY TUNED (Khusus Base/Lantai, Anti Tembus Map Utama)
 local function UpdateXray()
     task.spawn(function()
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+            if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
                 local n = v.Name:lower()
-                if n:find("wall") or n:find("base") or n:find("floor") or n:find("pillar") or n:find("part") then
+                -- FILTER: Target Base/Property, tapi kecualikan Wall/Tembok map
+                if (n:find("base") or n:find("floor") or n:find("lantai") or n:find("plot")) and not n:find("wall") then
                     if _G.GH_Settings.Xray_GH then
                         v.LocalTransparencyModifier = 0.7
                     else
@@ -48,9 +48,9 @@ end
 -- 4. ESP PLAYER
 local function UpdateESP()
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= lp then
+        if p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
             if _G.GH_Settings.ESP_Player_GH then
-                if p.Character and p.Character:FindFirstChild("Head") and not p.Character.Head:FindFirstChild("ESPTag") then
+                if not p.Character.Head:FindFirstChild("ESPTag") then
                     local bg = Instance.new("BillboardGui", p.Character.Head)
                     bg.Name = "ESPTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 200, 0, 50); bg.ExtentsOffset = Vector3.new(0, 3, 0)
                     local lbl = Instance.new("TextLabel", bg)
@@ -58,7 +58,7 @@ local function UpdateESP()
                     lbl.Text = p.Name; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 18; lbl.TextStrokeTransparency = 0
                 end
             else
-                if p.Character and p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESPTag") then
+                if p.Character.Head:FindFirstChild("ESPTag") then
                     p.Character.Head.ESPTag:Destroy()
                 end
             end
@@ -66,27 +66,17 @@ local function UpdateESP()
     end
 end
 
--- 5. UI CONSTRUCTION
-if CG:FindFirstChild("GuritaHubV1_Smooth") then CG.GuritaHubV1_Smooth:Destroy() end
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHubV1_Smooth"
+-- 5. UI CONSTRUCTION (LOGO & SIDEBAR)
+if CG:FindFirstChild("GuritaHubV1_Final") then CG.GuritaHubV1_Final:Destroy() end
+local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHubV1_Final"
 
 local GHTxtBtn = Instance.new("TextButton", SG)
 GHTxtBtn.Size = UDim2.new(0, 180, 0, 35); GHTxtBtn.Position = UDim2.new(0.5, -90, 0.05, 0)
 GHTxtBtn.BackgroundTransparency = 1; GHTxtBtn.Text = "GURITA HUB V1"; GHTxtBtn.Font = Enum.Font.GothamBold; GHTxtBtn.TextSize = 22; GHTxtBtn.TextStrokeTransparency = 0.6
 
-local Colors = {Color3.fromRGB(0, 170, 255), Color3.fromRGB(255, 120, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(170, 0, 255)}
-task.spawn(function()
-    local i = 1
-    while true do
-        TweenService:Create(GHTxtBtn, TweenInfo.new(1.5), {TextColor3 = Colors[i]}):Play()
-        task.wait(1.5); i = i % #Colors + 1
-    end
-end)
-
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 450, 0, 320); Main.Position = UDim2.new(0.5, -225, 0.5, -160); Main.BackgroundColor3 = Color3.fromRGB(15, 15, 22); Main.Visible = false
+Main.Size = UDim2.new(0, 480, 0, 340); Main.Position = UDim2.new(0.5, -240, 0.5, -170); Main.BackgroundColor3 = Color3.fromRGB(15, 15, 22); Main.Visible = false; Instance.new("UICorner", Main)
 local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fromRGB(0, 150, 255); MainStroke.Thickness = 2
-Instance.new("UICorner", Main)
 
 local CloseBtn = Instance.new("TextButton", Main)
 CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0, 5); CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50); CloseBtn.Text = "X"; CloseBtn.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", CloseBtn)
@@ -94,11 +84,11 @@ CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
 GHTxtBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
 local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0, 130, 1, -60); Sidebar.Position = UDim2.new(0, 10, 0, 45); Sidebar.BackgroundTransparency = 1
+Sidebar.Size = UDim2.new(0, 140, 1, -60); Sidebar.Position = UDim2.new(0, 10, 0, 50); Sidebar.BackgroundTransparency = 1
 Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 8)
 
 local Pages = Instance.new("Frame", Main)
-Pages.Size = UDim2.new(1, -160, 1, -100); Pages.Position = UDim2.new(0, 150, 0, 45); Pages.BackgroundTransparency = 1
+Pages.Size = UDim2.new(1, -170, 1, -100); Pages.Position = UDim2.new(0, 160, 0, 50); Pages.BackgroundTransparency = 1
 
 local function CreatePage(name)
     local p = Instance.new("ScrollingFrame", Pages); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 0
@@ -111,7 +101,7 @@ PagePaska.Visible = true
 
 local function CreateSideBtn(txt, page)
     local b = Instance.new("TextButton", Sidebar)
-    b.Size = UDim2.new(1, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(25, 25, 35); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.TextSize = 12; Instance.new("UICorner", b)
+    b.Size = UDim2.new(1, 0, 0, 45); b.BackgroundColor3 = Color3.fromRGB(25, 25, 35); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.TextSize = 12; Instance.new("UICorner", b)
     b.MouseButton1Click:Connect(function() 
         for _, v in pairs(Pages:GetChildren()) do v.Visible = false end
         page.Visible = true 
@@ -131,30 +121,29 @@ local function CreateToggle(parent, txt, var, callback)
     Instance.new("UICorner", b)
 end
 
--- [[ EXECUTION ]] --
+-- ISI MENU
 CreateToggle(PagePaska, "Auto Collect Coin", "AutoCollect_GH")
 CreateToggle(PagePaska, "ESP Egg Hunt", "ESP_Egg_GH")
-CreateToggle(PageESP, "X-Ray Base", "Xray_GH", UpdateXray)
+CreateToggle(PageESP, "X-Ray Base Only", "Xray_GH", UpdateXray)
 CreateToggle(PageESP, "ESP Player", "ESP_Player_GH", UpdateESP)
 
--- LOOP UTAMA (SINKRONISASI SEMUA FITUR)
+-- [[ LOOP SINKRONISASI ]] --
+local Colors = {Color3.fromRGB(0, 170, 255), Color3.fromRGB(255, 120, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(170, 0, 255)}
 task.spawn(function()
+    local i = 1
     while true do
-        -- 1. Jalankan Flat Color Otomatis
-        if _G.GH_Settings.FlatColor_GH then
-            ApplyFlatColor()
-        end
+        -- Animasi Warna
+        TweenService:Create(GHTxtBtn, TweenInfo.new(1.5), {TextColor3 = Colors[i]}):Play()
+        TweenService:Create(MainStroke, TweenInfo.new(1.5), {Color = Colors[i]}):Play()
         
-        -- 2. Jalankan ESP Player
-        if _G.GH_Settings.ESP_Player_GH then 
-            UpdateESP() 
-        end
+        -- Auto Flat Color
+        if _G.GH_Settings.FlatColor_GH then ApplyFlatColor() end
         
-        -- 3. Jalankan Xray (Cek objek baru)
-        if _G.GH_Settings.Xray_GH then 
-            UpdateXray() 
-        end
+        -- Update Fitur
+        if _G.GH_Settings.ESP_Player_GH then UpdateESP() end
+        if _G.GH_Settings.Xray_GH then UpdateXray() end
         
-        task.wait(2) -- Jeda 2 detik biar ringan
+        task.wait(2.5)
+        i = i % #Colors + 1
     end
 end)
