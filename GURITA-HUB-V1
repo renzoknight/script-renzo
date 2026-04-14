@@ -1,151 +1,161 @@
--- [[ GURITA-HUB-V1 - ANTI-LAG & STRICT XRAY ]] --
-
 local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
-local CG = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
-_G.GH_Settings = {
-    ESP_Player_GH = false,
-    Xray_GH = false,
-    AutoCollect_GH = false,
-    ESP_Egg_GH = false,
-    FlatColor_GH = true
+-- Membuat ScreenGui Utama
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NeonHub"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- --- 1. Main Frame (Background Gelap) ---
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Sangat gelap agar neon terlihat jelas
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 500, 0, 350)
+MainFrame.Active = true
+MainFrame.Draggable = true -- Bisa digeser
+
+-- Pinggiran Membulat
+local UICornerMain = Instance.new("UICorner")
+UICornerMain.CornerRadius = UDim.new(0, 10)
+UICornerMain.Parent = MainFrame
+
+-- --- 2. Efek Neon RGB di Pinggiran (UIStroke) ---
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Parent = MainFrame
+UIStroke.Thickness = 3 -- Ketebalan garis neon
+UIStroke.LineJoinMode = Enum.LineJoinMode.Round
+-- Warna awal (biru)
+UIStroke.Color = Color3.fromRGB(0, 150, 255) 
+
+-- --- 3. Sidebar Kiri ---
+local Sidebar = Instance.new("Frame")
+Sidebar.Name = "Sidebar"
+Sidebar.Parent = MainFrame
+Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 10) -- Lebih gelap dari main frame
+Sidebar.Size = UDim2.new(0, 120, 1, 0)
+Sidebar.Position = UDim2.new(0, 0, 0, 0)
+
+-- Membulatkan sidebar di sisi kiri saja
+local UICornerSidebar = Instance.new("UICorner")
+UICornerSidebar.CornerRadius = UDim.new(0, 10)
+UICornerSidebar.Parent = Sidebar
+
+-- --- 4. Judul di Atas Sidebar ---
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Parent = Sidebar
+Title.BackgroundTransparency = 1
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Position = UDim2.new(0, 0, 0, 10)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "BRAINROT"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 18
+Title.TextWrapped = true
+
+-- --- 5. Area untuk Tombol Kategori (Kiri) ---
+local ButtonContainer = Instance.new("Frame")
+ButtonContainer.Name = "ButtonContainer"
+ButtonContainer.Parent = Sidebar
+ButtonContainer.BackgroundTransparency = 1
+ButtonContainer.Size = UDim2.new(1, -10, 1, -60)
+ButtonContainer.Position = UDim2.new(0, 5, 0, 50)
+
+-- List Layout untuk menyusun tombol otomatis ke bawah
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = ButtonContainer
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 5)
+
+-- Fungsi untuk membuat Tombol Sidebar
+local function createSidebarButton(name, layoutOrder)
+    local button = Instance.new("TextButton")
+    button.Name = name.."Btn"
+    button.Parent = ButtonContainer
+    button.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- Warna tombol
+    button.Size = UDim2.new(1, 0, 0, 35)
+    button.Font = Enum.Font.Gotham
+    button.Text = name
+    button.TextColor3 = Color3.fromRGB(200, 200, 200)
+    button.TextSize = 14
+    button.LayoutOrder = layoutOrder
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = button
+    
+    -- Efek Hover
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end)
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    end)
+
+    return button
+end
+
+-- Membuat Tombol Kategori (seperti contoh gambar)
+createSidebarButton("Features", 1)
+local espButton = createSidebarButton("ESP", 2)
+createSidebarButton("Protection", 3)
+createSidebarButton("Utilities", 4)
+createSidebarButton("Customize", 5)
+
+-- --- LOGIKA ANIMASI WARNA NEON ---
+-- Daftar warna yang akan berganti (Biru, Oranye, Kuning, Ungu)
+local colors = {
+    Color3.fromRGB(0, 150, 255),  -- Biru Neon
+    Color3.fromRGB(255, 100, 0),  -- Oranye Neon
+    Color3.fromRGB(255, 200, 0),  -- Kuning Neon
+    Color3.fromRGB(150, 0, 255)   -- Ungu Neon
 }
 
--- 1. OPTIMIZED FLAT COLOR (ANTI LAG)
-local function ApplyFlatColor()
-    local descendants = workspace:GetDescendants()
-    for i, v in ipairs(descendants) do
-        if v:IsA("BasePart") and not v:IsA("Terrain") then
-            if not v:IsDescendantOf(lp.Character) and not v.Parent:FindFirstChildOfClass("Humanoid") then
-                v.Material = Enum.Material.Plastic
-                v.CastShadow = false
-            end
-        end
-        -- Kasih nafas tiap 300 part biar gak lag
-        if i % 300 == 0 then task.wait() end
-    end
-end
+local colorIndex = 1
+local nextColorIndex = 2
+local transitionTime = 2 -- Waktu perpindahan antar warna (detik)
+local currentTime = 0
 
--- 2. STRICT XRAY (KHUSUS LANTAI BASE SAJA)
-local function UpdateXray()
-    local descendants = workspace:GetDescendants()
-    for i, v in ipairs(descendants) do
-        if v:IsA("BasePart") and not v:IsDescendantOf(lp.Character) then
-            local n = v.Name:lower()
-            -- Filter super ketat: Harus ada kata kunci lantai, tapi HARUS BUKAN tembok/map
-            local isBase = n:find("base") or n:find("floor") or n:find("lantai") or n:find("plot")
-            local isWall = n:find("wall") or n:find("tembok") or n:find("map") or n:find("build") or n:find("tree")
-            
-            if isBase and not isWall then
-                if _G.GH_Settings.Xray_GH then
-                    v.LocalTransparencyModifier = 0.7
-                else
-                    v.LocalTransparencyModifier = 0
-                end
-            end
-        end
-        if i % 300 == 0 then task.wait() end
-    end
-end
+-- Menjalankan animasi setiap frame
+RunService.Heartbeat:Connect(function(dt)
+    currentTime = currentTime + dt
+    local percent = currentTime / transitionTime
 
--- 3. ESP PLAYER
-local function UpdateESP()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
-            if _G.GH_Settings.ESP_Player_GH then
-                if not p.Character.Head:FindFirstChild("ESPTag") then
-                    local bg = Instance.new("BillboardGui", p.Character.Head)
-                    bg.Name = "ESPTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 200, 0, 50); bg.ExtentsOffset = Vector3.new(0, 3, 0)
-                    local lbl = Instance.new("TextLabel", bg)
-                    lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.TextColor3 = Color3.new(1, 1, 1)
-                    lbl.Text = p.Name; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 18; lbl.TextStrokeTransparency = 0
-                end
-            else
-                local tag = p.Character.Head:FindFirstChild("ESPTag")
-                if tag then tag:Destroy() end
-            end
-        end
-    end
-end
+    -- Ambil warna saat ini dan warna tujuan
+    local startColor = colors[colorIndex]
+    local endColor = colors[nextColorIndex]
 
--- 4. UI CONSTRUCTION
-if CG:FindFirstChild("GuritaHubV1_Final") then CG.GuritaHubV1_Final:Destroy() end
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GuritaHubV1_Final"
+    -- Lakukan transisi warna secara halus (Lerp)
+    UIStroke.Color = startColor:Lerp(endColor, percent)
 
-local GHTxtBtn = Instance.new("TextButton", SG)
-GHTxtBtn.Size = UDim2.new(0, 180, 0, 35); GHTxtBtn.Position = UDim2.new(0.5, -90, 0.05, 0)
-GHTxtBtn.BackgroundTransparency = 1; GHTxtBtn.Text = "GURITA HUB V1"; GHTxtBtn.Font = Enum.Font.GothamBold; GHTxtBtn.TextSize = 22; GHTxtBtn.TextStrokeTransparency = 0.6
-
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 480, 0, 340); Main.Position = UDim2.new(0.5, -240, 0.5, -170); Main.BackgroundColor3 = Color3.fromRGB(15, 15, 22); Main.Visible = false; Instance.new("UICorner", Main)
-local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = Color3.fromRGB(0, 150, 255); MainStroke.Thickness = 2
-
-local CloseBtn = Instance.new("TextButton", Main)
-CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0, 5); CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50); CloseBtn.Text = "X"; CloseBtn.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", CloseBtn)
-CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
-GHTxtBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
-
-local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0, 140, 1, -60); Sidebar.Position = UDim2.new(0, 10, 0, 50); Sidebar.BackgroundTransparency = 1
-Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 8)
-
-local Pages = Instance.new("Frame", Main)
-Pages.Size = UDim2.new(1, -170, 1, -100); Pages.Position = UDim2.new(0, 160, 0, 50); Pages.BackgroundTransparency = 1
-
-local function CreatePage(name)
-    local p = Instance.new("ScrollingFrame", Pages); p.Name = name; p.Size = UDim2.new(1, 0, 1, 0); p.BackgroundTransparency = 1; p.Visible = false; p.ScrollBarThickness = 0
-    Instance.new("UIListLayout", p).Padding = UDim.new(0, 8)
-    return p
-end
-
-local PagePaska = CreatePage("PASKA"); local PageESP = CreatePage("ESP")
-PagePaska.Visible = true
-
-local function CreateSideBtn(txt, page)
-    local b = Instance.new("TextButton", Sidebar)
-    b.Size = UDim2.new(1, 0, 0, 45); b.BackgroundColor3 = Color3.fromRGB(25, 25, 35); b.Text = txt; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.TextSize = 12; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function() 
-        for _, v in pairs(Pages:GetChildren()) do if v:IsA("ScrollingFrame") then v.Visible = false end end
-        page.Visible = true 
-    end)
-end
-CreateSideBtn("PASKA EVENT", PagePaska); CreateSideBtn("ESP", PageESP)
-
-local function CreateToggle(parent, txt, var, callback)
-    local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(1, 0, 0, 45); b.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
-    local function UpdateBtn()
-        local s = _G.GH_Settings[var]; b.Text = txt..(s and ": ON" or ": OFF")
-        b.TextColor3 = s and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-    end
-    UpdateBtn()
-    b.MouseButton1Click:Connect(function() _G.GH_Settings[var] = not _G.GH_Settings[var]; UpdateBtn(); if callback then callback() end end)
-    Instance.new("UICorner", b)
-end
-
-CreateToggle(PagePaska, "Auto Collect Coin", "AutoCollect_GH")
-CreateToggle(PagePaska, "ESP Egg Hunt", "ESP_Egg_GH")
-CreateToggle(PageESP, "X-Ray Base Only", "Xray_GH", function() UpdateXray() end)
-CreateToggle(PageESP, "ESP Player", "ESP_Player_GH", function() UpdateESP() end)
-
--- [[ OPTIMIZED LOOP SYSTEM ]] --
-local Colors = {Color3.fromRGB(0, 170, 255), Color3.fromRGB(255, 120, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(170, 0, 255)}
-task.spawn(function()
-    local i = 1
-    while true do
-        TweenService:Create(GHTxtBtn, TweenInfo.new(1.5), {TextColor3 = Colors[i]}):Play()
-        TweenService:Create(MainStroke, TweenInfo.new(1.5), {Color = Colors[i]}):Play()
+    -- Jika transisi selesai, ganti ke warna berikutnya
+    if percent >= 1 then
+        currentTime = 0
+        colorIndex = nextColorIndex
+        nextColorIndex = nextColorIndex + 1
         
-        -- Fungsi berat dijalankan bergantian biar gak lag
-        if _G.GH_Settings.FlatColor_GH then ApplyFlatColor() end
-        task.wait(1)
-        if _G.GH_Settings.ESP_Player_GH then UpdateESP() end
-        task.wait(1)
-        if _G.GH_Settings.Xray_GH then UpdateXray() end
-        
-        i = i % #Colors + 1
-        task.wait(1)
+        -- Reset loop warna jika sudah sampai ujung
+        if nextColorIndex > #colors then
+            nextColorIndex = 1
+        end
+    end
+end)
+
+-- Tombol ESP untuk aktivasi/deaktivasi (Tombol toggle sederhana)
+local espActive = false
+espButton.MouseButton1Click:Connect(function()
+    espActive = not espActive
+    if espActive then
+        espButton.TextColor3 = Color3.fromRGB(0, 255, 100) -- Hijau saat aktif
+        print("ESP Diaktifkan dari Menu")
+        -- Panggil fungsi ESP di sini
+    else
+        espButton.TextColor3 = Color3.fromRGB(200, 200, 200) -- Kembali normal
+        print("ESP Dimatikan dari Menu")
+        -- Matikan fungsi ESP di sini
     end
 end)
