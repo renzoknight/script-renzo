@@ -1,61 +1,117 @@
--- [[ RENZO GURITA - STANDALONE NO CLIP ]] --
+-- [[ EHS SYSTEM V2 - GACOR EDITION ]] --
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local lp = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 
-_G.NoClipActive = false
+-- 1. DATABASE NAMA EGG LENGKAP (SESUAI LIST ABANG)
+local EggNames = {
+    "Hydra Bunny", "Noo my Eggs", "Sahur", "Easter", 
+    "Eggdin", "Buntteo", "Baskito", "Churrito", 
+    "Tralala", "Bunny Bunny", "Dun Egg"
+}
 
--- Logika Utama No Clip
-local function ToggleNoClip()
+_G.AutoCollectCoin_EHS = false
+_G.AutoESP_Egg_EHS = false
+
+-- 2. FILTER LOKASI (MAP ONLY)
+local function IsInPlayerBase(v)
+    local p = v.Parent
+    while p and p ~= workspace do
+        local n = p.Name:lower()
+        if n:find("base") or n:find("plot") or n:find("house") then
+            return true
+        end
+        p = p.Parent
+    end
+    return false
+end
+
+-- 3. ESP EGG HUNT (MAP ONLY)
+local function ApplyEggESP()
+    if not _G.AutoESP_Egg_EHS then return end
+    for _, v in pairs(workspace:GetDescendants()) do
+        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsInPlayerBase(v) then
+            local objName = v.Name:lower()
+            local foundName = ""
+            
+            for _, name in pairs(EggNames) do
+                if objName:find(name:lower()) then
+                    foundName = name
+                    break
+                end
+            end
+
+            if foundName ~= "" and not v:FindFirstChild("EHSTag") then
+                local bg = Instance.new("BillboardGui", v)
+                bg.Name = "EHSTag"; bg.AlwaysOnTop = true; bg.Size = UDim2.new(0, 200, 0, 50); bg.ExtentsOffset = Vector3.new(0, 3, 0)
+                local lbl = Instance.new("TextLabel", bg)
+                lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1
+                lbl.Text = "<b>[EHS] " .. foundName .. "</b>"
+                lbl.RichText = true; lbl.TextColor3 = Color3.fromRGB(0, 170, 255)
+                lbl.TextSize = 18; lbl.Font = Enum.Font.GothamBold; lbl.TextStrokeTransparency = 0
+            end
+        end
+    end
+end
+
+-- 4. AUTO COLLECT KOIN (BIAR GACOR)
+local function AutoCollectCoin()
     task.spawn(function()
-        while _G.NoClipActive do
-            if lp.Character then
-                for _, v in pairs(lp.Character:GetDescendants()) do
-                    if v:IsA("BasePart") then
-                        v.CanCollide = false
+        while _G.AutoCollectCoin_EHS do
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("BasePart") and v:FindFirstChild("TouchInterest") and not IsInPlayerBase(v) then
+                    if v.Name:lower():find("coin") then
+                        if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                            lp.Character.HumanoidRootPart.CFrame = v.CFrame
+                            task.wait(0.1)
+                        end
                     end
                 end
             end
-            RunService.Stepped:Wait()
-        end
-        -- Kembalikan Collide saat OFF
-        if lp.Character then
-            for _, v in pairs(lp.Character:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CanCollide = true
-                end
-            end
+            task.wait(0.5)
         end
     end)
 end
 
--- UI Kecil buat No Clip
-local SG = Instance.new("ScreenGui", game.CoreGui)
-local Btn = Instance.new("TextButton", SG)
+-- 5. UI EHS SYSTEM (BIRU SOLID)
+local SG = Instance.new("ScreenGui", game:GetService("CoreGui"))
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 200, 0, 150); Main.Position = UDim2.new(0.05, 0, 0.4, 0)
+Main.BackgroundColor3 = Color3.fromRGB(10, 10, 25); Main.Active = true; Main.Draggable = true
+Instance.new("UICorner", Main)
+local Stroke = Instance.new("UIStroke", Main); Stroke.Thickness = 2; Stroke.Color = Color3.fromRGB(0, 150, 255)
 
-Btn.Size = UDim2.new(0, 120, 0, 40)
-Btn.Position = UDim2.new(0.5, -60, 0.8, 0) -- Posisi di bawah tengah
-Btn.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
-Btn.Text = "NO CLIP: OFF"
-Btn.TextColor3 = Color3.new(1, 1, 1)
-Btn.Font = Enum.Font.GothamBold
-Btn.BorderSizePixel = 0
-Btn.ZIndex = 10
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 35); Title.Text = "EHS GACOR SYSTEM"; Title.TextColor3 = Color3.fromRGB(0, 200, 255)
+Title.Font = Enum.Font.GothamBold; Title.BackgroundTransparency = 1; Title.TextSize = 14
 
-local Border = Instance.new("Frame", Btn)
-Border.Size = UDim2.new(1, 4, 1, 4); Border.Position = UDim2.new(0, -2, 0, -2)
-Border.BackgroundColor3 = Color3.fromRGB(0, 160, 255); Border.ZIndex = 0
+local function CreateBtn(txt, pos, var, callback)
+    local b = Instance.new("TextButton", Main)
+    b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(20, 20, 45)
+    b.Text = txt .. ": OFF"; b.TextColor3 = Color3.new(1, 0, 0); b.Font = Enum.Font.GothamBold; b.TextSize = 10
+    Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function()
+        _G[var] = not _G[var]; b.Text = txt .. (_G[var] and ": ON" or ": OFF")
+        b.TextColor3 = _G[var] and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        callback()
+    end)
+end
 
-Instance.new("UICorner", Btn)
-Instance.new("UICorner", Border)
+CreateBtn("COLLECT COIN GACOR", UDim2.new(0.05, 0, 0.3, 0), "AutoCollectCoin_EHS", function()
+    if _G.AutoCollectCoin_EHS then AutoCollectCoin() end
+end)
 
-Btn.MouseButton1Click:Connect(function()
-    _G.NoClipActive = not _G.NoClipActive
-    Btn.Text = _G.NoClipActive and "NO CLIP: ON" or "NO CLIP: OFF"
-    Btn.TextColor3 = _G.NoClipActive and Color3.new(0, 1, 1) or Color3.new(1, 1, 1)
-    
-    if _G.NoClipActive then
-        ToggleNoClip()
+CreateBtn("ESP EGG HUNT EHS", UDim2.new(0.05, 0, 0.65, 0), "AutoESP_Egg_EHS", function()
+    if not _G.AutoESP_Egg_EHS then
+        for _, v in pairs(workspace:GetDescendants()) do if v.Name == "EHSTag" then v:Destroy() end end
+    end
+end)
+
+-- LOOP REFRESH
+task.spawn(function()
+    while true do
+        ApplyEggESP()
+        task.wait(3)
     end
 end)
