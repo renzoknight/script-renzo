@@ -1,26 +1,28 @@
--- [[ GURITA HUB - MANUAL NOTIFIER TESTER ]] --
+-- [[ GURITA HUB - ONLY NOTIFIER ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 local StarterGui = game:GetService("StarterGui")
 
--- 1. LIST TARGET
+-- 1. LIST TARGET (SESUAI REQUEST ABANG)
 local TargetEggs = {
     "hydra bunny", "noo my eggs", "baskito", "churrito", 
     "quackini snackini", "hopilikalika hopilikalako", "bunny sahur"
 }
 
-_G.ManualScanActive = false
+_G.NotifStatus = false -- Awalnya mati (OFF)
 
--- 2. FUNGSI NOTIFIKASI
+-- 2. FUNGSI KIRIM NOTIFIKASI
 local function KirimNotif(namaTelur)
+    -- Pop-up di layar
     StarterGui:SetCore("SendNotification", {
-        Title = "🥚 EGG DETECTED!";
-        Text = "Ditemukan: " .. namaTelur:upper();
+        Title = "🥚 EGG SPAWNED!";
+        Text = "Ketemu: " .. namaTelur:upper();
         Duration = 5;
     })
     
+    -- Efek Suara Ping
     local s = Instance.new("Sound", workspace)
     s.SoundId = "rbxassetid://4590662762"
     s.Volume = 1
@@ -29,11 +31,11 @@ local function KirimNotif(namaTelur)
     s:Destroy()
 end
 
--- 3. UI MENU & LOGO
-if PlayerGui:FindFirstChild("GHS_ManualNotif") then PlayerGui.GHS_ManualNotif:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GHS_ManualNotif"; SG.ResetOnSpawn = false
+-- 3. UI MENU & LOGO (WAJIB)
+if PlayerGui:FindFirstChild("GHS_NotifOnly") then PlayerGui.GHS_NotifOnly:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GHS_NotifOnly"; SG.ResetOnSpawn = false
 
--- Logo G H (Bisa Digeser)
+-- Tombol Logo G H
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 10, 0.5, 0)
 Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "G H"; Logo.TextColor3 = Color3.new(1, 1, 0)
@@ -42,24 +44,47 @@ Instance.new("UICorner", Logo); Instance.new("UIStroke", Logo).Thickness = 2
 
 -- Frame Menu
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 220, 0, 180); Main.Position = UDim2.new(0.5, -110, 0.5, -90)
+Main.Size = UDim2.new(0, 200, 0, 150); Main.Position = UDim2.new(0.5, -100, 0.5, -75)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main)
 Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
+-- Judul
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "MANUAL SCANNER"; Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "NOTIF DETECTOR"; Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.GothamBold; Title.BackgroundTransparency = 1; Title.TextSize = 14
 
--- TOMBOL SCAN MANUAL (Sekali Klik, Sekali Scan)
-local BtnScan = Instance.new("TextButton", Main)
-BtnScan.Size = UDim2.new(0.9, 0, 0, 50); BtnScan.Position = UDim2.new(0.05, 0, 0.3, 0)
-BtnScan.BackgroundColor3 = Color3.fromRGB(0, 85, 255); BtnScan.Text = "SCAN MAP SEKARANG"; BtnScan.TextColor3 = Color3.new(1,1,1)
-BtnScan.Font = Enum.Font.GothamBold; BtnScan.TextSize = 12; Instance.new("UICorner", BtnScan)
+-- TOMBOL ON/OFF (MANUAL)
+local Tgl = Instance.new("TextButton", Main)
+Tgl.Size = UDim2.new(0.85, 0, 0, 50); Tgl.Position = UDim2.new(0.075, 0, 0.45, 0)
+Tgl.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Tgl.Font = Enum.Font.GothamBold; Tgl.TextSize = 14
+Instance.new("UICorner", Tgl)
 
--- TOMBOL TES NOTIF (Hanya untuk Tes Suara/Pop-up)
-local BtnTest = Instance.new("TextButton", Main)
-BtnTest.Size = UDim2.new(0.9, 0, 0, 40); BtnTest.Position = UDim2.new(0.05, 0, 0.65, 0)
-BtnTest.BackgroundColor3 = Color3.fromRGB(40, 40, 40); BtnTest.Text = "TES NOTIF (SIMULASI)"; BtnTest.TextColor3 = Color3.new(1,1,1)
-BtnTest.Font = Enum.Font.GothamBold
+local function UpdateUI()
+    Tgl.Text = _G.NotifStatus and "STATUS: ON" or "STATUS: OFF"
+    Tgl.TextColor3 = _G.NotifStatus and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+end
+UpdateUI()
+
+Tgl.MouseButton1Click:Connect(function()
+    _G.NotifStatus = not _G.NotifStatus
+    UpdateUI()
+    if _G.NotifStatus then
+        print("Notifikasi diaktifkan.")
+    else
+        print("Notifikasi dimatikan.")
+    end
+end)
+
+-- 4. DETEKSI OTOMATIS (HANYA JALAN JIKA STATUS: ON)
+workspace.DescendantAdded:Connect(function(v)
+    if _G.NotifStatus then
+        local nameLower = v.Name:lower()
+        if table.find(TargetEggs, nameLower) then
+            KirimNotif(v.Name)
+        end
+    end
+end)
+
+print("Gurita Hub: Notifier Only Loaded!")
