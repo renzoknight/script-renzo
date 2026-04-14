@@ -1,143 +1,42 @@
--- [[ GURITA HUB V3.7 - PERFECT FLAT COLOR & RAINBOW ]] --
+-- [[ X-RAY SPECIALIST: PLAYER BASE ONLY ]] --
+-- Sifat: Otomatis & Spesifik (Tanpa Tombol)
 
-local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
+local transparencyValue = 0.7
 
--- 1. CONFIG SYSTEM
-local filename = "GuritaEzra_V37.json"
-_G.Settings = { ESP = false, Xray = false }
-
-local function SaveSettings()
-    if writefile then
-        pcall(function() writefile(filename, HttpService:JSONEncode(_G.Settings)) end)
-    end
-end
-
-local function LoadSettings()
-    if isfile and isfile(filename) then
-        local success, data = pcall(function() return HttpService:JSONDecode(readfile(filename)) end)
-        if success and data then _G.Settings = data end
-    end
-end
-LoadSettings()
-
--- 2. PROTEKSI CHARACTER (Biar Ezra gak jadi Flat/Polos)
-local function IsPlayer(v)
-    if v:IsDescendantOf(lp.Character) or (v.Parent and v.Parent:FindFirstChild("Humanoid")) then
-        return true
-    end
-    return false
-end
-
--- 3. FITUR FLAT COLOR (PAKSA SEMUA JADI FLAT TAPI WARNA ASLI)
-local function ApplyFlat(v)
+local function ApplyXrayToBase(obj)
     pcall(function()
-        if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsPlayer(v) then
-            -- Ganti Material biar Flat
-            v.Material = Enum.Material.Plastic
-            v.CastShadow = false
+        if obj:IsA("BasePart") then
+            -- 1. CEK: Apakah ini bagian dari Markas/Base? 
+            -- (Melihat dari nama Parent-nya sesuai struktur Tycoon)
+            local isBase = obj.Parent.Name:find("Base") or obj.Parent.Name:find("Tycoon") or obj.Name == "Baseplate"
             
-            -- Hapus Tekstur (Ini yang bikin Skin/Lantai gak polos)
-            if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, tex in pairs(v:GetChildren()) do
-                if tex:IsA("Texture") or tex:IsA("Decal") then
-                    tex:Destroy() -- Hapus skin/gambar di lantai
+            -- 2. CEK: Pastikan bukan Karakter Pemain (Humanoid)
+            local isNotHuman = obj.Parent:FindFirstChild("Humanoid") == nil
+            
+            if isBase and isNotHuman then
+                -- Target hanya lantai atau bagian dalam gedung base
+                if obj.Name:lower():find("floor") or obj.Name == "Baseplate" or obj.Name == "Part" then
+                    obj.LocalTransparencyModifier = transparencyValue
                 end
-            end
-            -- CATATAN: Warna (.Color) tidak diganti supaya tidak jadi abu-abu!
-        end
-    end)
-end
-
--- 4. XRAY & ESP
-local function RefreshXray()
-    task.spawn(function()
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not IsPlayer(v) then
-                local n = v.Name:lower()
-                if n:find("wall") or n:find("base") or n:find("door") or n:find("roof") then
-                    v.Transparency = _G.Settings.Xray and 0.5 or 0
-                end
+            else
+                -- Objek selain markas (tembok merah, rumput, dll) dipaksa normal
+                obj.LocalTransparencyModifier = 0
             end
         end
     end)
 end
 
-local function CreateTracer(plr)
-    local Line = Drawing.new("Line")
-    Line.Visible = false; Line.Thickness = 1.5
-    RunService.RenderStepped:Connect(function()
-        if _G.Settings.ESP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local pos, onScreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-            if onScreen then
-                Line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                Line.To = Vector2.new(pos.X, pos.Y); Line.Visible = true
-                Line.Color = Color3.fromHSV(tick() % 5 / 5, 0.8, 1)
-            else Line.Visible = false end
-        else Line.Visible = false end
-    end)
+-- [[ SISTEM OTOMATIS ]] --
+
+-- 1. Jalankan awal untuk objek yang sudah ada
+for _, v in pairs(workspace:GetDescendants()) do
+    ApplyXrayToBase(v)
 end
 
--- 5. UI RAINBOW
-local SG = Instance.new("ScreenGui")
-SG.Name = "GuritaV37"
-SG.ResetOnSpawn = false
-local guiParent = pcall(function() return game:GetService("CoreGui") end) and game:GetService("CoreGui") or lp:WaitForChild("PlayerGui")
-SG.Parent = guiParent
-
-local LogoFrame = Instance.new("Frame", SG)
-LogoFrame.Size = UDim2.new(0, 50, 0, 50); LogoFrame.Position = UDim2.new(0, 15, 0.45, 0)
-LogoFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20); LogoFrame.Active = true; LogoFrame.Draggable = true
-Instance.new("UICorner", LogoFrame).CornerRadius = UDim.new(1, 0)
-local LogoStroke = Instance.new("UIStroke", LogoFrame); LogoStroke.Thickness = 3
-
-local LogoBtn = Instance.new("TextButton", LogoFrame)
-LogoBtn.Size = UDim2.new(1, 0, 1, 0); LogoBtn.BackgroundTransparency = 1
-LogoBtn.Text = "GH"; LogoBtn.TextColor3 = Color3.new(1, 1, 1)
-LogoBtn.Font = Enum.Font.GothamBold; LogoBtn.TextSize = 20
-
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 220, 0, 150); Main.Position = UDim2.new(0, 80, 0.45, -75)
-Main.BackgroundColor3 = Color3.fromRGB(12, 12, 18); Main.Visible = false; Main.Active = true; Main.Draggable = true
-Instance.new("UICorner", Main)
-local MainStroke = Instance.new("UIStroke", Main); MainStroke.Thickness = 3
-
-LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
-
-local function CreateBtn(txt, pos, cb)
-    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 40); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(25, 25, 35); b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 11; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function() cb(b) end) return b
-end
-
-CreateBtn(_G.Settings.ESP and "ESP: ON" or "ESP: OFF", UDim2.new(0.05, 0, 0.2, 0), function(b)
-    _G.Settings.ESP = not _G.Settings.ESP
-    b.Text = _G.Settings.ESP and "ESP: ON" or "ESP: OFF"; SaveSettings()
+-- 2. Jalankan otomatis untuk objek baru (Pas Abang beli upgrade markas)
+workspace.DescendantAdded:Connect(function(newObj)
+    task.wait(0.1) -- Kasih jeda dikit biar objeknya ke-load sempurna
+    ApplyXrayToBase(newObj)
 end)
 
-CreateBtn(_G.Settings.Xray and "XRAY: ON" or "XRAY: OFF", UDim2.new(0.05, 0, 0.6, 0), function(b)
-    _G.Settings.Xray = not _G.Settings.Xray
-    b.Text = _G.Settings.Xray and "XRAY: ON" or "XRAY: OFF"
-    RefreshXray(); SaveSettings()
-end)
-
--- 6. RAINBOW & RUNNER
-RunService.RenderStepped:Connect(function()
-    local color = Color3.fromHSV(tick() % 5 / 5, 0.9, 1)
-    LogoStroke.Color = color; MainStroke.Color = color
-end)
-
-task.spawn(function()
-    local d = workspace:GetDescendants()
-    for i = 1, #d do 
-        ApplyFlat(d[i]) 
-        if i % 300 == 0 then task.wait() end 
-    end
-    if _G.Settings.Xray then RefreshXray() end
-end)
-
-workspace.DescendantAdded:Connect(ApplyFlat)
-for _, p in pairs(Players:GetPlayers()) do if p ~= lp then CreateTracer(p) end end
-Players.PlayerAdded:Connect(CreateTracer)
+print("X-Ray Markas Aktif & Otomatis.")
