@@ -1,37 +1,61 @@
--- [[ GURITA HUB - PERMANEN NIGHT FLAT (FORCE LOCK) ]] --
--- Fokus: Langit Malem Polos Gak Bisa Berubah, Anti-Lag Auto
+-- [[ GURITA HUB - FINAL LIGHTWEIGHT PERMANENT NIGHT ]] --
+-- Fokus: Tetap Malem, Gak Bakal Balik, Tapi GAK LAG
 
 local Lighting = game:GetService("Lighting")
-local MaterialService = game:GetService("MaterialService")
-local RunService = game:GetService("RunService")
 
--- [[ 1. FUNGSI LOCK LANGIT (ANTI-REVERT) ]] --
-local function ForceNightPolos()
-    -- Paksa jam 12 malem & matikan efek HD
-    Lighting.ClockTime = 0
-    Lighting.Brightness = 1
-    Lighting.GlobalShadows = false
-    Lighting.ExposureCompensation = 0.5
-    Lighting.EnvironmentDiffuseScale = 0
-    Lighting.EnvironmentSpecularScale = 0
-    
-    -- Hapus paksa Awan/Atmosfer/Sky yang baru muncul
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("PostEffect") then
-            v:Destroy()
+-- [[ 1. OPTIMASI HP REDMI 10 (SANGAT PENTING) ]] --
+pcall(function()
+    settings().Rendering.QualityLevel = 1
+    if setfpscap then setfpscap(45) end
+end)
+
+-- [[ 2. FUNGSI SIKAT LANGIT (EFISIEN) ]] --
+local function ForceNight()
+    pcall(function()
+        Lighting.ClockTime = 0
+        Lighting.Brightness = 1
+        Lighting.GlobalShadows = false
+        Lighting.EnvironmentDiffuseScale = 0
+        Lighting.EnvironmentSpecularScale = 0
+        
+        -- Hapus awan/atmosfer kalau ada yang masuk
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("PostEffect") then
+                v:Destroy()
+            end
         end
-    end
-    
-    -- Pasang Sky Hitam kalau belum ada
-    if not Lighting:FindFirstChild("GuritaSky") then
-        local sky = Instance.new("Sky", Lighting)
-        sky.Name = "GuritaSky"
-        sky.SkyboxBk, sky.SkyboxDn, sky.SkyboxFt, sky.SkyboxLf, sky.SkyboxRt, sky.SkyboxUp = "rbxassetid://0","rbxassetid://0","rbxassetid://0","rbxassetid://0","rbxassetid://0","rbxassetid://0"
-        sky.SunAngularSize, sky.MoonAngularSize, sky.StarCount = 0, 0, 0
-    end
+        
+        -- Pasang Sky Hitam (Hanya jika belum ada)
+        if not Lighting:FindFirstChild("GuritaSky") then
+            local sky = Instance.new("Sky", Lighting)
+            sky.Name = "GuritaSky"
+            sky.SkyboxBk, sky.SkyboxDn, sky.SkyboxFt, sky.SkyboxLf, sky.SkyboxRt, sky.SkyboxUp = "rbxassetid://0","rbxassetid://0","rbxassetid://0","rbxassetid://0","rbxassetid://0","rbxassetid://0"
+            sky.SunAngularSize, sky.MoonAngularSize, sky.StarCount = 0, 0, 0
+        end
+    end)
 end
 
--- [[ 2. LOGIKA SIKAT POLOS (MAP FLAT) ]] --
+-- [[ 3. PENJAGA LANGIT (VERSI ENTENG) ]] --
+-- Kita ganti RenderStepped (yang bikin lag) jadi Heartbeat dengan jeda
+local lastCheck = 0
+game:GetService("RunService").Heartbeat:Connect(function()
+    local now = tick()
+    if now - lastCheck >= 1.5 then -- Hanya cek tiap 1.5 detik (Biar gak lag)
+        lastCheck = now
+        Lighting.ClockTime = 0
+        if not Lighting:FindFirstChild("GuritaSky") then
+            ForceNight()
+        end
+    end
+end)
+
+-- Kalau ada yang coba masukin awan, langsung hapus (Instan)
+Lighting.ChildAdded:Connect(function()
+    task.wait(0.1)
+    ForceNight()
+end)
+
+-- [[ 4. LOGIKA FLAT POLOS (MAP) ]] --
 local function SikatPolos(v)
     if v:IsDescendantOf(game.Players.LocalPlayer.Character or workspace) and v.Parent:FindFirstChild("Humanoid") then return end
     pcall(function()
@@ -50,43 +74,17 @@ local function SikatPolos(v)
     end)
 end
 
--- [[ 3. EKSEKUSI & MONITORING KETAT ]] --
+-- Eksekusi Flat Map secara bertahap
 task.spawn(function()
-    -- Optimasi FPS Awal
-    settings().Rendering.QualityLevel = 1
-    if setfpscap then setfpscap(45) end
-    MaterialService.Use2022Materials = false
-
-    -- Jalankan Pertama Kali
-    ForceNightPolos()
-    
-    -- Sikat Map (Pelan biar gak lag di Redmi 10)
+    ForceNight()
     local all = workspace:GetDescendants()
     for i, v in pairs(all) do
         SikatPolos(v)
-        if i % 25 == 0 then task.wait() end
+        if i % 30 == 0 then task.wait(0.05) end -- Jeda lebih lama biar gak panas
     end
 end)
 
--- [[ INI RAHASIANYA BIAR PERMANEN ]] --
-
--- Pantau kalau ada perubahan waktu atau lighting dari server
-Lighting.Changed:Connect(function()
-    ForceNightPolos()
-end)
-
--- Pantau tiap frame (biar gak ada celah buat balik HD)
-RunService.RenderStepped:Connect(function()
-    Lighting.ClockTime = 0
-end)
-
--- Sikat objek map baru
-workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.5)
-    SikatPolos(v)
-end)
-
--- [[ 4. UI TULISAN BIRU ]] --
+-- [[ 5. UI TULISAN BIRU ]] --
 local lp = game.Players.LocalPlayer
 local SG = Instance.new("ScreenGui", lp.PlayerGui); SG.Name = "GuritaHubUI"
 local OpenBtn = Instance.new("TextButton", SG)
@@ -94,4 +92,4 @@ OpenBtn.Size = UDim2.new(0, 150, 0, 50); OpenBtn.Position = UDim2.new(0, 20, 0.5
 OpenBtn.BackgroundTransparency = 1; OpenBtn.Text = "GURITA HUB"; OpenBtn.Font = Enum.Font.GothamBlack
 OpenBtn.TextColor3 = Color3.fromRGB(0, 170, 255); OpenBtn.TextSize = 20; OpenBtn.TextStrokeTransparency = 0.5
 
-print("GURITA HUB: PERMANEN NIGHT FLAT LOCKED!")
+print("GURITA HUB: Anti-Lag & Permanen Night Active!")
