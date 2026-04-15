@@ -1,4 +1,4 @@
--- [[ GURITA HUB - AUTO FLAT & BLUE MENU ]] --
+-- [[ GURITA HUB - ANTI LAG & AUTO FLAT ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -7,24 +7,30 @@ local Lighting = game:GetService("Lighting")
 local MaterialService = game:GetService("MaterialService")
 
 -- [[ GLOBAL SETTINGS ]] --
-_G.FlatColorActive = true -- SET OTOMATIS AKTIF PAS INJECT
+_G.FlatColorActive = true
 _G.EggHuntActive = false
 local TargetEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini", "snackini", "bunny bunny sahur"}
 
--- [[ 1. LOGIKA FLAT COLOR (ORIGINAL COLORS & NO MOTIF) ]] --
+-- [[ 1. ANTI-LAG ENGINE (FPS BOOSTER) ]] --
+local function OptimizePerformance()
+    pcall(function()
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default
+        if setfpscap then setfpscap(60) end
+    end)
+end
+
+-- [[ 2. LOGIKA FLAT COLOR (SMOOTH LOADING) ]] --
 local function SikatMotif(v)
     if not _G.FlatColorActive then return end
-    -- Abaikan karakter player
     if v:IsDescendantOf(lp.Character or workspace) and v.Parent:FindFirstChild("Humanoid") then return end
     
     pcall(function()
         if v:IsA("BasePart") then
-            -- Jaga warna asli, hanya hapus tekstur/motif
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
             
-            -- Hapus motif kustom (bata, karpet, dll)
             for _, child in pairs(v:GetChildren()) do
                 if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") then 
                     child:Destroy() 
@@ -39,16 +45,13 @@ end
 
 local function NukeEnvironment()
     pcall(function()
-        -- Sikat Awan HD & Atmosfer
         MaterialService.Use2022Materials = false
         for _, v in pairs(MaterialService:GetChildren()) do v:Destroy() end
         for _, v in pairs(Lighting:GetChildren()) do
             if v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("Sky") then v:Destroy() end
         end
-        -- Langit Polos
         local sky = Instance.new("Sky", Lighting)
         sky.SunAngularSize = 0; sky.MoonAngularSize = 0
-        -- Lighting Rata
         Lighting.GlobalShadows = false
         Lighting.Brightness = 1.5
         Lighting.Ambient = Color3.fromRGB(200, 200, 200)
@@ -56,7 +59,7 @@ local function NukeEnvironment()
     end)
 end
 
--- [[ 2. LOGIKA EGG HUNT ]] --
+-- [[ 3. LOGIKA EGG HUNT ]] --
 local function ApplyHuntESP(obj)
     if not _G.EggHuntActive then return end
     local h = Instance.new("Highlight", obj)
@@ -67,19 +70,17 @@ local function ApplyHuntESP(obj)
     t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(0, 0.7, 1); t.Font = Enum.Font.GothamBold; t.TextSize = 12; t.Text = obj.Name:upper()
 end
 
--- [[ 3. CREATING THE UI ]] --
+-- [[ 4. UI GURITA HUB ]] --
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
 local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"
 
--- TOMBOL PEMBUKA (Hanya Tulisan Biru)
 local OpenBtn = Instance.new("TextButton", SG)
 OpenBtn.Size = UDim2.new(0, 150, 0, 50); OpenBtn.Position = UDim2.new(0, 20, 0.5, -25)
 OpenBtn.BackgroundTransparency = 1; OpenBtn.Text = "GURITA HUB"; OpenBtn.Font = Enum.Font.GothamBlack
 OpenBtn.TextColor3 = Color3.fromRGB(0, 170, 255); OpenBtn.TextSize = 20; OpenBtn.TextStrokeTransparency = 0.5
 
--- MENU UTAMA
 local MainFrame = Instance.new("Frame", SG)
-MainFrame.Size = UDim2.new(0, 300, 0, 200); MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+MainFrame.Size = UDim2.new(0, 300, 0, 220); MainFrame.Position = UDim2.new(0.5, -150, 0.5, -110)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10); MainFrame.Visible = false; MainFrame.Active = true; MainFrame.Draggable = true
 local Stroke = Instance.new("UIStroke", MainFrame); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 2
 Instance.new("UICorner", MainFrame)
@@ -87,7 +88,6 @@ Instance.new("UICorner", MainFrame)
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "GURITA HUB - MENU"; Title.TextColor3 = Color3.new(1, 1, 1); Title.BackgroundTransparency = 1; Title.Font = Enum.Font.GothamBold; Title.TextSize = 14
 
--- FUNGSI TOGGLE
 local function CreateToggle(name, pos, default, callback)
     local Btn = Instance.new("TextButton", MainFrame)
     Btn.Size = UDim2.new(0.85, 0, 0, 40); Btn.Position = UDim2.new(0.075, 0, 0, pos)
@@ -104,46 +104,30 @@ local function CreateToggle(name, pos, default, callback)
     end)
 end
 
--- AKTIVASI FITUR (Toggle)
-CreateToggle("FLAT COLOR (AUTO)", 60, true, function(state)
-    _G.FlatColorActive = state
-    if state then 
-        NukeEnvironment()
-        for _, v in pairs(workspace:GetDescendants()) do SikatMotif(v) end 
-    end
-end)
+CreateToggle("AUTO FLAT COLOR", 60, true, function(state) _G.FlatColorActive = state end)
+CreateToggle("EGG HUNT ESP", 120, false, function(state) _G.EggHuntActive = state end)
 
-CreateToggle("EGG HUNT ESP", 120, false, function(state)
-    _G.EggHuntActive = state
-    if state then
-        for _, v in pairs(workspace:GetDescendants()) do
-            if table.find(TargetEggs, v.Name:lower()) then ApplyHuntESP(v) end
-        end
-    else
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:FindFirstChild("HuntMarker") then v.HuntMarker:Destroy() end
-            if v:FindFirstChild("HuntTag") then v.HuntTag:Destroy() end
-        end
-    end
-end)
-
--- BUKA TUTUP MENU
 OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 
--- [[ 4. AUTO EXECUTION PAS INJECT ]] --
+-- [[ 5. SMOOTH EXECUTION (ANTI-LAG) ]] --
 task.spawn(function()
+    OptimizePerformance()
     NukeEnvironment()
+    
     local all = workspace:GetDescendants()
     for i, v in pairs(all) do
         SikatMotif(v)
-        if i % 100 == 0 then task.wait() end
+        -- Anti-Lag: Tunggu sebentar setiap 70 part agar CPU tidak kaget
+        if i % 70 == 0 then 
+            task.wait() 
+        end
     end
 end)
 
 workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.1)
+    task.wait(0.2) -- Jeda dikit biar part ke-load sempurna baru disikat
     if _G.FlatColorActive then SikatMotif(v) end
     if _G.EggHuntActive and table.find(TargetEggs, v.Name:lower()) then ApplyHuntESP(v) end
 end)
 
-print("GURITA HUB: Auto Flat Active!")
+print("GURITA HUB: Anti-Lag & Auto Flat Selesai di-Load!")
