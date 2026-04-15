@@ -1,87 +1,147 @@
--- [[ GURITA HUB: V38 - LIGHTWEIGHT FLAT COLOR ]] --
--- Fix: Lag & Texture Lock
+-- [[ GURITA HUB: EGG HUNT & ESP ENGINE (OPTIMIZED) ]] --
+-- Fokus: Ringan, No Lag, List Brainrot
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
-local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
 
-_G.FlatActive = false
+-- [[ 1. CONFIG ]] --
+local TargetEggs = {
+    "hydra bunny", 
+    "noo my eggs", 
+    "baskito", 
+    "churrito", 
+    "quackini", 
+    "snackini", 
+    "bunny bunny sahur"
+}
 
--- Fungsi Utama: Sikat Part Tanpa Beban
-local function SikatPart(v)
-    -- Abaikan UI & Karakter Player (Proteksi Ava)
-    if v:IsDescendantOf(PlayerGui) then return end
-    for _, p in pairs(Players:GetPlayers()) do
-        if p.Character and v:IsDescendantOf(p.Character) then return end
-    end
+local NotifiedEggs = {} -- Biar notif gak spam (hanya sekali per telur)
+_G.EggESPActive = false
+_G.NotifActive = true
 
-    pcall(function()
-        if v:IsA("BasePart") then
-            -- Ubah Material & Cabut Bayangan
-            v.Material = Enum.Material.SmoothPlastic
-            v.CastShadow = false
-            v.Reflectance = 0
-            
-            -- Cabut Tekstur Mesh
-            if v:IsA("MeshPart") then
-                v.TextureID = ""
+-- [[ 2. ENGINE ESP ]] --
+local function ApplyESP(obj)
+    -- Hapus marker lama kalau ada biar gak tumpuk
+    if obj:FindFirstChild("Marker") then obj.Marker:Destroy() end
+    if obj:FindFirstChild("Tag") then obj.Tag:Destroy() end
+
+    local h = Instance.new("Highlight", obj)
+    h.Name = "Marker"; h.FillColor = Color3.fromRGB(255, 255, 0)
+    h.OutlineColor = Color3.new(1, 1, 1); h.FillTransparency = 0.4
+    
+    local b = Instance.new("BillboardGui", obj)
+    b.Name = "Tag"; b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
+    
+    local t = Instance.new("TextLabel", b)
+    t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0)
+    t.Font = Enum.Font.GothamBlack; t.TextSize = 14; t.TextStrokeTransparency = 0; t.TextStrokeColor3 = Color3.new(0,0,0)
+
+    task.spawn(function()
+        while obj and obj.Parent and _G.EggESPActive do
+            if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude
+                t.Text = "✨ " .. obj.Name:upper() .. " ✨\n[" .. math.floor(dist) .. "m]"
             end
-            
-            -- Hapus SurfaceAppearance (Biang kerok tekstur bandel)
-            local sa = v:FindFirstChildOfClass("SurfaceAppearance")
-            if sa then sa:Destroy() end
-            
-        elseif v:IsA("Decal") or v:IsA("Texture") then
-            v:Destroy()
-        elseif v:IsA("SpecialMesh") then
-            v.TextureId = ""
+            task.wait(0.5) -- Update jarak tiap setengah detik (enteng)
         end
+        if b then b:Destroy() end
+        if h then h:Destroy() end
     end)
 end
 
--- Eksekusi Bertahap (Anti-Lag)
-local function RunFlatColor()
+-- [[ 3. SCANNER ENGINE (ANTI-LAG) ]] --
+local function ScanEggs()
     local all = workspace:GetDescendants()
     for i, v in pairs(all) do
-        if not _G.FlatActive then break end
-        SikatPart(v)
+        if not _G.EggESPActive and not _G.NotifActive then break end
         
-        -- Jeda setiap 100 part biar gak FPS Drop
-        if i % 100 == 0 then
-            task.wait() 
+        local name = v.Name:lower()
+        if table.find(TargetEggs, name) then
+            -- Jalankan ESP kalau aktif
+            if _G.EggESPActive then ApplyESP(v) end
+            
+            -- Jalankan Notif kalau aktif & belum pernah dinotif
+            if _G.NotifActive and not NotifiedEggs[v] then
+                NotifiedEggs[v] = true
+                StarterGui:SetCore("SendNotification", {
+                    Title = "🥚 EGG FOUND!", 
+                    Text = v.Name:upper(), 
+                    Duration = 5
+                })
+                -- Suara notif enteng
+                local s = Instance.new("Sound", game:GetService("SoundService"))
+                s.SoundId = "rbxassetid://4590662762"; s:Play()
+                
+                -- Reset log kalau telur ilang
+                v.AncestryChanged:Connect(function(_, p) if not p then NotifiedEggs[v] = nil end end)
+            end
         end
+        
+        -- Anti-Lag: Tiap 200 objek istirahat bentar
+        if i % 200 == 0 then task.wait() end
     end
 end
 
--- Pantau Part Baru (StreamingEnabled Safe)
+-- Pantau telor baru spawn
 workspace.DescendantAdded:Connect(function(v)
-    if _G.FlatActive then
-        task.wait(0.1) -- Kasih waktu part load bentar
-        SikatPart(v)
+    task.wait(0.5)
+    local name = v.Name:lower()
+    if table.find(TargetEggs, name) then
+        if _G.EggESPActive then ApplyESP(v) end
+        if _G.NotifActive and not NotifiedEggs[v] then
+            NotifiedEggs[v] = true
+            StarterGui:SetCore("SendNotification", {Title = "🥚 NEW SPAWN!", Text = v.Name:upper(), Duration = 5})
+            local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
+            v.AncestryChanged:Connect(function(_, p) if not p then NotifiedEggs[v] = nil end end)
+        end
     end
 end)
 
--- [[ UI KHUSUS UJI COBA ]] --
-if PlayerGui:FindFirstChild("GURITA_V38") then PlayerGui.GURITA_V38:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V38"
+-- Loop scan periodik (tiap 10 detik biar gak berat)
+task.spawn(function()
+    while true do
+        if _G.EggESPActive or _G.NotifActive then
+            ScanEggs()
+        end
+        task.wait(10)
+    end
+end)
+
+-- [[ 4. UI MENU ]] --
+if PlayerGui:FindFirstChild("GURITA_EGG_TEST") then PlayerGui.GURITA_EGG_TEST:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_EGG_TEST"
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 100); Main.Position = UDim2.new(0.5, -100, 0.5, -50)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Main.Active = true; Main.Draggable = true
+Main.Size = UDim2.new(0, 200, 0, 160); Main.Position = UDim2.new(0.5, 120, 0.5, -80)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
-local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0.9, 0, 0, 60); Btn.Position = UDim2.new(0.05, 0, 0.2, 0)
-Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); Btn.Text = "FLAT MAP: OFF"
-Btn.TextColor3 = Color3.new(1, 0, 0); Btn.Font = Enum.Font.GothamBold; Instance.new("UICorner", Btn)
+local function CreateBtn(text, pos, func)
+    local b = Instance.new("TextButton", Main)
+    b.Size = UDim2.new(0.9, 0, 0, 45); b.Position = UDim2.new(0.05, 0, pos, 0)
+    b.BackgroundColor3 = Color3.fromRGB(30, 30, 30); b.Text = text; b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.GothamBold; b.TextSize = 12; Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(func); return b
+end
 
-Btn.MouseButton1Click:Connect(function()
-    _G.FlatActive = not _G.FlatActive
-    if _G.FlatActive then
-        Btn.Text = "FLAT MAP: ON"; Btn.TextColor3 = Color3.new(0, 1, 0)
-        task.spawn(RunFlatColor) -- Jalankan proses nyisir map
-    else
-        Btn.Text = "FLAT MAP: OFF"; Btn.TextColor3 = Color3.new(1, 0, 0)
+local BtnESP = CreateBtn("ESP: OFF", 0.15, function()
+    _G.EggESPActive = not _G.EggESPActive
+    if _G.EggESPActive then task.spawn(ScanEggs) end
+end)
+
+local BtnNotif = CreateBtn("NOTIF: ON", 0.55, function()
+    _G.NotifActive = not _G.NotifActive
+end)
+
+-- Refresh UI Status
+task.spawn(function()
+    while true do
+        BtnESP.Text = "ESP: " .. (_G.EggESPActive and "ON" or "OFF")
+        BtnESP.TextColor3 = _G.EggESPActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        BtnNotif.Text = "NOTIF: " .. (_G.NotifActive and "ON" or "OFF")
+        BtnNotif.TextColor3 = _G.NotifActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        task.wait(0.5)
     end
 end)
