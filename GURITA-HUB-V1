@@ -1,5 +1,5 @@
--- [[ GURITA HUB: V31 - UI PROTECTION & ANTI-SELF-DESTRUCT ]] --
--- Fix: Logo Hilang & UI Terhapus
+-- [[ GURITA HUB: V32 - INFINITE FORCE FLAT COLOR ]] --
+-- Fix: Material Mental, Texture Reloading, & StreamingEnabled Issues
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -7,7 +7,6 @@ local PlayerGui = lp:WaitForChild("PlayerGui")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
 local HttpService = game:GetService("HttpService")
-local GuiService = game:GetService("GuiService")
 
 -- [[ 1. CONFIG ]] --
 local FileName = "GuritaHub_Config.json"
@@ -20,51 +19,59 @@ local function SaveData() if writefile then writefile(FileName, HttpService:JSON
 local function LoadData() if isfile and isfile(FileName) then pcall(function() _G.Settings = HttpService:JSONDecode(readfile(FileName)) end) end end
 LoadData()
 
--- [[ 2. AUTO RECONNECT ]] --
-GuiService.ErrorMessageChanged:Connect(function()
-    task.wait(5)
-    game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
-end)
-
--- [[ 3. FIXED FLAT COLOR (DENGAN PROTEKSI UI) ]] --
-local function SikatPart(v)
-    -- PROTEKSI: Jangan hapus apapun yang ada di dalam PlayerGui (UI)
-    if v:IsDescendantOf(PlayerGui) or v:IsA("ScreenGui") or v:IsDescendantOf(lp) then 
-        return 
-    end
+-- [[ 2. THE "FORCE" FLAT COLOR ENGINE ]] --
+local function SikatHabis(v)
+    -- Proteksi UI supaya gak ilang lagi
+    if v:IsDescendantOf(PlayerGui) or v:IsDescendantOf(lp) or v:IsA("ScreenGui") then return end
 
     pcall(function()
         if v:IsA("BasePart") then
+            -- Paksa Material & Hapus Bayangan
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end
-        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("Atmosphere") or v:IsA("Clouds") then
-            v:Destroy()
+            if v:IsA("MeshPart") then
+                v.TextureID = "" -- Cabut tekstur Mesh
+            end
+        elseif v:IsA("Decal") or v:IsA("Texture") then
+            v.Transparency = 1 -- Buat stiker jadi transparan (lebih aman daripada Destroy)
+        elseif v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("Sky") then
+            v:Destroy() -- Hapus langit & kabut
         end
     end)
 end
 
-local function OptimizeVisual()
-    local descendants = workspace:GetDescendants()
-    for i, v in pairs(descendants) do
-        SikatPart(v)
-        if i % 150 == 0 then task.wait() end 
+-- Fungsi Pembersih Cahaya
+local function NukeLighting()
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9e9
+    Lighting.Brightness = 2
+    Lighting.ClockTime = 12
+    Lighting.ExposureCompensation = 0.5
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("ColorCorrectionEffect") then
+            v:Destroy()
+        end
     end
 end
 
+-- Jalankan secara agresif (Anti-StreamingEnabled)
 task.spawn(function()
+    NukeLighting()
     while true do
-        OptimizeVisual()
-        task.wait(30)
+        for _, v in pairs(workspace:GetDescendants()) do
+            SikatHabis(v)
+        end
+        task.wait(10) -- Ulangi setiap 10 detik buat pastiin part baru tetep flat
     end
 end)
 
+-- Langsung sikat part yang baru muncul (Real-time)
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.1)
-    SikatPart(v)
+    SikatHabis(v)
 end)
 
--- [[ 4. ESP & NOTIF ]] --
+-- [[ 3. ESP & NOTIF ]] --
 local function ApplyESP(obj)
     if not _G.Settings.EggESP then return end
     if not obj:FindFirstChild("GuritaMarker") then
@@ -75,8 +82,7 @@ local function ApplyESP(obj)
         b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
         
         local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1, 0, 1, 0)
-        t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0)
-        t.Font = Enum.Font.GothamBlack; t.TextSize = 14
+        t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0); t.Font = Enum.Font.GothamBlack; t.TextSize = 14
 
         task.spawn(function()
             while obj and obj.Parent and _G.Settings.EggESP do
@@ -103,13 +109,13 @@ task.spawn(function()
                 end
             end
         end
-        task.wait(8)
+        task.wait(5)
     end
 end)
 
--- [[ 5. UI (DENGAN NAMA BARU BIAR GAK KETUKER) ]] --
-if PlayerGui:FindFirstChild("GURITA_V31_FIX") then PlayerGui.GURITA_V31_FIX:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V31_FIX"; SG.ResetOnSpawn = false
+-- [[ 4. UI CONSTRUCTION ]] --
+if PlayerGui:FindFirstChild("GURITA_V32") then PlayerGui.GURITA_V32:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V32"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0, 15, 0.5, -25)
