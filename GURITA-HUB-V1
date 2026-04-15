@@ -1,39 +1,36 @@
--- [[ GURITA HUB: PURE FLAT COLOR (NO CUSTOM COLOR - KEEP ORIGINAL) ]] --
--- Fitur: Hapus Motif (Bukan Warna), Nuke Awan HD, Bentuk Tetap Ada
+-- [[ GURITA HUB: PURE FLAT (JAGA WARNA ASLI) ]] --
+-- Fitur: No Motif, No Texture, No Awan HD, Warna Tetap Original
 
 pcall(function()
     if setfpscap then setfpscap(60) end
     settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
 end)
 
-local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local MaterialService = game:GetService("MaterialService")
 
--- [[ 1. LOGIKA POLOS (HAPUS MOTIF, JAGA WARNA ASLI) ]] --
+-- [[ 1. LOGIKA POLOS (SIKAT MOTIF SAJA) ]] --
 local function SikatMotif(v)
-    -- Proteksi Karakter Bang Ezra
-    for _, p in pairs(Players:GetPlayers()) do
-        if p.Character and v:IsDescendantOf(p.Character) then return end
-    end
+    -- Abaikan Karakter Player biar gak aneh
+    if v:IsDescendantOf(game:GetService("Players")) or v.Parent:FindFirstChild("Humanoid") then return end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Bikin Polos tapi JANGAN ganti v.Color (Biar warna asli event tetep ada)
-            v.Material = Enum.Material.SmoothPlastic
+            -- JANGAN ganti v.Color (Biar warna asli Karpet & Tembok tetep ada)
+            v.Material = Enum.Material.SmoothPlastic -- Paksa permukaan jadi licin
             v.CastShadow = false
             v.Reflectance = 0
             
-            -- Sikat Tekstur di dalam Mesh/Part
-            if v:IsA("MeshPart") then
-                v.TextureID = ""
-            end
-            
-            -- Hapus paksa SurfaceAppearance/Texture/Decal (Biang kerok motif)
+            -- Sikat "Gambar" di dalam part (SurfaceAppearance itu yang bikin motif bata/karpet)
             for _, child in pairs(v:GetChildren()) do
                 if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") then
                     child:Destroy()
                 end
+            end
+            
+            -- Sikat ID Mesh (Biar MeshPart jadi polos)
+            if v:IsA("MeshPart") then
+                v.TextureID = ""
             end
             
         elseif v:IsA("SpecialMesh") then
@@ -42,29 +39,29 @@ local function SikatMotif(v)
     end)
 end
 
--- [[ 2. NUKE AWAN HD & LANGIT ]] --
-local function SikatLangit()
+-- [[ 2. NUKE AWAN HD & ATMOSFER ]] --
+local function BersihkanLangit()
     pcall(function()
         Lighting.GlobalShadows = false
         Lighting.FogEnd = 9e9
         
-        -- Hapus Awan, Atmosfer, dan Sky HD
+        -- Sikat Awan HD dan Atmosfer yang bikin berat/silau
         for _, v in pairs(Lighting:GetChildren()) do
             if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("PostEffect") then
                 v:Destroy()
             end
         end
         
-        -- Buat Langit Polos (Biar gak HD)
+        -- Pasang Langit Polos
         local sky = Instance.new("Sky", Lighting)
         sky.SunAngularSize = 0
         sky.MoonAngularSize = 0
     end)
 end
 
--- [[ 3. EKSEKUSI AUTO ]] --
+-- [[ 3. EKSEKUSI GLOBAL ]] --
 task.spawn(function()
-    -- Matikan MaterialService agar motif global hilang
+    -- Matikan sistem Material Variant (Kunci semua motif global)
     pcall(function()
         MaterialService.Use2022Materials = false
         for _, v in pairs(MaterialService:GetChildren()) do
@@ -72,22 +69,20 @@ task.spawn(function()
         end
     end)
 
-    SikatLangit()
+    BersihkanLangit()
 
-    -- Scan Map secara bertahap
+    -- Scan semua objek map & item
     local all = workspace:GetDescendants()
-    local count = 0
-    for _, v in pairs(all) do
+    for i, v in pairs(all) do
         SikatMotif(v)
-        count = count + 1
-        if count >= 100 then count = 0 task.wait() end 
+        if i % 150 == 0 then task.wait() end -- Anti Lag
     end
 end)
 
--- Pantau kalau ada part baru masuk
+-- Pantau kalau ada part baru masuk (StreamingEnabled Safe)
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.1)
     SikatMotif(v)
 end)
 
-print("GURITA HUB: Pure Flat Sempurna! Motif Hilang, Warna Asli Tetap.")
+print("GURITA HUB: Flat Color Sempurna (Warna Original)!")
