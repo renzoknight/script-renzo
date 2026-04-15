@@ -1,33 +1,38 @@
--- [[ GURITA HUB: FLAT COLOR TEST ENGINE ]] --
+-- [[ GURITA HUB: ULTIMATE FLAT COLOR ENGINE - V37 ]] --
+-- Fokus: Brute Force Map Texture & Lighting
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
+local Lighting = game:GetService("Lighting")
 
--- [[ ENGINE INTI: FLAT COLOR ]] --
-local function ForceFlat(v)
-    -- PROTEKSI: Jangan sentuh karakter (biar warna & bentuk Ava aman)
+-- [[ 1. THE BRUTE FORCE ENGINE ]] --
+local function SikatTotal(v)
+    -- PROTEKSI: Jangan sentuh Karakter/Ava
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
+    
+    -- PROTEKSI: Jangan sentuh UI
+    if v:IsDescendantOf(PlayerGui) or v:IsA("ScreenGui") then return end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Paksa jadi polos total
-            v.Material = Enum.Material.SmoothPlastic
+            -- Paksa material ke Plastic
+            v.Material = Enum.Material.Plastic
             v.CastShadow = false
+            v.Reflectance = 0
             
-            -- Hapus tekstur di MeshPart
+            -- Hapus Tekstur Mesh
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
             
-            -- Hapus SurfaceAppearance (ini yang biasanya bikin tekstur bandel)
+            -- Hapus SurfaceAppearance (Penyebab map gak mau polos)
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
             
         elseif v:IsA("Decal") or v:IsA("Texture") then
-            -- Hapus stiker rumput, lantai, tembok
             v:Destroy()
         elseif v:IsA("SpecialMesh") then
             v.TextureId = ""
@@ -35,46 +40,65 @@ local function ForceFlat(v)
     end)
 end
 
--- Variabel kontrol
-_G.FlatColorActive = false
+-- Fungsi Nuke Lighting (Biar warna map makin flat/polos)
+local function NukeLighting()
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9e9
+    Lighting.Brightness = 2
+    Lighting.ClockTime = 12
+    Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+    
+    -- Hapus efek-efek yang bikin berat & bertekstur
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") then
+            v:Destroy()
+        end
+    end
+end
 
--- Loop pembersihan (Jalan terus kalau aktif)
+-- Variabel Control
+_G.FlatActive = false
+
+-- Loop Eksekusi
 task.spawn(function()
     while true do
-        if _G.FlatColorActive then
-            for i, v in pairs(workspace:GetDescendants()) do
-                ForceFlat(v)
-                if i % 300 == 0 then task.wait() end -- Anti lag
+        if _G.FlatActive then
+            NukeLighting()
+            local all = workspace:GetDescendants()
+            for i, v in pairs(all) do
+                if not _G.FlatActive then break end
+                SikatTotal(v)
+                -- Anti Lag: Proses 500 part baru istirahat sekejap
+                if i % 500 == 0 then task.wait() end 
             end
         end
-        task.wait(2) -- Cek ulang setiap 2 detik buat area baru
+        task.wait(5) -- Ulangi tiap 5 detik buat pastiin area baru tetep flat
     end
 end)
 
--- [[ UI MINIMALIS UNTUK TEST ]] --
-if PlayerGui:FindFirstChild("GURITA_TEST") then PlayerGui.GURITA_TEST:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_TEST"
+-- [[ 2. UI MINIMALIS KHUSUS TEST ]] --
+if PlayerGui:FindFirstChild("GURITA_FINAL_TEST") then PlayerGui.GURITA_FINAL_TEST:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_FINAL_TEST"
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 100); Main.Position = UDim2.new(0.5, -100, 0.5, -50)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Main.Draggable = true; Main.Active = true
+Main.Size = UDim2.new(0, 220, 0, 120); Main.Position = UDim2.new(0.5, -110, 0.5, -60)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 30); Title.Text = "FLAT COLOR TEST"; Title.TextColor3 = Color3.new(1, 1, 1)
-Title.BackgroundTransparency = 1; Title.Font = Enum.Font.GothamBlack
+Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "FLAT COLOR V37"; Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundTransparency = 1; Title.Font = Enum.Font.GothamBlack; Title.TextSize = 14
 
 local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0.8, 0, 0, 40); Btn.Position = UDim2.new(0.1, 0, 0.45, 0)
-Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40); Btn.Text = "STATUS: OFF"
+Btn.Size = UDim2.new(0.9, 0, 0, 50); Btn.Position = UDim2.new(0.05, 0, 0.45, 0)
+Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Btn.Text = "FLAT MAP: OFF"
 Btn.TextColor3 = Color3.new(1, 0, 0); Btn.Font = Enum.Font.GothamBold; Instance.new("UICorner", Btn)
 
 Btn.MouseButton1Click:Connect(function()
-    _G.FlatColorActive = not _G.FlatColorActive
-    if _G.FlatColorActive then
-        Btn.Text = "STATUS: ON"; Btn.TextColor3 = Color3.new(0, 1, 0)
+    _G.FlatActive = not _G.FlatActive
+    if _G.FlatActive then
+        Btn.Text = "FLAT MAP: ON"; Btn.TextColor3 = Color3.new(0, 1, 0)
     else
-        Btn.Text = "STATUS: OFF"; Btn.TextColor3 = Color3.new(1, 0, 0)
-        -- Kalau mau balikin ke awal biasanya harus Rejoin, karena tekstur yang dihapus susah balik
+        Btn.Text = "FLAT MAP: OFF"; Btn.TextColor3 = Color3.new(1, 0, 0)
     end
 end)
