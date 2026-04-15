@@ -1,56 +1,57 @@
--- [[ GURITA HUB: ULTIMATE FLAT COLOR - FULL AUTO ]] --
--- Fitur: Auto-On, No Texture, Warna Teduh, Anti-Lag Executor
+-- [[ GURITA HUB: ULTIMATE FLAT COLOR - FIX RUMPUT & TEMBOK ]] --
+-- Spesialis: Steal a Brainrot (Auto-On, No Lag, No Texture)
 
--- [[ 1. PRIORITAS UTAMA: ANTI-LAG ]] --
 pcall(function()
     if setfpscap then setfpscap(60) end
     settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 -- Kurangi beban render
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
 end)
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 
--- [[ 2. LOGIKA SIKAT PART (POLOS TOTAL) ]] --
-local function SikatPart(v)
-    -- Proteksi agar tidak lag & tidak merusak karakter player
-    if v:IsA("GuiObject") or v:IsA("ScreenGui") then return end
+-- [[ LOGIKA SIKAT TOTAL (TERMASUK RUMPUT & TEMBOK) ]] --
+local function SikatHabis(v)
+    -- Tetap proteksi Karakter Bang Ezra
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
+    if v:IsA("GuiObject") or v:IsA("ScreenGui") then return end
 
     pcall(function()
+        -- 1. Sikat Material & SurfaceAppearance (Tembok & Lantai)
         if v:IsA("BasePart") then
-            -- Bikin Polos & Warna Tidak Mencolok (Mulus)
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
             
-            -- Sikat Tekstur Mesh
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
             
-            -- Hapus SurfaceAppearance (Penyebab map berat & tekstur)
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
-            
-        elseif v:IsA("Decal") or v:IsA("Texture") then
-            v:Destroy()
-        elseif v:IsA("SpecialMesh") then
-            v.TextureId = ""
+        
+        -- 2. Sikat Rumput & Detail Tembok (Decal/Texture/Trail/Beam)
+        -- Ini bagian yang biasanya bikin rumput tetep ada teksturnya
+        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("SpecialMesh") then
+            if v:IsA("SpecialMesh") then
+                v.TextureId = ""
+            else
+                v:Destroy() -- Hapus paksa tekstur rumput/tembok
+            end
         end
     end)
 end
 
--- [[ 3. EKSEKUSI OTOMATIS (SISTEM ANTREAN 50 PART) ]] --
+-- [[ EKSEKUSI AUTO (SISTEM ANTREAN AMAN) ]] --
 task.spawn(function()
     local all = workspace:GetDescendants()
     local count = 0
     for _, v in pairs(all) do
-        SikatPart(v)
+        SikatHabis(v)
         
-        -- Jeda setiap 50 part agar Executor tidak freeze/lag
+        -- Jeda 50 part biar gak lag pas baru aktif
         count = count + 1
         if count >= 50 then 
             count = 0
@@ -59,25 +60,24 @@ task.spawn(function()
     end
 end)
 
--- Pantau part baru yang spawn (StreamingEnabled Safe)
+-- Pantau part baru/streaming area baru
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.1)
-    SikatPart(v)
+    SikatHabis(v)
 end)
 
--- [[ 4. SETTING VISUAL (WARNA TIDAK MENCOLOK) ]] --
+-- [[ VISUAL TEDUH (TIDAK MENCOLOK) ]] --
 task.spawn(function()
     Lighting.GlobalShadows = false
-    Lighting.Brightness = 1 -- Tidak terlalu terang/silau
-    Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150) -- Warna abu-abu teduh agar mata tidak sakit
+    Lighting.Brightness = 1
+    Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150)
     Lighting.ClockTime = 12
     
-    -- Hapus efek atmosfer yang bikin lag/berat
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") then
-            v:Destroy()
+    for _, effect in pairs(Lighting:GetChildren()) do
+        if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Clouds") then
+            effect:Destroy()
         end
     end
 end)
 
-print("GURITA HUB: Flat Color Sempurna & Auto-Active!")
+print("GURITA HUB: Rumput & Tembok Pembatas Selesai Disikat!")
