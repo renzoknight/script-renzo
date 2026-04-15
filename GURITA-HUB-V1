@@ -1,121 +1,94 @@
--- [[ GURITA HUB: ULTIMATE FLAT COLOR ENGINE ]] --
--- Fokus: Map Polos Total, No Texture, No Lag
+-- [[ GURITA HUB V39: SILENT FLAT COLOR (STEAL A BRAINROT SPECIAL) ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
-local Lighting = game:GetService("Lighting")
 
--- [[ 1. SETTINGS & CONTROL ]] --
-_G.FlatColorActive = true -- Set ke true biar langsung auto-on pas di-execute
+_G.FlatActive = true -- AUTO-ON
 
--- [[ 2. THE ENGINE (SIKAT TOTAL) ]] --
-local function SikatHabisTekstur(v)
-    -- PROTEKSI: Jangan hapus UI dan jangan ubah karakter (Ava) biar gak aneh
-    if v:IsDescendantOf(PlayerGui) or v:IsA("ScreenGui") then return end
+-- [[ LOGIKA SIKAT MAP (NO LAG VERSION) ]] --
+local function CleanObject(v)
+    -- PROTEKSI: Jangan sentuh karakter Bang Ezra & Player lain
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
+    if v:IsDescendantOf(PlayerGui) then return end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Paksa Material jadi Mulus & Hilangkan Bayangan
+            -- Paksa jadi plastik mulus
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
-            v.Reflectance = 0 -- Biar gak mengkilap
+            v.Reflectance = 0
             
-            -- Hapus Tekstur di MeshPart
+            -- Hapus tekstur mesh
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
             
-            -- Hapus SurfaceAppearance (Penyebab utama map gak mau polos)
+            -- Hapus SurfaceAppearance (Biang kerok tekstur map)
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
             
-        -- Hapus Decal/Stiker (Rumput, tembok bata, dll)
         elseif v:IsA("Decal") or v:IsA("Texture") then
             v:Destroy()
-            
-        -- Hapus Tekstur di SpecialMesh
         elseif v:IsA("SpecialMesh") then
             v.TextureId = ""
         end
     end)
 end
 
--- [[ 3. OPTIMIZER & LIGHTING ]] --
--- Biar warna map makin rata dan polos
-local function NukeEnvironment()
-    Lighting.GlobalShadows = false
-    Lighting.FogEnd = 9e9
-    Lighting.Brightness = 2
-    Lighting.ClockTime = 12
-    Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200) -- Cahaya rata
-    
-    -- Hapus efek ngeribetis yang bikin bertekstur
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") then
-            v:Destroy()
+-- [[ ENGINE EKSEKUSI (QUEUE SYSTEM) ]] --
+local function StartNuke()
+    local descendants = workspace:GetDescendants()
+    for i, v in pairs(descendants) do
+        if not _G.FlatActive then break end
+        CleanObject(v)
+        
+        -- Jeda per 50 part biar HP/PC Bang Ezra gak panas (Smooth Execution)
+        if i % 50 == 0 then 
+            task.wait() 
         end
     end
 end
 
--- [[ 4. EXECUTION FLOW (ANTI-LAG) ]] --
-local function RunFlatEffect()
-    if not _G.FlatColorActive then return end
-    
-    NukeEnvironment()
-    local descendants = workspace:GetDescendants()
-    
-    for i, v in pairs(descendants) do
-        if not _G.FlatColorActive then break end
-        SikatHabisTekstur(v)
-        
-        -- Anti-Lag: Proses 200 part istirahat sekejap biar gak FPS Drop
-        if i % 200 == 0 then task.wait() end 
-    end
-end
-
--- Pantau part baru yang muncul (StreamingEnabled Safe)
+-- Pantau kalau ada part map baru muncul (StreamingEnabled Safe)
 workspace.DescendantAdded:Connect(function(v)
-    if _G.FlatColorActive then
-        task.wait(0.1) -- Kasih waktu part load
-        SikatHabisTekstur(v)
+    if _G.FlatActive then
+        task.wait(0.1)
+        CleanObject(v)
     end
 end)
 
--- JALANKAN OTOMATIS SAAT EXECUTE
-task.spawn(RunFlatEffect)
+-- [[ JALANKAN OTOMATIS ]] --
+task.spawn(function()
+    print("Gurita Hub: Flat Color Active!")
+    StartNuke()
+end)
 
--- [[ 5. MINIMALIST UI (UNTUK ON/OFF) ]] --
-if PlayerGui:FindFirstChild("Gurita_FlatColor") then PlayerGui.Gurita_FlatColor:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "Gurita_FlatColor"
+-- [[ UI MINIMALIS UNTUK CONTROL ]] --
+if PlayerGui:FindFirstChild("GURITA_V39_HUB") then PlayerGui.GURITA_V39_HUB:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V39_HUB"
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 180, 0, 90); Main.Position = UDim2.new(0.5, -90, 0.5, -45)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Main.Active = true; Main.Draggable = true
+Main.Size = UDim2.new(0, 180, 0, 70); Main.Position = UDim2.new(0.5, -90, 0.5, -35)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
 local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0.9, 0, 0, 50); Btn.Position = UDim2.new(0.05, 0, 0.22, 0)
-Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 14
+Btn.Size = UDim2.new(0.9, 0, 0, 40); Btn.Position = UDim2.new(0.05, 0, 0.22, 0)
+Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 13
 Instance.new("UICorner", Btn)
 
--- Fungsi Update Tampilan Tombol
-local function UpdateBtn()
-    if _G.FlatColorActive then
-        Btn.Text = "FLAT MAP: ON"; Btn.TextColor3 = Color3.new(0, 1, 0)
-    else
-        Btn.Text = "FLAT MAP: OFF"; Btn.TextColor3 = Color3.new(1, 0, 0)
-    end
+local function UpdateUI()
+    Btn.Text = _G.FlatActive and "FLAT MAP: ON" or "FLAT MAP: OFF"
+    Btn.TextColor3 = _G.FlatActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
 end
-UpdateBtn() -- Set awal
 
 Btn.MouseButton1Click:Connect(function()
-    _G.FlatColorActive = not _G.FlatColorActive
-    UpdateBtn()
-    if _G.FlatColorActive then
-        task.spawn(RunFlatEffect) -- Jalankan ulang kalau di-ON kan
-    end
+    _G.FlatActive = not _G.FlatActive
+    UpdateUI()
+    if _G.FlatActive then task.spawn(StartNuke) end
 end)
+
+UpdateUI()
