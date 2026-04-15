@@ -1,29 +1,16 @@
--- [[ GURITA HUB: FINAL AUTO-EXECUTE (V38 ENGINE) ]] --
+-- [[ GURITA HUB: V38 - LIGHTWEIGHT FLAT COLOR ]] --
+-- Fix: Lag & Texture Lock
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
-local StarterGui = game:GetService("StarterGui")
+local Lighting = game:GetService("Lighting")
 
--- [[ 1. CONFIG & AUTO-ON SETTINGS ]] --
-local TargetEggs = {
-    "hydra bunny", 
-    "noo my eggs", 
-    "baskito", 
-    "churrito", 
-    "quackini", 
-    "snackini", 
-    "bunny bunny sahur"
-}
+_G.FlatActive = false
 
-local NotifiedEggs = {} 
-_G.FlatActive = true    -- LANGSUNG ON
-_G.HuntEggActive = true  -- LANGSUNG ON
-_G.HuntNotif = true     -- LANGSUNG ON
-
--- [[ 2. ENGINE FLAT COLOR (V38 LOGIC - SUPER LIGHT) ]] --
+-- Fungsi Utama: Sikat Part Tanpa Beban
 local function SikatPart(v)
-    -- Proteksi UI & Avatar Bang Ezra
+    -- Abaikan UI & Karakter Player (Proteksi Ava)
     if v:IsDescendantOf(PlayerGui) then return end
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
@@ -31,12 +18,20 @@ local function SikatPart(v)
 
     pcall(function()
         if v:IsA("BasePart") then
+            -- Ubah Material & Cabut Bayangan
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
-            if v:IsA("MeshPart") then v.TextureID = "" end
+            
+            -- Cabut Tekstur Mesh
+            if v:IsA("MeshPart") then
+                v.TextureID = ""
+            end
+            
+            -- Hapus SurfaceAppearance (Biang kerok tekstur bandel)
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
+            
         elseif v:IsA("Decal") or v:IsA("Texture") then
             v:Destroy()
         elseif v:IsA("SpecialMesh") then
@@ -45,112 +40,48 @@ local function SikatPart(v)
     end)
 end
 
--- Fungsi nyisir map (Run Sekali di awal)
+-- Eksekusi Bertahap (Anti-Lag)
 local function RunFlatColor()
     local all = workspace:GetDescendants()
     for i, v in pairs(all) do
         if not _G.FlatActive then break end
         SikatPart(v)
-        if i % 100 == 0 then task.wait() end -- Anti Lag
+        
+        -- Jeda setiap 100 part biar gak FPS Drop
+        if i % 100 == 0 then
+            task.wait() 
+        end
     end
 end
 
--- [[ 3. ENGINE HUNT EGG ]] --
-local function ApplyHuntESP(obj)
-    if obj:FindFirstChild("HuntMarker") then obj.HuntMarker:Destroy() end
-    if obj:FindFirstChild("HuntTag") then obj.HuntTag:Destroy() end
-
-    local h = Instance.new("Highlight", obj)
-    h.Name = "HuntMarker"; h.FillColor = Color3.fromRGB(255, 255, 0)
-    h.OutlineColor = Color3.new(1, 1, 1); h.FillTransparency = 0.4
-    
-    local b = Instance.new("BillboardGui", obj)
-    b.Name = "HuntTag"; b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
-    
-    local t = Instance.new("TextLabel", b)
-    t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0)
-    t.Font = Enum.Font.GothamBlack; t.TextSize = 14; t.TextStrokeTransparency = 0; t.TextStrokeColor3 = Color3.new(0,0,0)
-
-    task.spawn(function()
-        while obj and obj.Parent and _G.HuntEggActive do
-            if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                local dist = (obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude
-                t.Text = "✨ " .. obj.Name:upper() .. " ✨\n[" .. math.floor(dist) .. "m]"
-            end
-            task.wait(0.5)
-        end
-        if b then b:Destroy() end; if h then h:Destroy() end
-    end)
-end
-
-local function ScanHunt()
-    local all = workspace:GetDescendants()
-    for i, v in pairs(all) do
-        local name = v.Name:lower()
-        if table.find(TargetEggs, name) then
-            if _G.HuntEggActive then ApplyHuntESP(v) end
-            if _G.HuntNotif and not NotifiedEggs[v] then
-                NotifiedEggs[v] = true
-                StarterGui:SetCore("SendNotification", {Title = "🥚 EGG FOUND!", Text = v.Name:upper(), Duration = 5})
-                local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
-                v.AncestryChanged:Connect(function(_, p) if not p then NotifiedEggs[v] = nil end end)
-            end
-        end
-        if i % 200 == 0 then task.wait() end
-    end
-end
-
--- [[ 4. RUNTIME (AUTO-SCAN) ]] --
+-- Pantau Part Baru (StreamingEnabled Safe)
 workspace.DescendantAdded:Connect(function(v)
-    if _G.FlatActive then task.wait(0.1); SikatPart(v) end
-    local name = v.Name:lower()
-    if table.find(TargetEggs, name) then
-        if _G.HuntEggActive then ApplyHuntESP(v) end
+    if _G.FlatActive then
+        task.wait(0.1) -- Kasih waktu part load bentar
+        SikatPart(v)
     end
 end)
 
--- EKSEKUSI AUTO LANGSUNG TANPA TUNGGU MENU
-task.spawn(RunFlatColor)
-task.spawn(function()
-    while true do
-        ScanHunt()
-        task.wait(10)
-    end
-end)
-
--- [[ 5. UI CONTROL ]] --
-if PlayerGui:FindFirstChild("GURITA_FINAL_AUTO") then PlayerGui.GURITA_FINAL_AUTO:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_FINAL_AUTO"
+-- [[ UI KHUSUS UJI COBA ]] --
+if PlayerGui:FindFirstChild("GURITA_V38") then PlayerGui.GURITA_V38:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V38"
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 220, 0, 180); Main.Position = UDim2.new(0.5, -110, 0.5, -90)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Active = true; Main.Draggable = true
+Main.Size = UDim2.new(0, 200, 0, 100); Main.Position = UDim2.new(0.5, -100, 0.5, -50)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "GURITA HUB (AUTO)"; Title.TextColor3 = Color3.new(1, 1, 1); Title.BackgroundTransparency = 1; Title.Font = Enum.Font.GothamBlack
+local Btn = Instance.new("TextButton", Main)
+Btn.Size = UDim2.new(0.9, 0, 0, 60); Btn.Position = UDim2.new(0.05, 0, 0.2, 0)
+Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); Btn.Text = "FLAT MAP: OFF"
+Btn.TextColor3 = Color3.new(1, 0, 0); Btn.Font = Enum.Font.GothamBold; Instance.new("UICorner", Btn)
 
-local function CreateBtn(pos, text, func)
-    local b = Instance.new("TextButton", Main)
-    b.Size = UDim2.new(0.9, 0, 0, 45); b.Position = UDim2.new(0.05, 0, pos, 0)
-    b.BackgroundColor3 = Color3.fromRGB(30, 30, 30); b.Text = text; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 12; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(func); return b
-end
-
-local BtnFlat = CreateBtn(0.25, "FLAT MAP: ON", function()
+Btn.MouseButton1Click:Connect(function()
     _G.FlatActive = not _G.FlatActive
-    if _G.FlatActive then task.spawn(RunFlatColor) end
-end)
-
-local BtnHunt = CreateBtn(0.6, "EGG HUNT: ON", function()
-    _G.HuntEggActive = not _G.HuntEggActive
-    if _G.HuntEggActive then task.spawn(ScanHunt) end
-end)
-
-task.spawn(function()
-    while true do
-        BtnFlat.Text = "FLAT MAP: " .. (_G.FlatActive and "ON" or "OFF"); BtnFlat.TextColor3 = _G.FlatActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        BtnHunt.Text = "EGG HUNT: " .. (_G.HuntEggActive and "ON" or "OFF"); BtnHunt.TextColor3 = _G.HuntEggActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        task.wait(0.5)
+    if _G.FlatActive then
+        Btn.Text = "FLAT MAP: ON"; Btn.TextColor3 = Color3.new(0, 1, 0)
+        task.spawn(RunFlatColor) -- Jalankan proses nyisir map
+    else
+        Btn.Text = "FLAT MAP: OFF"; Btn.TextColor3 = Color3.new(1, 0, 0)
     end
 end)
