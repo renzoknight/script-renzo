@@ -1,35 +1,76 @@
--- [[ GURITA HUB - FAST FLAT & NORMAL SKY ]] --
--- Optimasi: Load Map Super Cepat, Langit Normal (Biar Gak Lag)
+-- [[ GURITA HUB - ALL-IN-ONE EGG HUNT ]] --
+-- Fitur: Fast Flat, Anti-Lag, Blue ESP Sky Island, Distance Tracker
 
+local lp = game.Players.LocalPlayer
+local Lighting = game:GetService("Lighting")
 local MaterialService = game:GetService("MaterialService")
 
--- [[ 1. OPTIMASI HP ]] --
-pcall(function()
-    settings().Rendering.QualityLevel = 1
-    if setfpscap then setfpscap(45) end
-end)
+-- [[ 1. DAFTAR TELUR TARGET (LENGKAP) ]] --
+local TargetEggs = {
+    "hydra bunny",
+    "noo my eggs",
+    "hopilikalika",
+    "baskito",
+    "churrito",
+    "quackini",
+    "snackini",
+    "bunny bunny sahur"
+}
 
--- [[ 2. LOGIKA SIKAT POLOS (MODE KILAT) ]] --
+-- [[ 2. FUNGSI ESP BIRU TEMBUS PANDANG ]] --
+local function PasangESP(obj)
+    if obj:FindFirstChild("GuritaMarker") then return end
+    
+    pcall(function()
+        -- Highlight Biru (Tembus dari ujung ke ujung)
+        local h = Instance.new("Highlight")
+        h.Name = "GuritaMarker"
+        h.Parent = obj
+        h.FillColor = Color3.fromRGB(0, 170, 255)
+        h.OutlineColor = Color3.new(1, 1, 1)
+        h.FillTransparency = 0.4
+        h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop 
+
+        -- Tag Nama & Jarak
+        local b = Instance.new("BillboardGui")
+        b.Name = "GuritaTag"
+        b.Parent = obj
+        b.Size = UDim2.new(0, 200, 0, 70)
+        b.AlwaysOnTop = true
+        b.ExtentsOffset = Vector3.new(0, 6, 0)
+        
+        local t = Instance.new("TextLabel", b)
+        t.Size = UDim2.new(1, 0, 1, 0)
+        t.BackgroundTransparency = 1
+        t.Text = obj.Name:upper() .. "\n[ Calibrating... ]"
+        t.TextColor3 = Color3.fromRGB(0, 170, 255)
+        t.Font = Enum.Font.GothamBlack
+        t.TextSize = 14
+        t.TextStrokeTransparency = 0
+
+        -- Update Jarak Otomatis
+        task.spawn(function()
+            while obj and obj.Parent do
+                if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                    local pos = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
+                    local dist = (lp.Character.HumanoidRootPart.Position - pos).Magnitude
+                    t.Text = obj.Name:upper() .. "\n[" .. math.floor(dist) .. " Studs]"
+                end
+                task.wait(1)
+            end
+        end)
+    end)
+end
+
+-- [[ 3. LOGIKA FAST FLAT COLOR ]] --
 local function SikatPolos(v)
-    -- Abaikan karakter
-    if v:IsDescendantOf(game.Players.LocalPlayer.Character or workspace) and v.Parent:FindFirstChild("Humanoid") then return end
-
+    if v:IsDescendantOf(lp.Character or workspace) and v.Parent:FindFirstChild("Humanoid") then return end
     pcall(function()
         if v:IsA("BasePart") then
-            -- Langsung buat material plastik polos
             v.Material = Enum.Material.Plastic
             v.CastShadow = false
-            v.Reflectance = 0
-            
-            -- Hapus tekstur mesh (pembatas map)
-            if v:IsA("MeshPart") then
-                v.TextureID = ""
-            end
-
-            -- Hapus semua motif (decal/tekstur)
-            local children = v:GetChildren()
-            for i=1, #children do
-                local child = children[i]
+            if v:IsA("MeshPart") then v.TextureID = "" end
+            for _, child in pairs(v:GetChildren()) do
                 if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") then
                     child:Destroy()
                 end
@@ -40,9 +81,10 @@ local function SikatPolos(v)
     end)
 end
 
--- [[ 3. EKSEKUSI MASAL (BULK PROCESSING) ]] --
+-- [[ 4. EKSEKUSI GLOBAL (FAST LOAD) ]] --
 task.spawn(function()
-    -- Matikan material HD bawaan roblox
+    -- Anti-Lag Awal
+    if setfpscap then setfpscap(45) end
     pcall(function()
         MaterialService.Use2022Materials = false
         for _, m in pairs(MaterialService:GetChildren()) do m:Destroy() end
@@ -50,27 +92,39 @@ task.spawn(function()
 
     local all = workspace:GetDescendants()
     local count = 0
-    
-    for i=1, #all do
-        SikatPolos(all[i])
-        count = count + 1
+    for i, v in pairs(all) do
+        -- Jalankan Flat Color
+        SikatPolos(v)
         
-        -- Sikat 150 part sekaligus baru istirahat (Biar Load-nya Kilat)
-        if count >= 150 then 
-            task.wait() 
-            count = 0
+        -- Cari Telur
+        local name = v.Name:lower()
+        for _, target in pairs(TargetEggs) do
+            if name == target then PasangESP(v) end
         end
+        
+        -- Jeda per 150 part biar gak panas
+        count = count + 1
+        if count >= 150 then task.wait() count = 0 end
     end
 end)
 
--- Sikat part baru yang muncul saat main
+-- Pantau New Spawn (Egg & Island)
 workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.1)
-    SikatPolos(v)
+    local name = v.Name:lower()
+    for _, target in pairs(TargetEggs) do
+        if name == target then
+            task.wait(0.8) -- Jeda biar model load dulu
+            PasangESP(v)
+        end
+    end
+    -- Tetap sikat polos part baru
+    if v:IsA("BasePart") then
+        task.wait(0.1)
+        SikatPolos(v)
+    end
 end)
 
--- [[ 4. UI TULISAN BIRU ]] --
-local lp = game.Players.LocalPlayer
+-- [[ 5. UI GURITA HUB ]] --
 local PlayerGui = lp:WaitForChild("PlayerGui")
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
 
@@ -80,4 +134,4 @@ OpenBtn.Size = UDim2.new(0, 150, 0, 50); OpenBtn.Position = UDim2.new(0, 20, 0.5
 OpenBtn.BackgroundTransparency = 1; OpenBtn.Text = "GURITA HUB"; OpenBtn.Font = Enum.Font.GothamBlack
 OpenBtn.TextColor3 = Color3.fromRGB(0, 170, 255); OpenBtn.TextSize = 20; OpenBtn.TextStrokeTransparency = 0.5
 
-print("GURITA HUB: Fast Flat Active (Normal Sky)!")
+print("GURITA HUB: ALL FEATURES MERGED! GOOD LUCK BANG EZRA!")
