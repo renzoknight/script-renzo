@@ -1,5 +1,5 @@
--- [[ GURITA HUB: V33 - GLOBAL RENDER INJECTOR ]] --
--- Fix: Map Texture Lock, Material Persistence, & Only-Avatar Bug
+-- [[ GURITA HUB: V34 - BRUTE FORCE FLAT COLOR ]] --
+-- Balik ke Logika Keras: Map Pasti Polos
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -12,60 +12,49 @@ local HttpService = game:GetService("HttpService")
 local FileName = "GuritaHub_Config.json"
 local TargetEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini", "snackini", "bunny bunny sahur"}
 local NotifiedEggs = {}
-
 _G.Settings = { EggESP = false, Notif = true }
 
 local function SaveData() if writefile then writefile(FileName, HttpService:JSONEncode(_G.Settings)) end end
-local function LoadData() if isfile and isfile(FileName) then pcall(function() _G.Settings = HttpService:JSONDecode(readfile(FileName)) end) end end
-LoadData()
+if isfile and isfile(FileName) then pcall(function() _G.Settings = HttpService:JSONDecode(readfile(FileName)) end) end
 
--- [[ 2. GLOBAL FLAT COLOR ENGINE (ULTIMATE) ]] --
-local function ForceFlat(v)
-    -- PROTEKSI UI
-    if v:IsDescendantOf(PlayerGui) or v:IsDescendantOf(lp) or v:IsA("ScreenGui") then return end
+-- [[ 2. BRUTE FORCE FLAT COLOR (TAMPILAN KARTUN POLOS) ]] --
+local function SikatHabis(v)
+    -- Abaikan UI dan Karakter biar gak error
+    if v:IsDescendantOf(PlayerGui) or v:IsDescendantOf(lp.Character or workspace) and v:FindFirstChild("Humanoid") then return end
 
     pcall(function()
         if v:IsA("BasePart") then
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
-            -- Jika MeshPart, kita paksa Texture-nya hilang total
-            if v:IsA("MeshPart") then
-                v.TextureID = ""
-            end
-        elseif v:IsA("Decal") or v:IsA("Texture") then
-            v.Transparency = 1
-            v:Destroy() -- Double kill biar bener-bener ilang
+            if v:IsA("MeshPart") then v.TextureID = "" end
         elseif v:IsA("SpecialMesh") then
             v.TextureId = ""
+        elseif v:IsA("Decal") or v:IsA("Texture") then
+            v:Destroy() -- Hapus semua tekstur/stiker di tembok & lantai
         end
     end)
 end
 
--- Teknik Baru: Force All Elements via Rendering Settings
-local function NukeEnvironment()
+-- Force Lighting biar warna makin rata
+local function ForceLighting()
+    Lighting.Brightness = 2
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
-    Lighting.Brightness = 2
-    Lighting.ClockTime = 12
-    
-    -- Hapus semua yang bikin map kelihatan berat/bertekstur
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("Sky") or v:IsA("SunRaysEffect") then
-            v:Destroy()
-        end
+    Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("Atmosphere") then v:Destroy() end
     end
 end
 
--- Loop Agresif: Memaksa Map (Bukan cuma Player)
+-- LOOPING KERAS (Setiap 5 detik pastiin map tetep polos)
 task.spawn(function()
-    NukeEnvironment()
+    ForceLighting()
     while true do
         for i, v in pairs(workspace:GetDescendants()) do
-            ForceFlat(v)
-            -- Jeda dikit biar gak freeze pas proses ribuan part map
-            if i % 250 == 0 then task.wait() end 
+            SikatHabis(v)
+            if i % 300 == 0 then task.wait() end -- Anti Lag
         end
-        task.wait(10) -- Paksa ulang tiap 10 detik (Anti-StreamingEnabled)
+        task.wait(5) 
     end
 end)
 
@@ -73,20 +62,13 @@ end)
 local function ApplyESP(obj)
     if not _G.Settings.EggESP then return end
     if not obj:FindFirstChild("GuritaMarker") then
-        local h = Instance.new("Highlight", obj); h.Name = "GuritaMarker"
-        h.FillColor = Color3.fromRGB(255, 255, 0); h.OutlineColor = Color3.new(1,1,1)
-        
-        local b = Instance.new("BillboardGui", obj); b.Name = "GuritaTag"
-        b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
-        
-        local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1, 0, 1, 0)
-        t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0); t.Font = Enum.Font.GothamBlack; t.TextSize = 14
-
+        local h = Instance.new("Highlight", obj); h.Name = "GuritaMarker"; h.FillColor = Color3.fromRGB(255, 255, 0)
+        local b = Instance.new("BillboardGui", obj); b.Name = "GuritaTag"; b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
+        local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0); t.Font = Enum.Font.GothamBlack; t.TextSize = 14
         task.spawn(function()
             while obj and obj.Parent and _G.Settings.EggESP do
                 if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                    local dist = (obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude
-                    t.Text = obj.Name:upper() .. "\n[" .. math.floor(dist) .. "m]"
+                    t.Text = obj.Name:upper() .. "\n[" .. math.floor((obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude) .. "m]"
                 end
                 task.wait(1)
             end
@@ -111,32 +93,21 @@ task.spawn(function()
     end
 end)
 
--- [[ 4. UI FIX ]] --
-if PlayerGui:FindFirstChild("GURITA_V33") then PlayerGui.GURITA_V33:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V33"; SG.ResetOnSpawn = false
-
-local Logo = Instance.new("TextButton", SG)
-Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0, 15, 0.5, -25)
-Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "V33"; Logo.TextColor3 = Color3.new(1, 1, 0); Logo.Font = Enum.Font.GothamBlack; Logo.Draggable = true; Logo.Active = true; Instance.new("UICorner", Logo)
-
-local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 180); Main.Position = UDim2.new(0.5, -100, 0.5, -90); Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
-
+-- [[ 4. UI CONSTRUCTION ]] --
+if PlayerGui:FindFirstChild("GURITA_V34") then PlayerGui.GURITA_V34:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V34"; SG.ResetOnSpawn = false
+local Logo = Instance.new("TextButton", SG); Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0, 15, 0.5, -25); Logo.BackgroundColor3 = Color3.fromRGB(20,20,20); Logo.Text = "GH"; Logo.TextColor3 = Color3.new(1,1,0); Logo.Font = Enum.Font.GothamBlack; Logo.Draggable = true; Logo.Active = true; Instance.new("UICorner", Logo)
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 180); Main.Position = UDim2.new(0.5, -100, 0.5, -90); Main.BackgroundColor3 = Color3.fromRGB(15,15,15); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1,1,0)
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
-
 local function CreateBtn(text, pos, func)
-    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 45); b.Position = UDim2.new(0.05, 0, pos, 0); b.BackgroundColor3 = Color3.fromRGB(30, 30, 30); b.Font = Enum.Font.GothamBold; b.TextSize = 12; b.Text = text; b.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", b); b.MouseButton1Click:Connect(func); return b
+    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 45); b.Position = UDim2.new(0.05, 0, pos, 0); b.BackgroundColor3 = Color3.fromRGB(30,30,30); b.Font = Enum.Font.GothamBold; b.TextSize = 12; b.Text = text; b.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", b); b.MouseButton1Click:Connect(func); return b
 end
-
-local BtnESP = CreateBtn("ESP: OFF", 0.2, function() 
-    _G.Settings.EggESP = not _G.Settings.EggESP; SaveData()
-    if not _G.Settings.EggESP then for _, v in pairs(workspace:GetDescendants()) do if v.Name == "GuritaMarker" or v.Name == "GuritaTag" then v:Destroy() end end end
-end)
+local BtnESP = CreateBtn("ESP: OFF", 0.2, function() _G.Settings.EggESP = not _G.Settings.EggESP; SaveData() end)
 local BtnNotif = CreateBtn("NOTIF: OFF", 0.6, function() _G.Settings.Notif = not _G.Settings.Notif; SaveData() end)
-
 task.spawn(function()
     while true do
-        BtnESP.Text = "ESP: " .. (_G.Settings.EggESP and "ON" or "OFF"); BtnESP.TextColor3 = _G.Settings.EggESP and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        BtnNotif.Text = "NOTIF: " .. (_G.Settings.Notif and "ON" or "OFF"); BtnNotif.TextColor3 = _G.Settings.Notif and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        BtnESP.Text = "ESP: " .. (_G.Settings.EggESP and "ON" or "OFF"); BtnESP.TextColor3 = _G.Settings.EggESP and Color3.new(0,1,0) or Color3.new(1,0,0)
+        BtnNotif.Text = "NOTIF: " .. (_G.Settings.Notif and "ON" or "OFF"); BtnNotif.TextColor3 = _G.Settings.Notif and Color3.new(0,1,0) or Color3.new(1,0,0)
         task.wait(0.5)
     end
 end)
