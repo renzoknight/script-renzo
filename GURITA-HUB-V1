@@ -1,18 +1,17 @@
--- [[ GURITA HUB V21 - ANTI SPAM & NO FOG FIX ]] --
+-- [[ GURITA HUB V22 - CLEAN RENDER & ANTI SPAM ]] --
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 
 _G.HuntingMode = false
 _G.NotifActive = true
 
--- Tabel buat nyatet target mana aja yang SUDAH dapet notif
 local NotifHistory = {}
 
 local SuperRare = {
     "hydra bunny", "no my egg", "baskito", 
     "churrito bunnito", "hopilikalika", "quackini"
 }
-local NormalTargets = {"bunny bunny sahur", "sky egg", "bunny egg"}
+local NormalTargets = {"bunny bunny sahul", "sky egg", "bunny egg"}
 local Blacklist = {"brainrot", "npc", "base", "shop", "harp"}
 
 local function PlayAlert()
@@ -24,12 +23,9 @@ local function PlayAlert()
 end
 
 local function KirimNotifRare(obj)
-    -- CEK ANTI-SPAM: Kalau objek ini sudah pernah dapet notif, jangan kirim lagi.
     if NotifHistory[obj] then return end
-    
     if not _G.NotifActive then return end
     
-    -- Tandai kalau objek ini sudah kirim notif
     NotifHistory[obj] = true 
     
     local col = Color3.new(1, 0, 0)
@@ -70,7 +66,8 @@ local function CekTarget(n)
 end
 
 local function ApplyESP(obj)
-    if obj:FindFirstChild("GuritaMarker") then return end
+    -- Hapus pengecekan lama biar fresh
+    if obj:FindFirstChild("GuritaTag") then return end
     pcall(function()
         local pos = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
         if pos.Y < 100 then return end
@@ -80,29 +77,29 @@ local function ApplyESP(obj)
 
         local col = (tipe == "rare") and Color3.new(1, 0, 0) or Color3.fromRGB(0, 170, 255)
         
-        -- Hanya notif kalau RARE dan BELUM PERNAH notif
         if tipe == "rare" then 
             KirimNotifRare(obj) 
         end
 
-        local h = Instance.new("Highlight", obj)
-        h.Name = "GuritaMarker"; h.FillColor = col; h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        
+        -- PAKAI BILLBOARD TAG SAJA (Biar Render Map Tetap Normal)
         local b = Instance.new("BillboardGui", obj)
         b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 8, 0)
         local t = Instance.new("TextLabel", b)
         t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = col
-        t.Font = Enum.Font.GothamBlack; t.TextSize = 18; t.TextStrokeTransparency = 0
+        t.Font = Enum.Font.GothamBlack; t.TextSize = 20; t.TextStrokeTransparency = 0
         
         task.spawn(function()
             while obj and obj.Parent and _G.HuntingMode do
-                local p = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
-                local dist = math.floor((lp.Character.HumanoidRootPart.Position - p).Magnitude)
-                t.Text = obj.Name:upper() .. "\n[" .. dist .. "s]"
+                local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local p = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
+                    local dist = math.floor((hrp.Position - p).Magnitude)
+                    t.Text = obj.Name:upper() .. "\n[" .. dist .. "s]"
+                end
                 task.wait(1)
             end
-            if h then h:Destroy() end; if b then b:Destroy() end
-            NotifHistory[obj] = nil -- Bersihkan history kalau objek hilang
+            if b then b:Destroy() end
+            NotifHistory[obj] = nil
         end)
     end)
 end
@@ -136,7 +133,7 @@ BtnHunt.MouseButton1Down:Connect(function()
         for _, v in pairs(workspace:GetDescendants()) do if CekTarget(v.Name) then ApplyESP(v) end end
     else
         BtnHunt.Text = "HUNTING MODE: OFF"; BtnHunt.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-        NotifHistory = {} -- Reset history saat OFF
+        NotifHistory = {}
     end
 end)
 
