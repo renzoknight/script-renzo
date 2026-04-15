@@ -1,4 +1,5 @@
--- [[ GURITA HUB - ANTI LAG & AUTO FLAT ]] --
+-- [[ GURITA HUB - PURE FLAT & ANTI-LAG (REDMI 10 ONLY) ]] --
+-- Fitur: Auto Flat, Nuke Awan HD, Tanpa Egg Hunt
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -6,31 +7,25 @@ local PlayerGui = lp:WaitForChild("PlayerGui")
 local Lighting = game:GetService("Lighting")
 local MaterialService = game:GetService("MaterialService")
 
--- [[ GLOBAL SETTINGS ]] --
-_G.FlatColorActive = true
-_G.EggHuntActive = false
-local TargetEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini", "snackini", "bunny bunny sahur"}
+-- [[ 1. MESIN ANTI-LAG KHUSUS REDMI 10 ]] --
+pcall(function()
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    if setfpscap then setfpscap(45) end -- Kunci FPS biar gak panas
+end)
 
--- [[ 1. ANTI-LAG ENGINE (FPS BOOSTER) ]] --
-local function OptimizePerformance()
-    pcall(function()
-        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-        settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default
-        if setfpscap then setfpscap(60) end
-    end)
-end
-
--- [[ 2. LOGIKA FLAT COLOR (SMOOTH LOADING) ]] --
-local function SikatMotif(v)
-    if not _G.FlatColorActive then return end
+-- [[ 2. LOGIKA FLAT POLOS (SIKAT MOTIF, JAGA WARNA) ]] --
+local function SikatHalus(v)
+    -- Abaikan karakter player
     if v:IsDescendantOf(lp.Character or workspace) and v.Parent:FindFirstChild("Humanoid") then return end
     
     pcall(function()
         if v:IsA("BasePart") then
+            -- Bikin licin polos tapi warna tetep asli (karpet tetep merah, dll)
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
             
+            -- Buang gambar/motif/tekstur
             for _, child in pairs(v:GetChildren()) do
                 if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") then 
                     child:Destroy() 
@@ -43,91 +38,70 @@ local function SikatMotif(v)
     end)
 end
 
-local function NukeEnvironment()
+-- [[ 3. NUKE AWAN HD & LANGIT (CLEAN VERSION) ]] --
+local function NukeAwanHD()
     pcall(function()
-        MaterialService.Use2022Materials = false
-        for _, v in pairs(MaterialService:GetChildren()) do v:Destroy() end
+        -- Bersihkan semua efek HD di langit
         for _, v in pairs(Lighting:GetChildren()) do
-            if v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("Sky") then v:Destroy() end
+            if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("PostEffect") then 
+                v:Destroy() 
+            end
         end
+        
+        -- Pasang langit baru yang flat
         local sky = Instance.new("Sky", Lighting)
-        sky.SunAngularSize = 0; sky.MoonAngularSize = 0
+        sky.SunAngularSize, sky.MoonAngularSize, sky.StarCount = 0, 0, 0
+        
+        -- Lighting rata (Enteng di GPU)
         Lighting.GlobalShadows = false
-        Lighting.Brightness = 1.5
-        Lighting.Ambient = Color3.fromRGB(200, 200, 200)
-        Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+        Lighting.Brightness = 1.2
+        Lighting.Ambient = Color3.fromRGB(180, 180, 180)
+        Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180)
     end)
 end
 
--- [[ 3. LOGIKA EGG HUNT ]] --
-local function ApplyHuntESP(obj)
-    if not _G.EggHuntActive then return end
-    local h = Instance.new("Highlight", obj)
-    h.Name = "HuntMarker"; h.FillColor = Color3.fromRGB(0, 170, 255); h.FillTransparency = 0.5
-    local b = Instance.new("BillboardGui", obj)
-    b.Name = "HuntTag"; b.Size = UDim2.new(0, 100, 0, 40); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
-    local t = Instance.new("TextLabel", b)
-    t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(0, 0.7, 1); t.Font = Enum.Font.GothamBold; t.TextSize = 12; t.Text = obj.Name:upper()
-end
-
--- [[ 4. UI GURITA HUB ]] --
+-- [[ 4. UI GURITA HUB (BLUE TEXT ONLY) ]] --
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
 local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"
 
+-- Tombol Pembuka (Tulisan Biru di Kiri)
 local OpenBtn = Instance.new("TextButton", SG)
 OpenBtn.Size = UDim2.new(0, 150, 0, 50); OpenBtn.Position = UDim2.new(0, 20, 0.5, -25)
-OpenBtn.BackgroundTransparency = 1; OpenBtn.Text = "GURITA HUB"; OpenBtn.Font = Enum.Font.GothamBlack
-OpenBtn.TextColor3 = Color3.fromRGB(0, 170, 255); OpenBtn.TextSize = 20; OpenBtn.TextStrokeTransparency = 0.5
+OpenBtn.BackgroundTransparency = 1; OpenBtn.Text = "GURITA HUB"
+OpenBtn.Font = Enum.Font.GothamBlack; OpenBtn.TextColor3 = Color3.fromRGB(0, 170, 255)
+OpenBtn.TextSize = 20; OpenBtn.TextStrokeTransparency = 0.5
 
+-- Menu Frame Minimalis
 local MainFrame = Instance.new("Frame", SG)
-MainFrame.Size = UDim2.new(0, 300, 0, 220); MainFrame.Position = UDim2.new(0.5, -150, 0.5, -110)
+MainFrame.Size = UDim2.new(0, 250, 0, 100); MainFrame.Position = UDim2.new(0.5, -125, 0.5, -50)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10); MainFrame.Visible = false; MainFrame.Active = true; MainFrame.Draggable = true
 local Stroke = Instance.new("UIStroke", MainFrame); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 2
 Instance.new("UICorner", MainFrame)
 
 local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "GURITA HUB - MENU"; Title.TextColor3 = Color3.new(1, 1, 1); Title.BackgroundTransparency = 1; Title.Font = Enum.Font.GothamBold; Title.TextSize = 14
-
-local function CreateToggle(name, pos, default, callback)
-    local Btn = Instance.new("TextButton", MainFrame)
-    Btn.Size = UDim2.new(0.85, 0, 0, 40); Btn.Position = UDim2.new(0.075, 0, 0, pos)
-    Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Btn.TextColor3 = default and Color3.fromRGB(0, 255, 127) or Color3.new(1, 1, 1)
-    Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 11; Btn.Text = name .. ": " .. (default and "ON" or "OFF")
-    Instance.new("UICorner", Btn); local bStroke = Instance.new("UIStroke", Btn); bStroke.Color = Color3.fromRGB(0, 100, 200)
-
-    local active = default
-    Btn.MouseButton1Click:Connect(function()
-        active = not active
-        Btn.Text = name .. ": " .. (active and "ON" or "OFF")
-        Btn.TextColor3 = active and Color3.fromRGB(0, 255, 127) or Color3.new(1, 1, 1)
-        callback(active)
-    end)
-end
-
-CreateToggle("AUTO FLAT COLOR", 60, true, function(state) _G.FlatColorActive = state end)
-CreateToggle("EGG HUNT ESP", 120, false, function(state) _G.EggHuntActive = state end)
+Title.Size = UDim2.new(1, 0, 1, 0); Title.Text = "FLAT MODE: AUTO-ACTIVE\nANTI-LAG: ENABLED"
+Title.TextColor3 = Color3.new(1, 1, 1); Title.BackgroundTransparency = 1; Title.Font = Enum.Font.GothamBold; Title.TextSize = 12
 
 OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 
--- [[ 5. SMOOTH EXECUTION (ANTI-LAG) ]] --
+-- [[ 5. EKSEKUSI SUPER HALUS (SLOW LOADING) ]] --
 task.spawn(function()
-    OptimizePerformance()
-    NukeEnvironment()
+    NukeAwanHD()
+    MaterialService.Use2022Materials = false
     
     local all = workspace:GetDescendants()
     for i, v in pairs(all) do
-        SikatMotif(v)
-        -- Anti-Lag: Tunggu sebentar setiap 70 part agar CPU tidak kaget
-        if i % 70 == 0 then 
-            task.wait() 
-        end
+        SikatHalus(v)
+        -- Jeda Redmi 10: Biar gak patah-patah pas jalan
+        if i % 15 == 0 then 
+            task.wait(0.05) 
+        end 
     end
 end)
 
 workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.2) -- Jeda dikit biar part ke-load sempurna baru disikat
-    if _G.FlatColorActive then SikatMotif(v) end
-    if _G.EggHuntActive and table.find(TargetEggs, v.Name:lower()) then ApplyHuntESP(v) end
+    task.wait(1) -- Nunggu stabil baru disikat
+    SikatHalus(v)
 end)
 
-print("GURITA HUB: Anti-Lag & Auto Flat Selesai di-Load!")
+print("GURITA HUB: Pure Flat Loaded!")
