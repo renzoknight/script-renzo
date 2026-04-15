@@ -1,4 +1,4 @@
--- [[ GURITA HUB: PREMIUM EDITION + AUTO-SAVE (V4 MODIFIED) ]] --
+-- [[ GURITA HUB: PREMIUM EDITION + AUTO-SAVE ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -8,19 +8,7 @@ local HttpService = game:GetService("HttpService")
 
 -- [[ 1. CONFIG & SAVE SYSTEM ]] --
 local FileName = "GuritaHub_Config.json"
-
--- LIST TARGET BARU (Brainrot List)
-local TargetEggs = {
-    "hydra bunny", 
-    "noo my eggs", 
-    "baskito", 
-    "churrito", 
-    "quackini", 
-    "snackini", 
-    "bunny bunny sahur"
-}
-
-local NotifiedEggs = {} -- Tabel internal buat handle notif sekali aja
+local TargetEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako", "bunny sahur"}
 
 -- Default Settings
 _G.Settings = {
@@ -88,22 +76,7 @@ task.spawn(function()
     while true do
         for i, v in pairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") and v.Material ~= Enum.Material.Plastic then SikatJadiFlat(v) end
-            
-            -- LOGIKA ESP & NOTIF SEKALI (ANTI-SPAM)
-            local name = v.Name:lower()
-            if table.find(TargetEggs, name) then
-                if _G.Settings.EggESP then ApplyUltimateESP(v) end
-                
-                if _G.Settings.Notif and not NotifiedEggs[v] then
-                    NotifiedEggs[v] = true
-                    StarterGui:SetCore("SendNotification", {Title = "🥚 EGG SPAWNED!", Text = v.Name:upper(), Duration = 5})
-                    local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
-                    
-                    -- Reset log kalau telur ilang/diambil orang
-                    v.AncestryChanged:Connect(function(_, p) if not p then NotifiedEggs[v] = nil end end)
-                end
-            end
-            
+            if _G.Settings.EggESP and table.find(TargetEggs, v.Name:lower()) then ApplyUltimateESP(v) end
             if i % 200 == 0 then task.wait() end 
         end
         task.wait(5)
@@ -113,14 +86,10 @@ end)
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.1)
     SikatJadiFlat(v)
-    local name = v.Name:lower()
-    if table.find(TargetEggs, name) then
-        -- Handle Notif Sekali pas spawn baru
-        if _G.Settings.Notif and not NotifiedEggs[v] then
-            NotifiedEggs[v] = true
+    if table.find(TargetEggs, v.Name:lower()) then
+        if _G.Settings.Notif then
             StarterGui:SetCore("SendNotification", {Title = "🥚 EGG SPAWNED!", Text = v.Name:upper(), Duration = 5})
             local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
-            v.AncestryChanged:Connect(function(_, p) if not p then NotifiedEggs[v] = nil end end)
         end
         if _G.Settings.EggESP then ApplyUltimateESP(v) end
     end
