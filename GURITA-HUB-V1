@@ -1,40 +1,45 @@
--- [[ GURITA HUB - ALL-IN-ONE EGG HUNT ]] --
--- Fitur: Fast Flat, Anti-Lag, Blue ESP Sky Island, Distance Tracker
+-- [[ GURITA HUB - AUTO SAVE & EGG HUNT ]] --
+-- Fitur: Fast Flat, ESP Sky Island, Auto Save Config
 
 local lp = game.Players.LocalPlayer
-local Lighting = game:GetService("Lighting")
-local MaterialService = game:GetService("MaterialService")
+local PlayerGui = lp:WaitForChild("PlayerGui")
+local HttpService = game:GetService("HttpService")
 
--- [[ 1. DAFTAR TELUR TARGET (LENGKAP) ]] --
-local TargetEggs = {
-    "hydra bunny",
-    "noo my eggs",
-    "hopilikalika",
-    "baskito",
-    "churrito",
-    "quackini",
-    "snackini",
-    "bunny bunny sahur"
+-- [[ 1. SISTEM AUTO SAVE (DATA) ]] --
+local Config = {
+    FlatColor = true,
+    ESP = true
 }
 
--- [[ 2. FUNGSI ESP BIRU TEMBUS PANDANG ]] --
+local function SaveData()
+    local data = HttpService:JSONEncode(Config)
+    writefile("GuritaHubConfig.json", data)
+end
+
+local function LoadData()
+    if isfile("GuritaHubConfig.json") then
+        local data = readfile("GuritaHubConfig.json")
+        Config = HttpService:JSONDecode(data)
+    end
+end
+
+-- Jalankan Load Data pas awal script
+LoadData()
+
+-- [[ 2. DAFTAR TELUR ]] --
+local TargetEggs = {"hydra bunny", "noo my eggs", "hopilikalika", "baskito", "churrito", "quackini", "snackini", "bunny bunny sahur"}
+
+-- [[ 3. FUNGSI ESP ]] --
 local function PasangESP(obj)
-    if obj:FindFirstChild("GuritaMarker") then return end
-    
+    if not Config.ESP or obj:FindFirstChild("GuritaMarker") then return end
     pcall(function()
-        -- Highlight Biru (Tembus dari ujung ke ujung)
-        local h = Instance.new("Highlight")
+        local h = Instance.new("Highlight", obj)
         h.Name = "GuritaMarker"
-        h.Parent = obj
         h.FillColor = Color3.fromRGB(0, 170, 255)
-        h.OutlineColor = Color3.new(1, 1, 1)
-        h.FillTransparency = 0.4
         h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop 
 
-        -- Tag Nama & Jarak
-        local b = Instance.new("BillboardGui")
+        local b = Instance.new("BillboardGui", obj)
         b.Name = "GuritaTag"
-        b.Parent = obj
         b.Size = UDim2.new(0, 200, 0, 70)
         b.AlwaysOnTop = true
         b.ExtentsOffset = Vector3.new(0, 6, 0)
@@ -42,15 +47,13 @@ local function PasangESP(obj)
         local t = Instance.new("TextLabel", b)
         t.Size = UDim2.new(1, 0, 1, 0)
         t.BackgroundTransparency = 1
-        t.Text = obj.Name:upper() .. "\n[ Calibrating... ]"
         t.TextColor3 = Color3.fromRGB(0, 170, 255)
         t.Font = Enum.Font.GothamBlack
         t.TextSize = 14
         t.TextStrokeTransparency = 0
 
-        -- Update Jarak Otomatis
         task.spawn(function()
-            while obj and obj.Parent do
+            while obj and obj.Parent and Config.ESP do
                 if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
                     local pos = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
                     local dist = (lp.Character.HumanoidRootPart.Position - pos).Magnitude
@@ -62,76 +65,47 @@ local function PasangESP(obj)
     end)
 end
 
--- [[ 3. LOGIKA FAST FLAT COLOR ]] --
+-- [[ 4. LOGIKA FLAT COLOR ]] --
 local function SikatPolos(v)
-    if v:IsDescendantOf(lp.Character or workspace) and v.Parent:FindFirstChild("Humanoid") then return end
+    if not Config.FlatColor then return end
     pcall(function()
-        if v:IsA("BasePart") then
+        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
             v.Material = Enum.Material.Plastic
             v.CastShadow = false
             if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, child in pairs(v:GetChildren()) do
-                if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") then
-                    child:Destroy()
-                end
-            end
-        elseif v:IsA("SpecialMesh") then
-            v.TextureId = ""
         end
     end)
 end
 
--- [[ 4. EKSEKUSI GLOBAL (FAST LOAD) ]] --
+-- [[ 5. EKSEKUSI ]] --
 task.spawn(function()
-    -- Anti-Lag Awal
-    if setfpscap then setfpscap(45) end
-    pcall(function()
-        MaterialService.Use2022Materials = false
-        for _, m in pairs(MaterialService:GetChildren()) do m:Destroy() end
-    end)
-
     local all = workspace:GetDescendants()
-    local count = 0
     for i, v in pairs(all) do
-        -- Jalankan Flat Color
-        SikatPolos(v)
-        
-        -- Cari Telur
+        if Config.FlatColor then SikatPolos(v) end
         local name = v.Name:lower()
         for _, target in pairs(TargetEggs) do
             if name == target then PasangESP(v) end
         end
-        
-        -- Jeda per 150 part biar gak panas
-        count = count + 1
-        if count >= 150 then task.wait() count = 0 end
+        if i % 150 == 0 then task.wait() end
     end
 end)
 
--- Pantau New Spawn (Egg & Island)
-workspace.DescendantAdded:Connect(function(v)
-    local name = v.Name:lower()
-    for _, target in pairs(TargetEggs) do
-        if name == target then
-            task.wait(0.8) -- Jeda biar model load dulu
-            PasangESP(v)
-        end
-    end
-    -- Tetap sikat polos part baru
-    if v:IsA("BasePart") then
-        task.wait(0.1)
-        SikatPolos(v)
-    end
-end)
-
--- [[ 5. UI GURITA HUB ]] --
-local PlayerGui = lp:WaitForChild("PlayerGui")
+-- [[ 6. UI MENU FIXED ]] --
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.DisplayOrder = 999; SG.ResetOnSpawn = false
 
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"
-local OpenBtn = Instance.new("TextButton", SG)
-OpenBtn.Size = UDim2.new(0, 150, 0, 50); OpenBtn.Position = UDim2.new(0, 20, 0.5, -25)
-OpenBtn.BackgroundTransparency = 1; OpenBtn.Text = "GURITA HUB"; OpenBtn.Font = Enum.Font.GothamBlack
-OpenBtn.TextColor3 = Color3.fromRGB(0, 170, 255); OpenBtn.TextSize = 20; OpenBtn.TextStrokeTransparency = 0.5
+local MainBtn = Instance.new("TextButton", SG)
+MainBtn.Size = UDim2.new(0, 150, 0, 50); MainBtn.Position = UDim2.new(0, 20, 0.5, -25)
+MainBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20); MainBtn.BackgroundTransparency = 0.3
+MainBtn.Text = "GURITA HUB"; MainBtn.TextColor3 = Color3.fromRGB(0, 170, 255)
+MainBtn.Font = Enum.Font.GothamBlack; MainBtn.TextSize = 18
+Instance.new("UICorner", MainBtn)
 
-print("GURITA HUB: ALL FEATURES MERGED! GOOD LUCK BANG EZRA!")
+-- Simpan otomatis tiap ada perubahan
+MainBtn.MouseButton1Click:Connect(function()
+    Config.FlatColor = not Config.FlatColor
+    SaveData() -- Simpan status terakhir
+    print("GURITA HUB: Config Saved!")
+end)
+
+print("GURITA HUB: Auto-Save System Ready!")
