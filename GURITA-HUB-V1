@@ -1,87 +1,121 @@
--- [[ GURITA HUB: V38 - LIGHTWEIGHT FLAT COLOR ]] --
--- Fix: Lag & Texture Lock
+-- [[ GURITA HUB: ULTIMATE FLAT COLOR ENGINE ]] --
+-- Fokus: Map Polos Total, No Texture, No Lag
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 local Lighting = game:GetService("Lighting")
 
-_G.FlatActive = false
+-- [[ 1. SETTINGS & CONTROL ]] --
+_G.FlatColorActive = true -- Set ke true biar langsung auto-on pas di-execute
 
--- Fungsi Utama: Sikat Part Tanpa Beban
-local function SikatPart(v)
-    -- Abaikan UI & Karakter Player (Proteksi Ava)
-    if v:IsDescendantOf(PlayerGui) then return end
+-- [[ 2. THE ENGINE (SIKAT TOTAL) ]] --
+local function SikatHabisTekstur(v)
+    -- PROTEKSI: Jangan hapus UI dan jangan ubah karakter (Ava) biar gak aneh
+    if v:IsDescendantOf(PlayerGui) or v:IsA("ScreenGui") then return end
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Ubah Material & Cabut Bayangan
+            -- Paksa Material jadi Mulus & Hilangkan Bayangan
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
-            v.Reflectance = 0
+            v.Reflectance = 0 -- Biar gak mengkilap
             
-            -- Cabut Tekstur Mesh
+            -- Hapus Tekstur di MeshPart
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
             
-            -- Hapus SurfaceAppearance (Biang kerok tekstur bandel)
+            -- Hapus SurfaceAppearance (Penyebab utama map gak mau polos)
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
             
+        -- Hapus Decal/Stiker (Rumput, tembok bata, dll)
         elseif v:IsA("Decal") or v:IsA("Texture") then
             v:Destroy()
+            
+        -- Hapus Tekstur di SpecialMesh
         elseif v:IsA("SpecialMesh") then
             v.TextureId = ""
         end
     end)
 end
 
--- Eksekusi Bertahap (Anti-Lag)
-local function RunFlatColor()
-    local all = workspace:GetDescendants()
-    for i, v in pairs(all) do
-        if not _G.FlatActive then break end
-        SikatPart(v)
-        
-        -- Jeda setiap 100 part biar gak FPS Drop
-        if i % 100 == 0 then
-            task.wait() 
+-- [[ 3. OPTIMIZER & LIGHTING ]] --
+-- Biar warna map makin rata dan polos
+local function NukeEnvironment()
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9e9
+    Lighting.Brightness = 2
+    Lighting.ClockTime = 12
+    Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200) -- Cahaya rata
+    
+    -- Hapus efek ngeribetis yang bikin bertekstur
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") then
+            v:Destroy()
         end
     end
 end
 
--- Pantau Part Baru (StreamingEnabled Safe)
+-- [[ 4. EXECUTION FLOW (ANTI-LAG) ]] --
+local function RunFlatEffect()
+    if not _G.FlatColorActive then return end
+    
+    NukeEnvironment()
+    local descendants = workspace:GetDescendants()
+    
+    for i, v in pairs(descendants) do
+        if not _G.FlatColorActive then break end
+        SikatHabisTekstur(v)
+        
+        -- Anti-Lag: Proses 200 part istirahat sekejap biar gak FPS Drop
+        if i % 200 == 0 then task.wait() end 
+    end
+end
+
+-- Pantau part baru yang muncul (StreamingEnabled Safe)
 workspace.DescendantAdded:Connect(function(v)
-    if _G.FlatActive then
-        task.wait(0.1) -- Kasih waktu part load bentar
-        SikatPart(v)
+    if _G.FlatColorActive then
+        task.wait(0.1) -- Kasih waktu part load
+        SikatHabisTekstur(v)
     end
 end)
 
--- [[ UI KHUSUS UJI COBA ]] --
-if PlayerGui:FindFirstChild("GURITA_V38") then PlayerGui.GURITA_V38:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V38"
+-- JALANKAN OTOMATIS SAAT EXECUTE
+task.spawn(RunFlatEffect)
+
+-- [[ 5. MINIMALIST UI (UNTUK ON/OFF) ]] --
+if PlayerGui:FindFirstChild("Gurita_FlatColor") then PlayerGui.Gurita_FlatColor:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "Gurita_FlatColor"
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 100); Main.Position = UDim2.new(0.5, -100, 0.5, -50)
+Main.Size = UDim2.new(0, 180, 0, 90); Main.Position = UDim2.new(0.5, -90, 0.5, -45)
 Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
 local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0.9, 0, 0, 60); Btn.Position = UDim2.new(0.05, 0, 0.2, 0)
-Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); Btn.Text = "FLAT MAP: OFF"
-Btn.TextColor3 = Color3.new(1, 0, 0); Btn.Font = Enum.Font.GothamBold; Instance.new("UICorner", Btn)
+Btn.Size = UDim2.new(0.9, 0, 0, 50); Btn.Position = UDim2.new(0.05, 0, 0.22, 0)
+Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 14
+Instance.new("UICorner", Btn)
 
-Btn.MouseButton1Click:Connect(function()
-    _G.FlatActive = not _G.FlatActive
-    if _G.FlatActive then
+-- Fungsi Update Tampilan Tombol
+local function UpdateBtn()
+    if _G.FlatColorActive then
         Btn.Text = "FLAT MAP: ON"; Btn.TextColor3 = Color3.new(0, 1, 0)
-        task.spawn(RunFlatColor) -- Jalankan proses nyisir map
     else
         Btn.Text = "FLAT MAP: OFF"; Btn.TextColor3 = Color3.new(1, 0, 0)
+    end
+end
+UpdateBtn() -- Set awal
+
+Btn.MouseButton1Click:Connect(function()
+    _G.FlatColorActive = not _G.FlatColorActive
+    UpdateBtn()
+    if _G.FlatColorActive then
+        task.spawn(RunFlatEffect) -- Jalankan ulang kalau di-ON kan
     end
 end)
