@@ -1,45 +1,44 @@
--- [[ GURITA HUB: GLOBAL MATERIAL NUKE ]] --
--- Sifat: AUTO-ON, NO UI, NO LAG, NO TEXTURE
+-- [[ GURITA HUB: FINAL AUTO-EXECUTE (ULTRA OPTIMIZED) ]] --
+-- Perintah Khusus: Anti-Lag, Auto-On, Flat Color, Hunt Egg
 
-local Players = game:GetService("Players")
-local MaterialService = game:GetService("MaterialService")
-local Lighting = game:GetService("Lighting")
-
--- [[ 1. NUKE MATERIAL SERVICE ]] --
--- Ini kuncinya: Matikan semua pengganti material buatan developer gamenya
+-- [[ 1. ANTI-LAG BOOSTER (EXECUTOR OPTIMIZATION) ]] --
 pcall(function()
-    MaterialService.Use2022Materials = false
-    -- Kosongkan semua override material global jika ada
-    for _, v in pairs(MaterialService:GetChildren()) do
-        if v:IsA("TerrainDetail") or v:IsA("MaterialVariant") then
-            v:Destroy()
-        end
-    end
+    if setfpscap then setfpscap(60) end -- Stabilkan FPS
+    settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 -- Paksa render terendah biar enteng
 end)
 
--- [[ 2. FUNGSI PEMBERSIH TOTAL ]] --
-local function ForceFlat(v)
-    -- PROTEKSI KARAKTER (Ava Bang Ezra & Player)
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local PlayerGui = lp:WaitForChild("PlayerGui")
+local StarterGui = game:GetService("StarterGui")
+
+-- [[ 2. CONFIG & AUTO-ON SETTINGS ]] --
+local TargetEggs = {
+    "hydra bunny", "noo my eggs", "baskito", "churrito", 
+    "quackini", "snackini", "bunny bunny sahur"
+}
+
+local NotifiedEggs = {} 
+_G.FlatActive = true    
+_G.HuntEggActive = true 
+_G.HuntNotif = true    
+
+-- [[ 3. ENGINE FLAT COLOR (V38 RE-LOGIC - NO LAG) ]] --
+local function SikatPart(v)
+    if v:IsDescendantOf(PlayerGui) then return end
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Paksa ke material paling dasar
-            v.Material = Enum.Material.Plastic
+            v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
-            
-            -- Sikat Tekstur Mesh
-            if v:IsA("MeshPart") then
-                v.TextureID = ""
-            end
-            
-            -- Sikat SurfaceAppearance (Penyebab map gak mau polos)
+            if v:IsA("MeshPart") then v.TextureID = "" end
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
-            
         elseif v:IsA("Decal") or v:IsA("Texture") then
             v:Destroy()
         elseif v:IsA("SpecialMesh") then
@@ -48,34 +47,100 @@ local function ForceFlat(v)
     end)
 end
 
--- [[ 3. AUTOMATION (AUTO-RUN) ]] --
-
--- Eksekusi awal (Nyapu map yang sudah ke-load)
-task.spawn(function()
+-- Fungsi nyisir map dengan jeda extra biar gak lag
+local function RunFlatColor()
     local all = workspace:GetDescendants()
-    for i, v in pairs(all) do
-        ForceFlat(v)
-        -- Jeda tipis biar gak lag di map berat
-        if i % 150 == 0 then task.wait() end
-    end
-end)
-
--- Pantau part baru (Penting buat map yang luas/streaming)
-workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.1)
-    ForceFlat(v)
-end)
-
--- [[ 4. LIGHTING OVERRIDE (BIAR MAKIN FLAT) ]] --
-task.spawn(function()
-    Lighting.GlobalShadows = false
-    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-    Lighting.Brightness = 2
-    for _, effect in pairs(Lighting:GetChildren()) do
-        if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Clouds") then
-            effect:Destroy()
+    local count = 0
+    for _, v in pairs(all) do
+        if not _G.FlatActive then break end
+        SikatPart(v)
+        count = count + 1
+        if count >= 50 then -- Tiap 50 part istirahat, biar executor napas
+            count = 0
+            task.wait() 
         end
     end
+end
+
+-- [[ 4. ENGINE HUNT EGG & ESP ]] --
+local function ApplyHuntESP(obj)
+    if obj:FindFirstChild("HuntMarker") then obj.HuntMarker:Destroy() end
+    if obj:FindFirstChild("HuntTag") then obj.HuntTag:Destroy() end
+
+    local h = Instance.new("Highlight", obj)
+    h.Name = "HuntMarker"; h.FillColor = Color3.fromRGB(255, 255, 0); h.FillTransparency = 0.4
+    
+    local b = Instance.new("BillboardGui", obj)
+    b.Name = "HuntTag"; b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
+    
+    local t = Instance.new("TextLabel", b)
+    t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0); t.Font = Enum.Font.GothamBlack; t.TextSize = 14; t.TextStrokeTransparency = 0
+
+    task.spawn(function()
+        while obj and obj.Parent and _G.HuntEggActive do
+            if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                t.Text = "✨ " .. obj.Name:upper() .. " ✨\n[" .. math.floor((obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude) .. "m]"
+            end
+            task.wait(0.5)
+        end
+        if b then b:Destroy() end; if h then h:Destroy() end
+    end)
+end
+
+local function ScanHunt()
+    local all = workspace:GetDescendants()
+    for i, v in pairs(all) do
+        local name = v.Name:lower()
+        if table.find(TargetEggs, name) then
+            if _G.HuntEggActive then ApplyHuntESP(v) end
+            if _G.HuntNotif and not NotifiedEggs[v] then
+                NotifiedEggs[v] = true
+                StarterGui:SetCore("SendNotification", {Title = "🥚 EGG FOUND!", Text = v.Name:upper(), Duration = 5})
+                local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
+                v.AncestryChanged:Connect(function(_, p) if not p then NotifiedEggs[v] = nil end end)
+            end
+        end
+        if i % 150 == 0 then task.wait() end -- Scan telor juga dibikin enteng
+    end
+end
+
+-- [[ 5. RUNTIME & AUTO-EXECUTE ]] --
+workspace.DescendantAdded:Connect(function(v)
+    if _G.FlatActive then task.wait(0.1); SikatPart(v) end
+    if table.find(TargetEggs, v.Name:lower()) then
+        if _G.HuntEggActive then ApplyHuntESP(v) end
+    end
 end)
 
-print("Gurita Hub: Global Nuke Active. Map should be Flat now!")
+-- Langsung Eksekusi Begitu Inject
+task.spawn(RunFlatColor)
+task.spawn(function()
+    while true do
+        if _G.HuntEggActive then ScanHunt() end
+        task.wait(10)
+    end
+end)
+
+-- [[ 6. MINIMALIST UI CONTROL ]] --
+if PlayerGui:FindFirstChild("GURITA_FINAL_FIX") then PlayerGui.GURITA_FINAL_FIX:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_FINAL_FIX"
+
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 200, 0, 150); Main.Position = UDim2.new(0.5, -100, 0.5, -75)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Active = true; Main.Draggable = true; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
+
+local function CreateBtn(pos, text, func)
+    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 40); b.Position = UDim2.new(0.05, 0, pos, 0); b.BackgroundColor3 = Color3.fromRGB(30, 30, 30); b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 11; Instance.new("UICorner", b); b.Text = text
+    b.MouseButton1Click:Connect(func); return b
+end
+
+local BtnFlat = CreateBtn(0.2, "FLAT MAP: ON", function() _G.FlatActive = not _G.FlatActive; task.spawn(RunFlatColor) end)
+local BtnHunt = CreateBtn(0.55, "EGG HUNT: ON", function() _G.HuntEggActive = not _G.HuntEggActive; task.spawn(ScanHunt) end)
+
+task.spawn(function()
+    while true do
+        BtnFlat.Text = "FLAT MAP: " .. (_G.FlatActive and "ON" or "OFF"); BtnFlat.TextColor3 = _G.FlatActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        BtnHunt.Text = "EGG HUNT: " .. (_G.HuntEggActive and "ON" or "OFF"); BtnHunt.TextColor3 = _G.HuntEggActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        task.wait(0.5)
+    end
+end)
