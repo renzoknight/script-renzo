@@ -1,84 +1,110 @@
--- [[ GURITA HUB V6.4.29 - UPDATED EGG LIST ]] --
+-- [[ GURITA HUB: EGG HUNT & ESP - FULL AUTO ]] --
+-- Fitur: Auto Scan, HighLight ESP, Distance Tag, Sound Notif
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
-local CG = game:GetService("CoreGui")
-local TweenService = game:GetService("TweenService")
+local StarterGui = game:GetService("StarterGui")
 
--- 1. CONFIG & TARGETS (TELITI: BUNNY SAHUR ADDED)
-local AllowedEggs = {
-    "hydra bunny", 
-    "noo my eggs", 
-    "baskito", 
-    "churrito", 
-    "quackini snackini", 
-    "hopilikalika hopilikalako",
-    "bunny sahur" -- Tambahan Telur Baru
+-- [[ 1. CONFIG TELOR TARGET ]] --
+local TargetEggs = {
+    "hydra bunny", "noo my eggs", "baskito", "churrito", 
+    "quackini", "snackini", "bunny bunny sahur"
 }
 
-_G.GH_Config = {
-    ESP_Player_GH = false,
-    AutoCollect_GH = false,
-    ESP_Egg_GH = false
-}
+local NotifiedEggs = {} 
 
--- [[ 2. AUTO FLAT COLOR ENGINE (OTOMATIS AKTIF) ]] --
-local function ApplyFlat(v)
-    pcall(function()
-        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") and not v:IsDescendantOf(lp.Character) then
-            v.Material = Enum.Material.Plastic
-            v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, child in pairs(v:GetChildren()) do 
-                if child:IsA("Texture") or child:IsA("Decal") then child:Destroy() end 
+-- [[ 2. FUNGSI PASANG ESP (HIGHLIGHT & JARAK) ]] --
+local function ApplyHuntESP(obj)
+    -- Bersihkan jika sudah ada tanda lama
+    if obj:FindFirstChild("HuntMarker") then obj.HuntMarker:Destroy() end
+    if obj:FindFirstChild("HuntTag") then obj.HuntTag:Destroy() end
+
+    -- Efek Glow Kuning
+    local h = Instance.new("Highlight", obj)
+    h.Name = "HuntMarker"
+    h.FillColor = Color3.fromRGB(255, 255, 0)
+    h.FillTransparency = 0.4
+    h.OutlineColor = Color3.fromRGB(255, 255, 255)
+    
+    -- Label Jarak di Atas Telor
+    local b = Instance.new("BillboardGui", obj)
+    b.Name = "HuntTag"
+    b.Size = UDim2.new(0, 150, 0, 50)
+    b.AlwaysOnTop = true
+    b.ExtentsOffset = Vector3.new(0, 3, 0)
+    
+    local t = Instance.new("TextLabel", b)
+    t.Size = UDim2.new(1, 0, 1, 0)
+    t.BackgroundTransparency = 1
+    t.TextColor3 = Color3.new(1, 1, 0)
+    t.Font = Enum.Font.GothamBlack
+    t.TextSize = 14
+    t.TextStrokeTransparency = 0
+
+    -- Update Jarak secara Real-time
+    task.spawn(function()
+        while obj and obj.Parent do
+            if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = math.floor((obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude)
+                t.Text = "✨ " .. obj.Name:upper() .. " ✨\n[" .. dist .. "m]"
             end
+            task.wait(0.5)
         end
     end)
 end
 
--- [[ 3. ESP ENGINE ]] --
-local function CreateESP(obj, text, color)
-    if not obj:FindFirstChild("GHS_ESP") then
-        local h = Instance.new("Highlight", obj); h.Name = "GHS_ESP"; h.FillColor = color; h.OutlineColor = Color3.new(1, 1, 1); h.FillTransparency = 0.5
-        local b = Instance.new("BillboardGui", obj); b.Name = "GHS_Tag"; b.Size = UDim2.new(0, 100, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
-        local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.Text = text; t.TextColor3 = color; t.Font = Enum.Font.GothamBold; t.TextSize = 14
+-- [[ 3. ENGINE SCANNER ]] --
+local function ScanEggs()
+    local all = workspace:GetDescendants()
+    for i, v in pairs(all) do
+        local name = v.Name:lower()
+        if table.find(TargetEggs, name) then
+            -- Pasang ESP
+            ApplyHuntESP(v)
+            
+            -- Kasih Notifikasi & Suara (Hanya jika baru ketemu)
+            if not NotifiedEggs[v] then
+                NotifiedEggs[v] = true
+                StarterGui:SetCore("SendNotification", {
+                    Title = "🥚 EGG FOUND!",
+                    Text = "Ketemu: " .. v.Name:upper(),
+                    Duration = 5
+                })
+                
+                -- Bunyi Notif
+                local s = Instance.new("Sound", game:GetService("SoundService"))
+                s.SoundId = "rbxassetid://4590662762"
+                s:Play()
+                
+                -- Reset data kalau telornya diambil/hilang
+                v.AncestryChanged:Connect(function(_, p)
+                    if not p then NotifiedEggs[v] = nil end
+                end)
+            end
+        end
+        -- Jeda scan biar nggak lag
+        if i % 150 == 0 then task.wait() end 
     end
 end
 
-local function UpdateESP()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            if _G.GH_Config.ESP_Player_GH then CreateESP(p.Character, p.Name, Color3.fromRGB(0, 255, 255)) 
-            elseif p.Character:FindFirstChild("GHS_ESP") then p.Character.GHS_ESP:Destroy(); p.Character.GHS_Tag:Destroy() end
-        end
-    end
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and table.find(AllowedEggs, v.Name:lower()) then
-            if _G.GH_Config.ESP_Egg_GH then CreateESP(v, v.Name, Color3.fromRGB(255, 255, 0)) 
-            elseif v:FindFirstChild("GHS_ESP") then v.GHS_ESP:Destroy(); v.GHS_Tag:Destroy() end
-        end
-    end
-end
+-- [[ 4. RUNTIME (AUTO EXECUTE) ]] --
+-- Scan saat baru inject
+task.spawn(ScanEggs)
 
--- [[ 4. UI GURITA HUB (SIDEBAR RESTORED) ]] --
-if CG:FindFirstChild("GHS_MainUI") then CG.GHS_MainUI:Destroy() end
-local SG = Instance.new("ScreenGui", CG); SG.Name = "GHS_MainUI"
-
-local LogoBtn = Instance.new("TextButton", SG)
-LogoBtn.Size = UDim2.new(0, 65, 0, 65); LogoBtn.Position = UDim2.new(0, 15, 0.3, 0); LogoBtn.BackgroundColor3 = Color3.new(0, 0, 0); LogoBtn.Text = "G H"; LogoBtn.TextColor3 = Color3.new(1, 1, 1); LogoBtn.Font = Enum.Font.GothamBlack; LogoBtn.TextSize = 22; LogoBtn.Draggable = true; LogoBtn.Active = true
-Instance.new("UICorner", LogoBtn); local LogoStroke = Instance.new("UIStroke", LogoBtn); LogoStroke.Thickness = 4
-
+-- Scan setiap 10 detik (buat telor yang baru spawn)
 task.spawn(function()
-    local colors = {Color3.fromRGB(0, 150, 255), Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 220, 0), Color3.fromRGB(160, 32, 240)}
-    local i = 1
     while true do
-        TweenService:Create(LogoStroke, TweenInfo.new(1.5), {Color = colors[i]}):Play()
-        task.wait(2); i = (i % #colors) + 1
+        ScanEggs()
+        task.wait(10)
     end
 end)
 
-local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 440, 0, 260); Main.Position = UDim2.new(0.5, -220, 0.5, -130); Main.BackgroundColor3 = Color3.new(0,0,0); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
-LogoBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+-- Pantau part baru yang masuk ke workspace (StreamingEnabled Safe)
+workspace.DescendantAdded:Connect(function(v)
+    if table.find(TargetEggs, v.Name:lower()) then
+        task.wait(0.5) -- Tunggu part ke-load sempurna
+        ApplyHuntESP(v)
+    end
+end)
 
-local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 130, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(5, 5, 10); Instance.new("UICorner", Sidebar); local SL = Instance.new("UIListLayout", Sidebar); SL.HorizontalAlignment = Enum.HorizontalAlignment.Center; SL.Padding = UDim.new(0, 5)
-local Pages = Instance.new("Frame", Main);
+print("GURITA HUB: Egg Hunt & ESP Active!")
