@@ -1,110 +1,151 @@
--- [[ GURITA HUB V9 - PURE EGG & HARP ONLY ]] --
-
+-- [[ GURITA HUB V21 - ANTI SPAM & NO FOG FIX ]] --
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 
 _G.HuntingMode = false
+_G.NotifActive = true
 
--- DAFTAR TARGET MURNI (KHUSUS TELUR & HARP)
-local ValidTargets = {"egg", "bunny", "hydra", "harp", "baskito", "churrito", "hopili", "quackini", "snackini"}
--- DAFTAR BLACKLIST (YANG HARUS DIHAPUS/DIABAIKAN)
-local Blacklist = {"brainrot", "npc", "base", "pedestal", "shop"}
+-- Tabel buat nyatet target mana aja yang SUDAH dapet notif
+local NotifHistory = {}
 
-local function IsValidEgg(name)
-    local n = name:lower()
-    -- Cek apakah ada di blacklist
-    for _, b in pairs(Blacklist) do
-        if n:find(b) then return false end
-    end
-    -- Cek apakah ada di target egg
-    for _, t in pairs(ValidTargets) do
-        if n:find(t) then return true end
-    end
+local SuperRare = {
+    "hydra bunny", "no my egg", "baskito", 
+    "churrito bunnito", "hopilikalika", "quackini"
+}
+local NormalTargets = {"bunny bunny sahur", "sky egg", "bunny egg"}
+local Blacklist = {"brainrot", "npc", "base", "shop", "harp"}
+
+local function PlayAlert()
+    if not _G.NotifActive then return end
+    local s = Instance.new("Sound", workspace)
+    s.SoundId = "rbxassetid://4590662766"
+    s.Volume = 1; s:Play()
+    s.Ended:Connect(function() s:Destroy() end)
+end
+
+local function KirimNotifRare(obj)
+    -- CEK ANTI-SPAM: Kalau objek ini sudah pernah dapet notif, jangan kirim lagi.
+    if NotifHistory[obj] then return end
+    
+    if not _G.NotifActive then return end
+    
+    -- Tandai kalau objek ini sudah kirim notif
+    NotifHistory[obj] = true 
+    
+    local col = Color3.new(1, 0, 0)
+    local sg = Instance.new("ScreenGui", PlayerGui)
+    local f = Instance.new("Frame", sg)
+    f.Size = UDim2.new(0, 280, 0, 70); f.Position = UDim2.new(1, 50, 0.8, 0)
+    f.BackgroundColor3 = Color3.fromRGB(10, 10, 10); f.BorderSizePixel = 0
+    Instance.new("UICorner", f)
+    
+    local line = Instance.new("Frame", f)
+    line.Size = UDim2.new(0, 5, 1, 0); line.BackgroundColor3 = col; line.BorderSizePixel = 0
+    Instance.new("UICorner", line)
+
+    local t1 = Instance.new("TextLabel", f)
+    t1.Size = UDim2.new(0, 200, 0, 20); t1.Position = UDim2.new(0, 50, 0.25, 0)
+    t1.Text = "RARE TARGET DETECTED!"; t1.TextColor3 = Color3.new(1, 1, 1)
+    t1.Font = Enum.Font.GothamBold; t1.TextSize = 13; t1.BackgroundTransparency = 1; t1.TextXAlignment = "Left"
+
+    local t2 = Instance.new("TextLabel", f)
+    t2.Size = UDim2.new(0, 200, 0, 20); t2.Position = UDim2.new(0, 50, 0.55, 0)
+    t2.Text = "New: " .. obj.Name:upper(); t2.TextColor3 = col
+    t2.Font = Enum.Font.GothamBold; t2.TextSize = 15; t2.BackgroundTransparency = 1; t2.TextXAlignment = "Left"
+
+    PlayAlert()
+    f:TweenPosition(UDim2.new(1, -300, 0.8, 0), "Out", "Quart", 0.5)
+    task.delay(5, function()
+        f:TweenPosition(UDim2.new(1, 50, 0.8, 0), "In", "Quart", 0.5)
+        task.wait(0.6); sg:Destroy()
+    end)
+end
+
+local function CekTarget(n)
+    n = n:lower()
+    for _, b in pairs(Blacklist) do if n:find(b) then return false end end
+    for _, r in pairs(SuperRare) do if n:find(r) then return "rare" end end
+    for _, e in pairs(NormalTargets) do if n:find(e) then return "normal" end end
     return false
 end
 
-local function PasangESP(obj)
+local function ApplyESP(obj)
     if obj:FindFirstChild("GuritaMarker") then return end
-    
     pcall(function()
-        -- FILTER: Hanya di Sky/Island (Ketinggian > 100)
         local pos = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
         if pos.Y < 100 then return end
-        
-        -- HIGHLIGHT (Merah buat HARP/HYDRA, Biru buat Telur Biasa)
-        local h = Instance.new("Highlight", obj)
-        h.Name = "GuritaMarker"
-        if obj.Name:lower():find("harp") or obj.Name:lower():find("hydra") then
-            h.FillColor = Color3.new(1, 0, 0) -- Merah (PENTING!)
-        else
-            h.FillColor = Color3.fromRGB(0, 170, 255) -- Biru (Telur Biasa)
-        end
-        h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 
-        -- LABEL
+        local tipe = CekTarget(obj.Name)
+        if not tipe then return end
+
+        local col = (tipe == "rare") and Color3.new(1, 0, 0) or Color3.fromRGB(0, 170, 255)
+        
+        -- Hanya notif kalau RARE dan BELUM PERNAH notif
+        if tipe == "rare" then 
+            KirimNotifRare(obj) 
+        end
+
+        local h = Instance.new("Highlight", obj)
+        h.Name = "GuritaMarker"; h.FillColor = col; h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        
         local b = Instance.new("BillboardGui", obj)
         b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 8, 0)
-        
         local t = Instance.new("TextLabel", b)
-        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = h.FillColor
-        t.Font = Enum.Font.GothamBlack; t.TextSize = 20; t.TextStrokeTransparency = 0
+        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = col
+        t.Font = Enum.Font.GothamBlack; t.TextSize = 18; t.TextStrokeTransparency = 0
         
         task.spawn(function()
             while obj and obj.Parent and _G.HuntingMode do
                 local p = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
-                local d = math.floor((lp.Character.HumanoidRootPart.Position - p).Magnitude)
-                t.Text = obj.Name:upper() .. "\n[" .. d .. " STUDS]"
+                local dist = math.floor((lp.Character.HumanoidRootPart.Position - p).Magnitude)
+                t.Text = obj.Name:upper() .. "\n[" .. dist .. "s]"
                 task.wait(1)
             end
-            if h then h:Destroy() end
-            if b then b:Destroy() end
+            if h then h:Destroy() end; if b then b:Destroy() end
+            NotifHistory[obj] = nil -- Bersihkan history kalau objek hilang
         end)
     end)
 end
 
--- UI MENU RAKSASA
+-- UI
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
 local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false
-
 local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 90, 0, 90); Toggle.Position = UDim2.new(0, 20, 0.4, 0)
+Toggle.Size = UDim2.new(0, 80, 0, 80); Toggle.Position = UDim2.new(0, 20, 0.4, 0)
 Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255); Toggle.Text = "G"; Toggle.TextColor3 = Color3.new(1, 1, 1)
-Toggle.Font = Enum.Font.GothamBlack; Toggle.TextSize = 45; Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 20)
+Toggle.Font = Enum.Font.GothamBlack; Toggle.TextSize = 40; Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 20)
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 320, 0, 240); Main.Position = UDim2.new(0.5, -160, 0.5, -120)
+Main.Size = UDim2.new(0, 320, 0, 280); Main.Position = UDim2.new(0.5, -160, 0.5, -140)
 Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Main.Visible = false; Instance.new("UICorner", Main)
 
-local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0, 280, 0, 100); Btn.Position = UDim2.new(0, 20, 0, 70)
-Btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0); Btn.Text = "HUNTING MODE: OFF"; Btn.Font = Enum.Font.GothamBold
-Btn.TextColor3 = Color3.new(1, 1, 1); Btn.TextSize = 22; Instance.new("UICorner", Btn)
+local BtnHunt = Instance.new("TextButton", Main)
+BtnHunt.Size = UDim2.new(0, 280, 0, 80); BtnHunt.Position = UDim2.new(0, 20, 0, 40)
+BtnHunt.BackgroundColor3 = Color3.fromRGB(150, 0, 0); BtnHunt.Text = "HUNTING MODE: OFF"; BtnHunt.Font = Enum.Font.GothamBold; BtnHunt.TextColor3 = Color3.new(1, 1, 1); BtnHunt.TextSize = 20; Instance.new("UICorner", BtnHunt)
+
+local BtnNotif = Instance.new("TextButton", Main)
+BtnNotif.Size = UDim2.new(0, 280, 0, 80); BtnNotif.Position = UDim2.new(0, 20, 0, 150)
+BtnNotif.BackgroundColor3 = Color3.fromRGB(0, 120, 200); BtnNotif.Text = "NOTIF & SOUND: ON"; BtnNotif.Font = Enum.Font.GothamBold; BtnNotif.TextColor3 = Color3.new(1, 1, 1); BtnNotif.TextSize = 20; Instance.new("UICorner", BtnNotif)
 
 Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
 
-Btn.MouseButton1Down:Connect(function()
+BtnHunt.MouseButton1Down:Connect(function()
     _G.HuntingMode = not _G.HuntingMode
     if _G.HuntingMode then
-        Btn.Text = "HUNTING MODE: ON\n(PURE EGGS)"; Btn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-        for _, v in pairs(workspace:GetDescendants()) do
-            if IsValidEgg(v.Name) then PasangESP(v) end
-        end
+        BtnHunt.Text = "HUNTING MODE: ON"; BtnHunt.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        for _, v in pairs(workspace:GetDescendants()) do if CekTarget(v.Name) then ApplyESP(v) end end
     else
-        Btn.Text = "HUNTING MODE: OFF"; Btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        BtnHunt.Text = "HUNTING MODE: OFF"; BtnHunt.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        NotifHistory = {} -- Reset history saat OFF
     end
 end)
 
--- AUTO FLAT COLOR
-task.spawn(function()
-    settings().Rendering.QualityLevel = 1
-    game:GetService("Lighting").GlobalShadows = false
-    pcall(function()
-        local ms = game:GetService("MaterialService")
-        ms.Use2022Materials = false
-        for _, v in pairs(ms:GetChildren()) do v:Destroy() end
-    end)
+BtnNotif.MouseButton1Down:Connect(function()
+    _G.NotifActive = not _G.NotifActive
+    BtnNotif.Text = _G.NotifActive and "NOTIF & SOUND: ON" or "NOTIF & SOUND: OFF"
+    BtnNotif.BackgroundColor3 = _G.NotifActive and Color3.fromRGB(0, 120, 200) or Color3.fromRGB(80, 80, 80)
 end)
 
 workspace.DescendantAdded:Connect(function(v)
-    if _G.HuntingMode and IsValidEgg(v.Name) then task.wait(2); PasangESP(v) end
+    if _G.HuntingMode and CekTarget(v.Name) then task.wait(2); ApplyESP(v) end
 end)
