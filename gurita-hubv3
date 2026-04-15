@@ -1,110 +1,105 @@
--- [[ GURITA HUB: EGG HUNT & ESP - FULL AUTO ]] --
--- Fitur: Auto Scan, HighLight ESP, Distance Tag, Sound Notif
+-- [[ GURITA HUB: EGG HUNT & ESP (MENU EDITION) ]] --
+-- Fitur: Auto Scan, HighLight ESP, Distance Tag, Minimalist UI
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
+local PlayerGui = lp:WaitForChild("PlayerGui")
 local StarterGui = game:GetService("StarterGui")
 
--- [[ 1. CONFIG TELOR TARGET ]] --
+-- [[ 1. CONFIG & TOGGLE ]] --
+_G.HuntEggActive = true -- Default langsung ON pas inject
 local TargetEggs = {
     "hydra bunny", "noo my eggs", "baskito", "churrito", 
     "quackini", "snackini", "bunny bunny sahur"
 }
-
 local NotifiedEggs = {} 
 
--- [[ 2. FUNGSI PASANG ESP (HIGHLIGHT & JARAK) ]] --
+-- [[ 2. ENGINE ESP (DIBUAT OTOMATIS) ]] --
 local function ApplyHuntESP(obj)
-    -- Bersihkan jika sudah ada tanda lama
     if obj:FindFirstChild("HuntMarker") then obj.HuntMarker:Destroy() end
     if obj:FindFirstChild("HuntTag") then obj.HuntTag:Destroy() end
 
-    -- Efek Glow Kuning
     local h = Instance.new("Highlight", obj)
-    h.Name = "HuntMarker"
-    h.FillColor = Color3.fromRGB(255, 255, 0)
-    h.FillTransparency = 0.4
-    h.OutlineColor = Color3.fromRGB(255, 255, 255)
+    h.Name = "HuntMarker"; h.FillColor = Color3.fromRGB(255, 255, 0); h.FillTransparency = 0.4
     
-    -- Label Jarak di Atas Telor
     local b = Instance.new("BillboardGui", obj)
-    b.Name = "HuntTag"
-    b.Size = UDim2.new(0, 150, 0, 50)
-    b.AlwaysOnTop = true
-    b.ExtentsOffset = Vector3.new(0, 3, 0)
+    b.Name = "HuntTag"; b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
     
     local t = Instance.new("TextLabel", b)
-    t.Size = UDim2.new(1, 0, 1, 0)
-    t.BackgroundTransparency = 1
-    t.TextColor3 = Color3.new(1, 1, 0)
-    t.Font = Enum.Font.GothamBlack
-    t.TextSize = 14
-    t.TextStrokeTransparency = 0
+    t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0); t.Font = Enum.Font.GothamBlack; t.TextSize = 14; t.TextStrokeTransparency = 0
 
-    -- Update Jarak secara Real-time
     task.spawn(function()
-        while obj and obj.Parent do
+        while obj and obj.Parent and _G.HuntEggActive do
             if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
                 local dist = math.floor((obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude)
                 t.Text = "✨ " .. obj.Name:upper() .. " ✨\n[" .. dist .. "m]"
             end
             task.wait(0.5)
         end
+        if b then b:Destroy() end; if h then h:Destroy() end
     end)
 end
 
--- [[ 3. ENGINE SCANNER ]] --
-local function ScanEggs()
+local function ScanHunt()
+    if not _G.HuntEggActive then return end
     local all = workspace:GetDescendants()
     for i, v in pairs(all) do
         local name = v.Name:lower()
         if table.find(TargetEggs, name) then
-            -- Pasang ESP
             ApplyHuntESP(v)
-            
-            -- Kasih Notifikasi & Suara (Hanya jika baru ketemu)
             if not NotifiedEggs[v] then
                 NotifiedEggs[v] = true
-                StarterGui:SetCore("SendNotification", {
-                    Title = "🥚 EGG FOUND!",
-                    Text = "Ketemu: " .. v.Name:upper(),
-                    Duration = 5
-                })
-                
-                -- Bunyi Notif
-                local s = Instance.new("Sound", game:GetService("SoundService"))
-                s.SoundId = "rbxassetid://4590662762"
-                s:Play()
-                
-                -- Reset data kalau telornya diambil/hilang
-                v.AncestryChanged:Connect(function(_, p)
-                    if not p then NotifiedEggs[v] = nil end
-                end)
+                StarterGui:SetCore("SendNotification", {Title = "🥚 EGG FOUND!", Text = v.Name:upper(), Duration = 5})
+                local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
+                v.AncestryChanged:Connect(function(_, p) if not p then NotifiedEggs[v] = nil end end)
             end
         end
-        -- Jeda scan biar nggak lag
         if i % 150 == 0 then task.wait() end 
     end
 end
 
--- [[ 4. RUNTIME (AUTO EXECUTE) ]] --
--- Scan saat baru inject
-task.spawn(ScanEggs)
-
--- Scan setiap 10 detik (buat telor yang baru spawn)
-task.spawn(function()
-    while true do
-        ScanEggs()
-        task.wait(10)
-    end
-end)
-
--- Pantau part baru yang masuk ke workspace (StreamingEnabled Safe)
+-- [[ 3. RUNTIME LOOP ]] --
 workspace.DescendantAdded:Connect(function(v)
-    if table.find(TargetEggs, v.Name:lower()) then
-        task.wait(0.5) -- Tunggu part ke-load sempurna
+    if _G.HuntEggActive and table.find(TargetEggs, v.Name:lower()) then
+        task.wait(0.5)
         ApplyHuntESP(v)
     end
 end)
 
-print("GURITA HUB: Egg Hunt & ESP Active!")
+task.spawn(function()
+    while true do
+        if _G.HuntEggActive then ScanHunt() end
+        task.wait(10)
+    end
+end)
+
+-- [[ 4. MINIMALIST UI CONTROL ]] --
+if PlayerGui:FindFirstChild("GURITA_HUNT_UI") then PlayerGui.GURITA_HUNT_UI:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_HUNT_UI"
+
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 180, 0, 80); Main.Position = UDim2.new(0.5, -90, 0.5, -40)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Active = true; Main.Draggable = true
+Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 30); Title.BackgroundTransparency = 1; Title.TextColor3 = Color3.new(1, 1, 0)
+Title.Font = Enum.Font.GothamBold; Title.TextSize = 12; Title.Text = "GURITA HUB: EGG HUNT"
+
+local BtnHunt = Instance.new("TextButton", Main)
+BtnHunt.Size = UDim2.new(0.9, 0, 0, 35); BtnHunt.Position = UDim2.new(0.05, 0, 0.45, 0)
+BtnHunt.BackgroundColor3 = Color3.fromRGB(30, 30, 30); BtnHunt.Font = Enum.Font.GothamBold; BtnHunt.TextSize = 11; Instance.new("UICorner", BtnHunt)
+
+local function UpdateUI()
+    BtnHunt.Text = "AUTO HUNT: " .. (_G.HuntEggActive and "ON" or "OFF")
+    BtnHunt.TextColor3 = _G.HuntEggActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+end
+
+BtnHunt.MouseButton1Click:Connect(function()
+    _G.HuntEggActive = not _G.HuntEggActive
+    UpdateUI()
+    if _G.HuntEggActive then task.spawn(ScanHunt) end
+end)
+
+UpdateUI()
+task.spawn(ScanHunt) -- Langsung jalan pas inject
