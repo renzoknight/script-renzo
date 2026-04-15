@@ -1,4 +1,4 @@
--- [[ GURITA HUB: PREMIUM EDITION + AUTO-SAVE ]] --
+-- [[ GURITA HUB: V36 - TOTAL MAP FLAT (SAFE CHARACTER COLOR) ]] --
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -8,131 +8,99 @@ local HttpService = game:GetService("HttpService")
 
 -- [[ 1. CONFIG & SAVE SYSTEM ]] --
 local FileName = "GuritaHub_Config.json"
-local TargetEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini snackini", "hopilikalika hopilikalako", "bunny sahur"}
+local TargetEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini", "snackini", "bunny bunny sahur"}
+local NotifiedEggs = {} 
 
--- Default Settings
-_G.Settings = {
-    EggESP = false,
-    Notif = true
-}
+_G.Settings = { EggESP = false, Notif = true }
 
--- Fungsi Save ke Folder Executor
-local function SaveData()
-    if writefile then
-        local data = HttpService:JSONEncode(_G.Settings)
-        writefile(FileName, data)
+local function SaveData() if writefile then writefile(FileName, HttpService:JSONEncode(_G.Settings)) end end
+local function LoadData() if isfile and isfile(FileName) then pcall(function() _G.Settings = HttpService:JSONDecode(readfile(FileName)) end) end end
+LoadData()
+
+-- [[ 2. ULTRA FLAT COLOR (MAP ONLY) ]] --
+local function SikatMap(v)
+    -- PROTEKSI TOTAL: Cek apakah objek ini bagian dari karakter siapapun
+    for _, p in pairs(Players:GetPlayers()) do
+        if p.Character and v:IsDescendantOf(p.Character) then return end
     end
-end
+    
+    -- Abaikan UI
+    if v:IsDescendantOf(PlayerGui) or v:IsA("ScreenGui") then return end
 
--- Fungsi Load Data
-local function LoadData()
-    if isfile and isfile(FileName) then
-        local data = readfile(FileName)
-        _G.Settings = HttpService:JSONDecode(data)
-    end
-end
-
-LoadData() -- Jalankan load saat script di-start
-
--- [[ 2. ENGINE ESP & NOTIF ]] --
-local function ApplyUltimateESP(obj)
-    if not obj:FindFirstChild("Marker") then
-        local h = Instance.new("Highlight", obj)
-        h.Name = "Marker"; h.FillColor = Color3.fromRGB(255, 255, 0)
-        h.OutlineColor = Color3.new(1, 1, 1); h.FillTransparency = 0.4
-        
-        local b = Instance.new("BillboardGui", obj)
-        b.Name = "Tag"; b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
-        
-        local t = Instance.new("TextLabel", b)
-        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0)
-        t.Font = Enum.Font.GothamBlack; t.TextSize = 14; t.TextStrokeTransparency = 0; t.TextStrokeColor3 = Color3.new(0,0,0)
-
-        task.spawn(function()
-            while obj and obj.Parent and _G.Settings.EggESP do
-                if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                    local dist = (obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude
-                    t.Text = "✨ " .. obj.Name:upper() .. " ✨\n[" .. math.floor(dist) .. "m]"
-                end
-                task.wait(0.5)
-            end
-            if b then b:Destroy() end
-            if h then h:Destroy() end
-        end)
-    end
-end
-
--- [[ 3. AUTOMATION & FLAT COLOR ]] --
-local function SikatJadiFlat(v)
     pcall(function()
-        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
-            v.Material = Enum.Material.Plastic; v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end
+        if v:IsA("BasePart") then
+            v.Material = Enum.Material.SmoothPlastic
+            v.CastShadow = false
+            if v:IsA("MeshPart") then
+                v.TextureID = "" -- Hapus tekstur map
+            end
+        elseif v:IsA("Decal") or v:IsA("Texture") then
+            v:Destroy() -- Hapus stiker di tembok/lantai
         end
     end)
 end
 
 task.spawn(function()
     while true do
-        for i, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and v.Material ~= Enum.Material.Plastic then SikatJadiFlat(v) end
-            if _G.Settings.EggESP and table.find(TargetEggs, v.Name:lower()) then ApplyUltimateESP(v) end
-            if i % 200 == 0 then task.wait() end 
+        local all = workspace:GetDescendants()
+        for i, v in pairs(all) do
+            SikatMap(v)
+            if i % 300 == 0 then task.wait() end 
+        end
+        task.wait(10) -- Ulangi tiap 10 detik biar map tetep polos
+    end
+end)
+
+-- [[ 3. ENGINE ESP & NOTIF ]] --
+local function ApplyUltimateESP(obj)
+    if not obj:FindFirstChild("Marker") then
+        local h = Instance.new("Highlight", obj); h.Name = "Marker"; h.FillColor = Color3.fromRGB(255, 255, 0)
+        local b = Instance.new("BillboardGui", obj); b.Name = "Tag"; b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
+        local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0); t.Font = Enum.Font.GothamBlack; t.TextSize = 14
+        task.spawn(function()
+            while obj and obj.Parent and _G.Settings.EggESP do
+                if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                    t.Text = "✨ " .. obj.Name:upper() .. " ✨\n[" .. math.floor((obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude) .. "m]"
+                end
+                task.wait(0.5)
+            end
+            if b then b:Destroy() end; if h then h:Destroy() end
+        end)
+    end
+end
+
+task.spawn(function()
+    while true do
+        for _, v in pairs(workspace:GetDescendants()) do
+            local name = v.Name:lower()
+            if table.find(TargetEggs, name) then
+                if _G.Settings.EggESP then ApplyUltimateESP(v) end
+                if _G.Settings.Notif and not NotifiedEggs[v] then
+                    NotifiedEggs[v] = true
+                    StarterGui:SetCore("SendNotification", {Title = "🥚 EGG FOUND!", Text = v.Name:upper(), Duration = 5})
+                    local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
+                    v.AncestryChanged:Connect(function(_, p) if not p then NotifiedEggs[v] = nil end end)
+                end
+            end
         end
         task.wait(5)
     end
 end)
 
-workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.1)
-    SikatJadiFlat(v)
-    if table.find(TargetEggs, v.Name:lower()) then
-        if _G.Settings.Notif then
-            StarterGui:SetCore("SendNotification", {Title = "🥚 EGG SPAWNED!", Text = v.Name:upper(), Duration = 5})
-            local s = Instance.new("Sound", game:GetService("SoundService")); s.SoundId = "rbxassetid://4590662762"; s:Play()
-        end
-        if _G.Settings.EggESP then ApplyUltimateESP(v) end
-    end
-end)
-
--- [[ 4. UPGRADED UI ]] --
-if PlayerGui:FindFirstChild("GURITA_V4_SAVED") then PlayerGui.GURITA_V4_SAVED:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V4_SAVED"
-
-local Logo = Instance.new("TextButton", SG)
-Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
-Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "G H"; Logo.TextColor3 = Color3.new(1, 1, 0)
-Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 22; Logo.Draggable = true; Logo.Active = true
-Instance.new("UICorner", Logo); Instance.new("UIStroke", Logo).Thickness = 2; Logo.UIStroke.Color = Color3.new(1,1,0)
-
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 220, 0, 200); Main.Position = UDim2.new(0.5, -110, 0.5, -100)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main)
-Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
-
+-- [[ 4. UI CONSTRUCTION ]] --
+if PlayerGui:FindFirstChild("GURITA_V36") then PlayerGui.GURITA_V36:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V36"; SG.ResetOnSpawn = false
+local Logo = Instance.new("TextButton", SG); Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30); Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "G H"; Logo.TextColor3 = Color3.new(1, 1, 0); Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 22; Logo.Draggable = true; Logo.Active = true; Instance.new("UICorner", Logo); Instance.new("UIStroke", Logo).Color = Color3.new(1,1,0)
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 220, 0, 200); Main.Position = UDim2.new(0.5, -110, 0.5, -100); Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
-
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "GURITA HUB SAVER"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = Enum.Font.GothamBlack; Title.BackgroundTransparency = 1; Title.TextSize = 15
-
 local function CreateBtn(pos)
-    local b = Instance.new("TextButton", Main)
-    b.Size = UDim2.new(0.9, 0, 0, 50); b.Position = UDim2.new(0.05, 0, pos, 0)
-    b.BackgroundColor3 = Color3.fromRGB(25, 25, 25); b.Font = Enum.Font.GothamBold; b.TextSize = 13; Instance.new("UICorner", b)
-    return b
+    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 50); b.Position = UDim2.new(0.05, 0, pos, 0); b.BackgroundColor3 = Color3.fromRGB(25, 25, 25); b.Font = Enum.Font.GothamBold; b.TextSize = 13; Instance.new("UICorner", b); return b
 end
-
-local BtnESP = CreateBtn(0.3)
-local BtnNotif = CreateBtn(0.6)
-
+local BtnESP = CreateBtn(0.3); local BtnNotif = CreateBtn(0.6)
 local function Refresh()
     BtnESP.Text = _G.Settings.EggESP and "ESP EGG: ON" or "ESP EGG: OFF"; BtnESP.TextColor3 = _G.Settings.EggESP and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
     BtnNotif.Text = _G.Settings.Notif and "NOTIF: ON" or "NOTIF: OFF"; BtnNotif.TextColor3 = _G.Settings.Notif and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
 end
 Refresh()
-
-BtnESP.MouseButton1Click:Connect(function() 
-    _G.Settings.EggESP = not _G.Settings.EggESP; SaveData(); Refresh() 
-    if not _G.Settings.EggESP then for _, v in pairs(workspace:GetDescendants()) do if v.Name == "Marker" or v.Name == "Tag" then v:Destroy() end end end
-end)
+BtnESP.MouseButton1Click:Connect(function() _G.Settings.EggESP = not _G.Settings.EggESP; SaveData(); Refresh(); if not _G.Settings.EggESP then for _, v in pairs(workspace:GetDescendants()) do if v.Name == "Marker" or v.Name == "Tag" then v:Destroy() end end end end)
 BtnNotif.MouseButton1Click:Connect(function() _G.Settings.Notif = not _G.Settings.Notif; SaveData(); Refresh() end)
