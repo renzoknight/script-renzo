@@ -1,55 +1,64 @@
--- [[ GURITA HUB - ULTIMATE FLAT COLOR (FIXED) ]] --
--- Fokus: Warna Asli Tetap, Tekstur/Motif/Bayangan HILANG TOTAL
+-- [[ GURITA HUB - NIGHT FLAT EDITION (REDMI 10 SAFE) ]] --
+-- Fitur: Langit Malem Polos, No Awan, No Lag, Warna Map Tetap Asli
 
 local Lighting = game:GetService("Lighting")
 local MaterialService = game:GetService("MaterialService")
 
--- [[ 1. AUTO ANTI-LAG (SANGAT EKSTRIM) ]] --
-local function SikatHD()
+-- [[ 1. ANTI-LAG & SETTINGAN RENDERING ]] --
+pcall(function()
+    settings().Rendering.QualityLevel = 1
+    if setfpscap then setfpscap(45) end
+end)
+
+-- [[ 2. FIXED NIGHT POLOS (HAPUS AWAN TOTAL) ]] --
+local function SikatLangitJadiMalem()
     pcall(function()
-        settings().Rendering.QualityLevel = 1
-        if setfpscap then setfpscap(45) end
-        
-        -- Sikat Awan & Langit HD (Biang kerok makin HD)
+        -- Hapus semua efek langit (Awan, Atmosfer, Sky HD)
         for _, v in pairs(Lighting:GetChildren()) do
-            v:Destroy() 
+            v:Destroy()
         end
         
-        -- Paksa Langit Polos Tanpa Efek
+        -- Buat Langit Malem Polos
         local sky = Instance.new("Sky", Lighting)
-        sky.SunAngularSize, sky.MoonAngularSize, sky.StarCount = 0, 0, 0
+        sky.SkyboxBk = "rbxassetid://0" -- Hitam
+        sky.SkyboxDn = "rbxassetid://0"
+        sky.SkyboxFt = "rbxassetid://0"
+        sky.SkyboxLf = "rbxassetid://0"
+        sky.SkyboxRt = "rbxassetid://0"
+        sky.SkyboxUp = "rbxassetid://0"
+        sky.SunAngularSize = 0
+        sky.MoonAngularSize = 0
+        sky.StarCount = 0
         
-        -- Cahaya Rata (Biar gak mengkilap/Shadowless)
+        -- Setting Waktu Jadi Malem
+        Lighting.ClockTime = 0 -- Jam 12 malem
+        Lighting.Brightness = 1 -- Tetap ada cahaya biar map gak gelap gulita
         Lighting.GlobalShadows = false
-        Lighting.Brightness = 1
-        Lighting.Ambient = Color3.fromRGB(200, 200, 200)
-        Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+        Lighting.FogEnd = 9e9
         Lighting.EnvironmentDiffuseScale = 0
         Lighting.EnvironmentSpecularScale = 0
     end)
 end
 
--- [[ 2. LOGIKA FLAT POLOS (MURNI TANPA MOTIF) ]] --
+-- [[ 3. LOGIKA FLAT POLOS (MURNI TANPA MOTIF) ]] --
 local function BuatPolos(v)
     if v:IsDescendantOf(game.Players.LocalPlayer.Character or workspace) and v.Parent:FindFirstChild("Humanoid") then return end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- AMBIL WARNA ASLI, TAPI BUANG MATERIAL
-            local warnaAsli = v.Color
-            v.Material = Enum.Material.Plastic -- Plastic lebih polos dari SmoothPlastic di beberapa map
-            v.Color = warnaAsli
+            -- Jaga warna asli tapi material jadi Plastic (Paling Polos)
+            v.Material = Enum.Material.Plastic
             v.CastShadow = false
             v.Reflectance = 0
             
-            -- Sikat Tekstur/Decal/SurfaceAppearance
+            -- Sikat Tekstur/Motif
             for _, child in pairs(v:GetChildren()) do
                 if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") then
                     child:Destroy()
                 end
             end
             
-            -- Sikat Tekstur Mesh (Tembok Pembatas)
+            -- Sikat Tekstur Mesh (Biar Pembatas Polos)
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
@@ -59,10 +68,10 @@ local function BuatPolos(v)
     end)
 end
 
--- [[ 3. EKSEKUSI AUTO BERTAHAP (REDMI 10 SAFE) ]] --
+-- [[ 4. EKSEKUSI AUTO (BERTAHAP BIAR GAK PATAH-PATAH) ]] --
 task.spawn(function()
-    SikatHD()
-    -- Matikan sistem material baru Roblox
+    SikatLangitJadiMalem()
+    
     pcall(function()
         MaterialService.Use2022Materials = false
         for _, m in pairs(MaterialService:GetChildren()) do m:Destroy() end
@@ -71,17 +80,18 @@ task.spawn(function()
     local all = workspace:GetDescendants()
     for i, v in pairs(all) do
         BuatPolos(v)
-        -- Jeda biar gak lag pas loading
+        -- Jeda Redmi 10 (Sangat penting biar gak lag)
         if i % 20 == 0 then task.wait(0.01) end
     end
 end)
 
+-- Pantau part baru
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.5)
     BuatPolos(v)
 end)
 
--- [[ 4. MENU TULISAN BIRU ]] --
+-- [[ 5. MENU TULISAN BIRU ]] --
 local lp = game.Players.LocalPlayer
 local SG = Instance.new("ScreenGui", lp.PlayerGui); SG.Name = "GuritaHubUI"
 
@@ -90,4 +100,4 @@ OpenBtn.Size = UDim2.new(0, 150, 0, 50); OpenBtn.Position = UDim2.new(0, 20, 0.5
 OpenBtn.BackgroundTransparency = 1; OpenBtn.Text = "GURITA HUB"; OpenBtn.Font = Enum.Font.GothamBlack
 OpenBtn.TextColor3 = Color3.fromRGB(0, 170, 255); OpenBtn.TextSize = 20; OpenBtn.TextStrokeTransparency = 0.5
 
-print("GURITA HUB: Flat Color Sempurna Loaded!")
+print("GURITA HUB: Night Flat Mode Active!")
