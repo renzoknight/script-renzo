@@ -1,91 +1,100 @@
--- [[ GURITA HUB - SMART ZONE EDITION ]] --
--- Fitur: ESP Cuma di Sky/Island (Base Gak Bakal ESP)
+-- [[ GURITA HUB V9 - PURE EGG & HARP ONLY ]] --
 
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 
--- 1. DAFTAR TARGET
-local TargetEggs = {"hydra", "bunny", "noo", "hopili", "baskito", "churrito", "quackini", "snackini", "sahur", "egg"}
+_G.HuntingMode = false
 
--- 2. FUNGSI CEK LOKASI (BIAR GAK NYAMPAH DI BASE)
-local function ApakahDiLuarBase(obj)
-    pcall(function()
-        local pos = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
-        -- KETINGGIAN: Kalau di atas 100 studs, berarti itu di Sky Island
-        -- JARAK: Kalau jauh dari titik tengah (0,0,0), berarti itu di Island luar
-        if pos.Y > 100 or (pos - Vector3.new(0,0,0)).Magnitude > 300 then
-            return true
-        end
-        return false
-    end)
+-- DAFTAR TARGET MURNI (KHUSUS TELUR & HARP)
+local ValidTargets = {"egg", "bunny", "hydra", "harp", "baskito", "churrito", "hopili", "quackini", "snackini"}
+-- DAFTAR BLACKLIST (YANG HARUS DIHAPUS/DIABAIKAN)
+local Blacklist = {"brainrot", "npc", "base", "pedestal", "shop"}
+
+local function IsValidEgg(name)
+    local n = name:lower()
+    -- Cek apakah ada di blacklist
+    for _, b in pairs(Blacklist) do
+        if n:find(b) then return false end
+    end
+    -- Cek apakah ada di target egg
+    for _, t in pairs(ValidTargets) do
+        if n:find(t) then return true end
+    end
+    return false
 end
 
--- 3. FUNGSI MEGA ESP (BIRU NEON)
-local function PasangMegaESP(obj)
-    -- Cek dulu, kalau di markas, JANGAN dipasang ESP
-    if not ApakahDiLuarBase(obj) then return end
+local function PasangESP(obj)
     if obj:FindFirstChild("GuritaMarker") then return end
     
     pcall(function()
+        -- FILTER: Hanya di Sky/Island (Ketinggian > 100)
+        local pos = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
+        if pos.Y < 100 then return end
+        
+        -- HIGHLIGHT (Merah buat HARP/HYDRA, Biru buat Telur Biasa)
         local h = Instance.new("Highlight", obj)
-        h.Name = "GuritaMarker"; h.FillColor = Color3.fromRGB(0, 170, 255)
-        h.OutlineColor = Color3.new(1, 1, 1); h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop 
+        h.Name = "GuritaMarker"
+        if obj.Name:lower():find("harp") or obj.Name:lower():find("hydra") then
+            h.FillColor = Color3.new(1, 0, 0) -- Merah (PENTING!)
+        else
+            h.FillColor = Color3.fromRGB(0, 170, 255) -- Biru (Telur Biasa)
+        end
+        h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 
+        -- LABEL
         local b = Instance.new("BillboardGui", obj)
-        b.Name = "GuritaTag"; b.Size = UDim2.new(0, 250, 0, 80); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 10, 0)
+        b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 8, 0)
         
         local t = Instance.new("TextLabel", b)
-        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.fromRGB(0, 170, 255)
-        t.Font = Enum.Font.GothamBlack; t.TextSize = 22; t.TextStrokeTransparency = 0
-        t.Text = "TARGET: " .. obj.Name:upper()
-
+        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = h.FillColor
+        t.Font = Enum.Font.GothamBlack; t.TextSize = 20; t.TextStrokeTransparency = 0
+        
         task.spawn(function()
-            while obj and obj.Parent do
-                if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                    local p = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
-                    t.Text = "TARGET: " .. obj.Name:upper() .. "\n[" .. math.floor((lp.Character.HumanoidRootPart.Position - p).Magnitude) .. " STUDS]"
-                end
+            while obj and obj.Parent and _G.HuntingMode do
+                local p = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
+                local d = math.floor((lp.Character.HumanoidRootPart.Position - p).Magnitude)
+                t.Text = obj.Name:upper() .. "\n[" .. d .. " STUDS]"
                 task.wait(1)
             end
+            if h then h:Destroy() end
+            if b then b:Destroy() end
         end)
     end)
 end
 
--- 4. SCANNER
-local function ForceScan()
-    for _, v in pairs(workspace:GetDescendants()) do
-        local name = v.Name:lower()
-        for _, target in pairs(TargetEggs) do
-            if string.find(name, target) then PasangMegaESP(v) end
-        end
-    end
-end
-
--- 5. UI RAKSASA (FIXED SIZE)
+-- UI MENU RAKSASA
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
 local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false
 
 local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 90, 0, 90); Toggle.Position = UDim2.new(0, 25, 0.4, 0)
+Toggle.Size = UDim2.new(0, 90, 0, 90); Toggle.Position = UDim2.new(0, 20, 0.4, 0)
 Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255); Toggle.Text = "G"; Toggle.TextColor3 = Color3.new(1, 1, 1)
 Toggle.Font = Enum.Font.GothamBlack; Toggle.TextSize = 45; Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 20)
 
-local MainFrame = Instance.new("Frame", SG)
-MainFrame.Size = UDim2.new(0, 320, 0, 250); MainFrame.Position = UDim2.new(0.5, -160, 0.5, -125)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20); MainFrame.Visible = false; Instance.new("UICorner", MainFrame)
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 320, 0, 240); Main.Position = UDim2.new(0.5, -160, 0.5, -120)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Main.Visible = false; Instance.new("UICorner", Main)
 
-local BtnESP = Instance.new("TextButton", MainFrame)
-BtnESP.Size = UDim2.new(0, 280, 0, 80); BtnESP.Position = UDim2.new(0, 20, 0, 80)
-BtnESP.BackgroundColor3 = Color3.fromRGB(0, 170, 255); BtnESP.Text = "CARI TELUR DI SKY"; BtnESP.Font = Enum.Font.GothamBold
-BtnESP.TextColor3 = Color3.new(1, 1, 1); BtnESP.TextSize = 20; Instance.new("UICorner", BtnESP)
+local Btn = Instance.new("TextButton", Main)
+Btn.Size = UDim2.new(0, 280, 0, 100); Btn.Position = UDim2.new(0, 20, 0, 70)
+Btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0); Btn.Text = "HUNTING MODE: OFF"; Btn.Font = Enum.Font.GothamBold
+Btn.TextColor3 = Color3.new(1, 1, 1); Btn.TextSize = 22; Instance.new("UICorner", Btn)
 
-Toggle.MouseButton1Down:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-BtnESP.MouseButton1Down:Connect(function()
-    BtnESP.Text = "MENGAMATI LANGIT..."; ForceScan()
-    task.wait(1); BtnESP.Text = "SCAN SELESAI!"; task.wait(1); BtnESP.Text = "CARI TELUR DI SKY"
+Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
+
+Btn.MouseButton1Down:Connect(function()
+    _G.HuntingMode = not _G.HuntingMode
+    if _G.HuntingMode then
+        Btn.Text = "HUNTING MODE: ON\n(PURE EGGS)"; Btn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        for _, v in pairs(workspace:GetDescendants()) do
+            if IsValidEgg(v.Name) then PasangESP(v) end
+        end
+    else
+        Btn.Text = "HUNTING MODE: OFF"; Btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+    end
 end)
 
--- 6. AUTO START
+-- AUTO FLAT COLOR
 task.spawn(function()
     settings().Rendering.QualityLevel = 1
     game:GetService("Lighting").GlobalShadows = false
@@ -94,12 +103,8 @@ task.spawn(function()
         ms.Use2022Materials = false
         for _, v in pairs(ms:GetChildren()) do v:Destroy() end
     end)
-    ForceScan()
 end)
 
 workspace.DescendantAdded:Connect(function(v)
-    local name = v.Name:lower()
-    for _, target in pairs(TargetEggs) do
-        if string.find(name, target) then task.wait(1.5); PasangMegaESP(v) end
-    end
+    if _G.HuntingMode and IsValidEgg(v.Name) then task.wait(2); PasangESP(v) end
 end)
