@@ -1,42 +1,40 @@
--- [[ GURITA HUB: GLOBAL MATERIAL NUKE ]] --
--- Sifat: AUTO-ON, NO UI, NO LAG, NO TEXTURE
+-- [[ GURITA HUB: V38 - PURE FLAT COLOR (STANDALONE) ]] --
+-- Sifat: AUTO-ON, NO TEXTURE, ANTI-LAG
 
 local Players = game:GetService("Players")
-local MaterialService = game:GetService("MaterialService")
-local Lighting = game:GetService("Lighting")
+local lp = Players.LocalPlayer
+local PlayerGui = lp:WaitForChild("PlayerGui")
 
--- [[ 1. NUKE MATERIAL SERVICE ]] --
--- Ini kuncinya: Matikan semua pengganti material buatan developer gamenya
+-- [[ 1. ANTI-LAG SETTINGS ]] --
 pcall(function()
-    MaterialService.Use2022Materials = false
-    -- Kosongkan semua override material global jika ada
-    for _, v in pairs(MaterialService:GetChildren()) do
-        if v:IsA("TerrainDetail") or v:IsA("MaterialVariant") then
-            v:Destroy()
-        end
-    end
+    if setfpscap then setfpscap(60) end
+    settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
 end)
 
--- [[ 2. FUNGSI PEMBERSIH TOTAL ]] --
-local function ForceFlat(v)
-    -- PROTEKSI KARAKTER (Ava Bang Ezra & Player)
+_G.FlatActive = true -- LANGSUNG AUTO-ON
+
+-- [[ 2. ENGINE SIKAT PART (V38 ORIGINAL) ]] --
+local function SikatPart(v)
+    -- Abaikan UI & Karakter Player (Proteksi Avatar)
+    if v:IsDescendantOf(PlayerGui) then return end
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Paksa ke material paling dasar
-            v.Material = Enum.Material.Plastic
+            -- Ubah Material & Cabut Bayangan
+            v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
             
-            -- Sikat Tekstur Mesh
+            -- Cabut Tekstur Mesh
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
             
-            -- Sikat SurfaceAppearance (Penyebab map gak mau polos)
+            -- Hapus SurfaceAppearance (Biang kerok tekstur bandel)
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
             
@@ -48,34 +46,60 @@ local function ForceFlat(v)
     end)
 end
 
--- [[ 3. AUTOMATION (AUTO-RUN) ]] --
-
--- Eksekusi awal (Nyapu map yang sudah ke-load)
-task.spawn(function()
+-- [[ 3. SISTEM EKSEKUSI (QUEUED) ]] --
+local function RunFlatColor()
     local all = workspace:GetDescendants()
-    for i, v in pairs(all) do
-        ForceFlat(v)
-        -- Jeda tipis biar gak lag di map berat
-        if i % 150 == 0 then task.wait() end
-    end
-end)
-
--- Pantau part baru (Penting buat map yang luas/streaming)
-workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.1)
-    ForceFlat(v)
-end)
-
--- [[ 4. LIGHTING OVERRIDE (BIAR MAKIN FLAT) ]] --
-task.spawn(function()
-    Lighting.GlobalShadows = false
-    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-    Lighting.Brightness = 2
-    for _, effect in pairs(Lighting:GetChildren()) do
-        if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Clouds") then
-            effect:Destroy()
+    local count = 0
+    for _, v in pairs(all) do
+        if not _G.FlatActive then break end
+        SikatPart(v)
+        
+        -- Jeda per 50 part biar executor gak freeze (Anti-Lag)
+        count = count + 1
+        if count >= 50 then 
+            count = 0
+            task.wait() 
         end
     end
+end
+
+-- Pantau part baru yang masuk (StreamingEnabled Safe)
+workspace.DescendantAdded:Connect(function(v)
+    if _G.FlatActive then
+        task.wait(0.1)
+        SikatPart(v)
+    end
 end)
 
-print("Gurita Hub: Global Nuke Active. Map should be Flat now!")
+-- [[ 4. JALANKAN OTOMATIS ]] --
+task.spawn(function()
+    print("Gurita Flat Color V38: Activated!")
+    RunFlatColor()
+end)
+
+-- [[ 5. UI SIMPLE (HANYA UNTUK STATUS) ]] --
+if PlayerGui:FindFirstChild("GURITA_FLAT_ONLY") then PlayerGui.GURITA_FLAT_ONLY:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_FLAT_ONLY"
+
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 180, 0, 60); Main.Position = UDim2.new(0.5, -90, 0.5, -30)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Main.Active = true; Main.Draggable = true
+Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
+
+local Btn = Instance.new("TextButton", Main)
+Btn.Size = UDim2.new(0.9, 0, 0, 40); Btn.Position = UDim2.new(0.05, 0, 0.15, 0)
+Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 12
+Instance.new("UICorner", Btn)
+
+local function UpdateUI()
+    Btn.Text = _G.FlatActive and "FLAT MAP: ON" or "FLAT MAP: OFF"
+    Btn.TextColor3 = _G.FlatActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+end
+
+Btn.MouseButton1Click:Connect(function()
+    _G.FlatActive = not _G.FlatActive
+    UpdateUI()
+    if _G.FlatActive then task.spawn(RunFlatColor) end
+end)
+
+UpdateUI()
