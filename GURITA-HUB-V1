@@ -1,58 +1,57 @@
--- [[ GURITA HUB - FULL AUTO FLAT & ANTI-LAG ]] --
--- Perangkat: Redmi 10 | Executor: Delta | Map: Streaming Off
+-- [[ GURITA HUB - ULTIMATE FLAT COLOR (FIXED) ]] --
+-- Fokus: Warna Asli Tetap, Tekstur/Motif/Bayangan HILANG TOTAL
 
 local Lighting = game:GetService("Lighting")
 local MaterialService = game:GetService("MaterialService")
-local RunService = game:GetService("RunService")
 
--- [[ 1. AUTO ANTI-LAG (LANGSUNG AKTIF) ]] --
-local function AktifkanAntiLag()
+-- [[ 1. AUTO ANTI-LAG (SANGAT EKSTRIM) ]] --
+local function SikatHD()
     pcall(function()
-        -- Turunkan kualitas render ke paling rendah secara sistem
         settings().Rendering.QualityLevel = 1
-        settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default
-        
-        -- Kunci FPS di 45 biar Redmi 10 stabil & gak panas (Thermal Throttling)
         if setfpscap then setfpscap(45) end
         
-        -- Sikat Awan HD, Atmosfer, dan Efek yang bikin berat
+        -- Sikat Awan & Langit HD (Biang kerok makin HD)
         for _, v in pairs(Lighting:GetChildren()) do
-            if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("Sky") then
-                v:Destroy()
-            end
+            v:Destroy() 
         end
         
-        -- Langit Polos Total
+        -- Paksa Langit Polos Tanpa Efek
         local sky = Instance.new("Sky", Lighting)
         sky.SunAngularSize, sky.MoonAngularSize, sky.StarCount = 0, 0, 0
         
-        -- Cahaya Rata (No Shadows = FPS Naik)
+        -- Cahaya Rata (Biar gak mengkilap/Shadowless)
         Lighting.GlobalShadows = false
-        Lighting.Brightness = 1.2
-        Lighting.Ambient = Color3.fromRGB(180, 180, 180)
+        Lighting.Brightness = 1
+        Lighting.Ambient = Color3.fromRGB(200, 200, 200)
+        Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+        Lighting.EnvironmentDiffuseScale = 0
+        Lighting.EnvironmentSpecularScale = 0
     end)
 end
 
--- [[ 2. LOGIKA SIKAT POLOS (JAGA WARNA ASLI) ]] --
-local function SikatPolos(v)
+-- [[ 2. LOGIKA FLAT POLOS (MURNI TANPA MOTIF) ]] --
+local function BuatPolos(v)
     if v:IsDescendantOf(game.Players.LocalPlayer.Character or workspace) and v.Parent:FindFirstChild("Humanoid") then return end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Paksa material polos
-            v.Material = Enum.Material.SmoothPlastic
+            -- AMBIL WARNA ASLI, TAPI BUANG MATERIAL
+            local warnaAsli = v.Color
+            v.Material = Enum.Material.Plastic -- Plastic lebih polos dari SmoothPlastic di beberapa map
+            v.Color = warnaAsli
             v.CastShadow = false
+            v.Reflectance = 0
             
-            -- Sikat ID Texture di MeshPart (Biar Tembok/Pembatas Polos)
-            if v:IsA("MeshPart") then
-                v.TextureID = ""
-            end
-
-            -- Hapus SurfaceAppearance (Biang kerok motif karpet/bata)
+            -- Sikat Tekstur/Decal/SurfaceAppearance
             for _, child in pairs(v:GetChildren()) do
                 if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") then
                     child:Destroy()
                 end
+            end
+            
+            -- Sikat Tekstur Mesh (Tembok Pembatas)
+            if v:IsA("MeshPart") then
+                v.TextureID = ""
             end
         elseif v:IsA("SpecialMesh") then
             v.TextureId = ""
@@ -60,34 +59,29 @@ local function SikatPolos(v)
     end)
 end
 
--- [[ 3. EKSEKUSI OTOMATIS BERTAHAP (REDMI 10 SAFE) ]] --
+-- [[ 3. EKSEKUSI AUTO BERTAHAP (REDMI 10 SAFE) ]] --
 task.spawn(function()
-    -- Jalankan Anti-Lag & Bersihkan Material Global
-    AktifkanAntiLag()
+    SikatHD()
+    -- Matikan sistem material baru Roblox
     pcall(function()
         MaterialService.Use2022Materials = false
         for _, m in pairs(MaterialService:GetChildren()) do m:Destroy() end
     end)
 
-    -- Scan map secara perlahan agar tidak patah-patah
     local all = workspace:GetDescendants()
     for i, v in pairs(all) do
-        SikatPolos(v)
-        
-        -- Setiap 15 part, istirahat sekejap (PENTING biar gak lag pas inject)
-        if i % 15 == 0 then 
-            task.wait(0.02) 
-        end
+        BuatPolos(v)
+        -- Jeda biar gak lag pas loading
+        if i % 20 == 0 then task.wait(0.01) end
     end
 end)
 
--- Pantau part baru yang muncul saat main
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.5)
-    SikatPolos(v)
+    BuatPolos(v)
 end)
 
--- [[ 4. MENU TULISAN BIRU (GURITA HUB) ]] --
+-- [[ 4. MENU TULISAN BIRU ]] --
 local lp = game.Players.LocalPlayer
 local SG = Instance.new("ScreenGui", lp.PlayerGui); SG.Name = "GuritaHubUI"
 
@@ -96,16 +90,4 @@ OpenBtn.Size = UDim2.new(0, 150, 0, 50); OpenBtn.Position = UDim2.new(0, 20, 0.5
 OpenBtn.BackgroundTransparency = 1; OpenBtn.Text = "GURITA HUB"; OpenBtn.Font = Enum.Font.GothamBlack
 OpenBtn.TextColor3 = Color3.fromRGB(0, 170, 255); OpenBtn.TextSize = 20; OpenBtn.TextStrokeTransparency = 0.5
 
-local MainFrame = Instance.new("Frame", SG)
-MainFrame.Size = UDim2.new(0, 250, 0, 100); MainFrame.Position = UDim2.new(0.5, -125, 0.5, -50)
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10); MainFrame.Visible = false; MainFrame.Active = true; MainFrame.Draggable = true
-local Stroke = Instance.new("UIStroke", MainFrame); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 2
-Instance.new("UICorner", MainFrame)
-
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 1, 0); Title.Text = "GURITA HUB\nANTI-LAG: AUTO ON\nFLAT MODE: AUTO ON"; Title.TextColor3 = Color3.new(1, 1, 1)
-Title.BackgroundTransparency = 1; Title.Font = Enum.Font.GothamBold; Title.TextSize = 12
-
-OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-
-print("GURITA HUB: Auto Anti-Lag & Pure Flat Active!")
+print("GURITA HUB: Flat Color Sempurna Loaded!")
