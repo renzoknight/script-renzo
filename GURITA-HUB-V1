@@ -1,6 +1,8 @@
--- [[ GURITA HUB: EVENT EDITION - SEMPURNA & AUTO ]] --
--- Fitur: Hijau Polos (Tidak Mencolok), No Shadow, No Lag, Auto-Active
+-- [[ GURITA HUB: PURE FLAT COLOR (FOTO VERSION) ]] --
+-- Target: Map Steal a Brainrot (Bikin rata kayak di foto)
+-- Fitur: Full Auto, No Shadow, No Texture, Anti-Lag
 
+-- [[ 1. OPTIMASI EXECUTOR ]] --
 pcall(function()
     if setfpscap then setfpscap(60) end
     settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default
@@ -9,33 +11,33 @@ end)
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
-local MaterialService = game:GetService("MaterialService")
 
--- [[ 1. LOGIKA WARNA HIJAU LEMBUT & POLOS ]] --
-local function SikatEvent(v)
-    -- Proteksi karakter Bang Ezra
+-- [[ 2. LOGIKA SIKAT PART & WARNA RATA ]] --
+local function SikatRata(v)
+    -- Proteksi Karakter Bang Ezra
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Bikin Polos
+            -- Paksa jadi Plastik Mulus (Biar warnanya rata)
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
             
-            -- Atur Warna Hijau Rumput (Tidak Mencolok/Soft)
-            if v.Name:lower():find("grass") or v.Name:lower():find("rumput") or v.Name:lower():find("floor") then
-                v.Color = Color3.fromRGB(85, 120, 85) -- Hijau daun yang adem di mata
-            end
-
+            -- Hapus tekstur biar jadi polos total
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
             
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
+            
+            -- Jika itu rumput, kasih warna hijau cerah kayak di foto
+            if v.Name:lower():find("grass") or v.Name:lower():find("floor") then
+                v.Color = Color3.fromRGB(0, 255, 0) -- Hijau terang khas Flat Color
+            end
             
         elseif v:IsA("Decal") or v:IsA("Texture") then
             v:Destroy()
@@ -45,46 +47,41 @@ local function SikatEvent(v)
     end)
 end
 
--- [[ 2. EKSEKUSI AUTO (SISTEM ANTREAN AMAN) ]] --
+-- [[ 3. SISTEM AUTO-EXECUTE (ANTREAN AMAN) ]] --
 task.spawn(function()
-    -- Sikat Warna Terrain (Jika rumputnya pakai sistem Terrain)
+    -- Sikat Terrain (Jika ada rumput Terrain Roblox)
     local t = workspace:FindFirstChildOfClass("Terrain")
     if t then
-        t.WaterWaveSize = 0
-        t.WaterWaveSpeed = 0
+        t.WaterWaveSize = 0; t.WaterWaveSpeed = 0
         pcall(function()
-            t:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(85, 120, 85))
+            t:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(0, 255, 0))
         end)
     end
 
     local all = workspace:GetDescendants()
     local count = 0
     for _, v in pairs(all) do
-        SikatEvent(v)
+        SikatRata(v)
         count = count + 1
-        if count >= 50 then count = 0 task.wait() end 
+        if count >= 100 then count = 0 task.wait() end -- Anti Lag
     end
 end)
 
+-- Pantau kalau ada part baru masuk (StreamingEnabled Safe)
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.1)
-    SikatEvent(v)
+    SikatRata(v)
 end)
 
--- [[ 3. FIX LIGHTING (PENGHAPUS BAYANGAN TOTAL) ]] --
+-- [[ 4. SETTING LIGHTING (BIAR GAK ADA BAYANGAN SAMA SEKALI) ]] --
 task.spawn(function()
     Lighting.GlobalShadows = false
-    Lighting.Brightness = 0.8 -- Tidak terlalu silau
-    Lighting.ClockTime = 12
+    Lighting.ClockTime = 14 -- Waktu siang biar terang
+    Lighting.Brightness = 2 -- Cahaya kuat biar warna part keluar
+    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255) -- Putih total biar gak ada sisi gelap
+    Lighting.Ambient = Color3.fromRGB(255, 255, 255) -- Putih total buat bayangan dalem
     
-    -- Menghilangkan bayangan di pojokan tembok (Ambient Force)
-    Lighting.Ambient = Color3.fromRGB(150, 150, 150)
-    Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150)
-    
-    pcall(function()
-        MaterialService.Use2022Materials = false
-    end)
-
+    -- Hapus efek atmosfer yang bikin butek
     for _, v in pairs(Lighting:GetChildren()) do
         if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") then
             v:Destroy()
@@ -92,4 +89,4 @@ task.spawn(function()
     end
 end)
 
-print("GURITA HUB: Event Color Fixed! Hijau Polos & No Shadow.")
+print("GURITA HUB: Flat Color Rata Sempurna Activated!")
