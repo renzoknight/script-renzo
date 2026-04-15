@@ -1,5 +1,5 @@
--- [[ GURITA HUB: V14 - FINAL CLEAN LIST ]] --
--- Terhapus: Tralala, Egg Dun, Egg Din, Bunny, Buntteo, Los Bunitos
+-- [[ GURITA HUB: V15 - CLOUD HUNTER ONLY ]] --
+-- Update: Filter Ketinggian (Cuma deteksi yang di awan, abaikan karpet/lantai)
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -10,17 +10,16 @@ local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- [[ 1. CONFIG & STRICT TARGET ]] --
-local FileName = "GuritaHub_v14.json"
--- List sudah dibersihkan total sesuai permintaan
+-- [[ 1. CONFIG ]] --
+local FileName = "GuritaHub_v15.json"
 local StrictTargets = {
-    "egg pedas",
-    "baskito", 
-    "churrito", 
-    "quackini", 
-    "snackini", 
-    "sahur"
+    "egg pedas", "baskito", "churrito", 
+    "quackini", "snackini", "sahur"
 }
+
+-- Batas ketinggian minimal biar nggak nyasar ke karpet/base
+-- Kita set minimal 50 unit ke atas (Awan biasanya jauh lebih tinggi)
+local MIN_HEIGHT = 50 
 
 _G.Settings = {
     EggESP = false,
@@ -73,7 +72,6 @@ task.spawn(function()
         Lighting.ClockTime = 0
         Lighting.Brightness = 2
         Lighting.Ambient = Color3.fromRGB(127, 127, 127)
-        Lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
         task.wait(3)
     end
 end)
@@ -82,7 +80,7 @@ end)
 local function CreateESP(target)
     if not target:FindFirstChild("GuritaMarker") then
         local h = Instance.new("Highlight")
-        h.Name = "GuritaMarker"; h.FillColor = Color3.fromRGB(255, 255, 0)
+        h.Name = "GuritaMarker"; h.FillColor = Color3.fromRGB(255, 0, 0) -- Merah biar kontras di awan
         h.OutlineColor = Color3.fromRGB(255, 255, 255); h.FillTransparency = 0.3
         h.Parent = target
         
@@ -93,7 +91,7 @@ local function CreateESP(target)
         
         local t = Instance.new("TextLabel")
         t.Parent = b; t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1
-        t.TextColor3 = Color3.new(1, 1, 0); t.TextStrokeTransparency = 0
+        t.TextColor3 = Color3.new(1, 1, 1); t.TextStrokeTransparency = 0
         t.Font = Enum.Font.GothamBlack; t.TextSize = 14
 
         task.spawn(function()
@@ -103,7 +101,7 @@ local function CreateESP(target)
                     local pos = target:IsA("BasePart") and target.Position or (target:FindFirstChildWhichIsA("BasePart") and target:FindFirstChildWhichIsA("BasePart").Position)
                     if pos then
                         local dist = (pos - root.Position).Magnitude
-                        t.Text = "⭐ " .. target.Name:upper() .. " ⭐\n[" .. math.floor(dist) .. "m]"
+                        t.Text = "☁️ " .. target.Name:upper() .. " ☁️\n[" .. math.floor(dist) .. "m]"
                     end
                 end
                 task.wait(0.5)
@@ -113,37 +111,33 @@ local function CreateESP(target)
     end
 end
 
--- [[ 6. STRICT SCANNER ]] --
+-- [[ 6. CLOUD SCANNER ]] --
 local function Scan(v)
     local name = v.Name:lower()
-    
-    -- Filter 1: Cek nama di list target yang sudah dibersihkan
     local isTarget = false
     for _, key in pairs(StrictTargets) do
-        if name:find(key) then
-            isTarget = true
-            break
-        end
+        if name:find(key) then isTarget = true break end
     end
     
     if isTarget then
-        -- Filter 2: Anti-Base (Jangan scan yang ada di markas)
-        local p = v.Parent
-        local isBase = false
-        while p and p ~= workspace do
-            local pn = p.Name:lower()
-            if pn:find("base") or pn:find("lobby") or pn:find("display") or pn:find("pajangan") then
-                isBase = true
-                break
-            end
-            p = p.Parent
-        end
+        -- CEK KETINGGIAN (Cuma kalau di awan/di atas)
+        local pos = v:IsA("BasePart") and v.Position or (v:FindFirstChildWhichIsA("BasePart") and v:FindFirstChildWhichIsA("BasePart").Position)
         
-        if not isBase then
-            if _G.Settings.Notif then
-                StarterGui:SetCore("SendNotification", {Title = "🥚 EGG FOUND!", Text = v.Name, Duration = 3})
+        if pos and pos.Y > MIN_HEIGHT then
+            -- Bukan di Base/Lobby
+            local p = v.Parent
+            local isBase = false
+            while p and p ~= workspace do
+                if p.Name:lower():find("base") or p.Name:lower():find("lobby") then isBase = true break end
+                p = p.Parent
             end
-            if _G.Settings.EggESP then CreateESP(v) end
+            
+            if not isBase then
+                if _G.Settings.Notif then
+                    StarterGui:SetCore("SendNotification", {Title = "☁️ CLOUD EGG!", Text = v.Name, Duration = 3})
+                end
+                if _G.Settings.EggESP then CreateESP(v) end
+            end
         end
     end
 end
@@ -152,17 +146,14 @@ task.spawn(function()
     while true do
         for _, v in pairs(workspace:GetDescendants()) do
             if _G.Settings.EggESP then Scan(v) end
-            if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
-                v.Material = Enum.Material.Plastic; v.CastShadow = false
-            end
         end
         task.wait(8)
     end
 end)
 
 -- [[ 7. UI ]] --
-if PlayerGui:FindFirstChild("GURITA_V14") then PlayerGui.GURITA_V14:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V14"; SG.ResetOnSpawn = false
+if PlayerGui:FindFirstChild("GURITA_V15") then PlayerGui.GURITA_V15:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V15"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
@@ -185,14 +176,7 @@ local function CreateBtn(text, func)
     b.MouseButton1Click:Connect(func); return b
 end
 
-local BtnESP = CreateBtn("ESP: OFF", function() 
-    _G.Settings.EggESP = not _G.Settings.EggESP; SaveData() 
-    if not _G.Settings.EggESP then
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v.Name == "GuritaMarker" or v.Name == "GuritaTag" then v:Destroy() end
-        end
-    end
-end)
+local BtnESP = CreateBtn("ESP: OFF", function() _G.Settings.EggESP = not _G.Settings.EggESP; SaveData() end)
 local BtnNotif = CreateBtn("NOTIF: OFF", function() _G.Settings.Notif = not _G.Settings.Notif; SaveData() end)
 local BtnSpeed = CreateBtn("SPEED: 16", function() 
     _G.Settings.WalkSpeed = (_G.Settings.WalkSpeed == 16 and 60 or (_G.Settings.WalkSpeed == 60 and 120 or 16))
