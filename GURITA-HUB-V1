@@ -1,5 +1,5 @@
--- [[ GURITA HUB: V30 - LAG-FREE FLAT COLOR & OPTIMIZED ]] --
--- Update: Iterative Object Processing, Anti-Lag Visual, Auto-Reconnect
+-- [[ GURITA HUB: V31 - UI PROTECTION & ANTI-SELF-DESTRUCT ]] --
+-- Fix: Logo Hilang & UI Terhapus
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -20,55 +20,45 @@ local function SaveData() if writefile then writefile(FileName, HttpService:JSON
 local function LoadData() if isfile and isfile(FileName) then pcall(function() _G.Settings = HttpService:JSONDecode(readfile(FileName)) end) end end
 LoadData()
 
--- [[ 2. AUTO RECONNECT (NOMOR 2 SEMPURNA) ]] --
+-- [[ 2. AUTO RECONNECT ]] --
 GuiService.ErrorMessageChanged:Connect(function()
     task.wait(5)
     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
 end)
 
--- [[ 3. LOGIKA FLAT COLOR ANTI-LAG (ITERATIVE) ]] --
+-- [[ 3. FIXED FLAT COLOR (DENGAN PROTEKSI UI) ]] --
 local function SikatPart(v)
-    if v:IsA("BasePart") then
-        v.Material = Enum.Material.SmoothPlastic
-        v.CastShadow = false
-        if v:IsA("MeshPart") then v.TextureID = "" end
-    elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("Sky") then
-        v:Destroy()
+    -- PROTEKSI: Jangan hapus apapun yang ada di dalam PlayerGui (UI)
+    if v:IsDescendantOf(PlayerGui) or v:IsA("ScreenGui") or v:IsDescendantOf(lp) then 
+        return 
     end
+
+    pcall(function()
+        if v:IsA("BasePart") then
+            v.Material = Enum.Material.SmoothPlastic
+            v.CastShadow = false
+            if v:IsA("MeshPart") then v.TextureID = "" end
+        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("Atmosphere") or v:IsA("Clouds") then
+            v:Destroy()
+        end
+    end)
 end
 
--- Fungsi loop yang tidak bikin lag (Menggunakan antrean)
 local function OptimizeVisual()
     local descendants = workspace:GetDescendants()
     for i, v in pairs(descendants) do
         SikatPart(v)
-        -- Tiap 100 objek, script istirahat sekejap (Biar executor nggak lag)
-        if i % 100 == 0 then 
-            task.wait() 
-        end
-    end
-end
-
--- Nuke Lighting di awal
-local function NukeLighting()
-    Lighting.GlobalShadows = false
-    Lighting.FogEnd = 9e9
-    Lighting.Brightness = 2
-    Lighting.ClockTime = 12
-    for _, v in pairs(Lighting:GetChildren()) do
-        v:Destroy()
+        if i % 150 == 0 then task.wait() end 
     end
 end
 
 task.spawn(function()
-    NukeLighting()
     while true do
         OptimizeVisual()
-        task.wait(30) -- Refresh tiap 30 detik (Udah cukup, jangan terlalu sering biar stabil)
+        task.wait(30)
     end
 end)
 
--- Handle objek baru yang muncul agar tetap flat
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.1)
     SikatPart(v)
@@ -79,14 +69,14 @@ local function ApplyESP(obj)
     if not _G.Settings.EggESP then return end
     if not obj:FindFirstChild("GuritaMarker") then
         local h = Instance.new("Highlight", obj); h.Name = "GuritaMarker"
-        h.FillColor = Color3.fromRGB(255, 255, 0); h.OutlineTransparency = 0
+        h.FillColor = Color3.fromRGB(255, 255, 0)
         
         local b = Instance.new("BillboardGui", obj); b.Name = "GuritaTag"
         b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
         
         local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1, 0, 1, 0)
         t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1, 1, 0)
-        t.Font = Enum.Font.GothamBlack; t.TextSize = 14; t.TextStrokeTransparency = 0
+        t.Font = Enum.Font.GothamBlack; t.TextSize = 14
 
         task.spawn(function()
             while obj and obj.Parent and _G.Settings.EggESP do
@@ -94,7 +84,7 @@ local function ApplyESP(obj)
                     local dist = (obj.Position - lp.Character.HumanoidRootPart.Position).Magnitude
                     t.Text = obj.Name:upper() .. "\n[" .. math.floor(dist) .. "m]"
                 end
-                task.wait(1) -- Delay update ESP ditingkatkan biar nggak lag
+                task.wait(1)
             end
             if b then b:Destroy() end; if h then h:Destroy() end
         end)
@@ -104,8 +94,7 @@ end
 task.spawn(function()
     while true do
         for _, v in pairs(workspace:GetDescendants()) do
-            local name = v.Name:lower()
-            if table.find(TargetEggs, name) then
+            if table.find(TargetEggs, v.Name:lower()) then
                 if _G.Settings.EggESP then ApplyESP(v) end
                 if _G.Settings.Notif and not NotifiedEggs[v] then
                     NotifiedEggs[v] = true
@@ -118,17 +107,21 @@ task.spawn(function()
     end
 end)
 
--- [[ 5. UI ]] --
-if PlayerGui:FindFirstChild("GURITA_V30") then PlayerGui.GURITA_V30:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V30"
-local Logo = Instance.new("TextButton", SG); Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0, 10, 0.5, -25); Logo.BackgroundColor3 = Color3.fromRGB(30,30,30); Logo.Text = "V30"; Logo.TextColor3 = Color3.new(1,1,0); Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 18; Logo.Draggable = true; Logo.Active = true; Instance.new("UICorner", Logo)
+-- [[ 5. UI (DENGAN NAMA BARU BIAR GAK KETUKER) ]] --
+if PlayerGui:FindFirstChild("GURITA_V31_FIX") then PlayerGui.GURITA_V31_FIX:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V31_FIX"; SG.ResetOnSpawn = false
 
-local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 180); Main.Position = UDim2.new(0.5, -100, 0.5, -90); Main.BackgroundColor3 = Color3.fromRGB(20,20,20); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1,1,0)
+local Logo = Instance.new("TextButton", SG)
+Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0, 15, 0.5, -25)
+Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "GH"; Logo.TextColor3 = Color3.new(1, 1, 0)
+Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 20; Logo.Draggable = true; Logo.Active = true; Instance.new("UICorner", Logo)
+
+local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 180); Main.Position = UDim2.new(0.5, -100, 0.5, -90); Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
 Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
 local function CreateBtn(text, pos, func)
-    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 45); b.Position = UDim2.new(0.05, 0, pos, 0); b.BackgroundColor3 = Color3.fromRGB(40,40,40); b.Font = Enum.Font.GothamBold; b.TextSize = 12; b.Text = text; Instance.new("UICorner", b); b.MouseButton1Click:Connect(func); return b
+    local b = Instance.new("TextButton", Main); b.Size = UDim2.new(0.9, 0, 0, 45); b.Position = UDim2.new(0.05, 0, pos, 0); b.BackgroundColor3 = Color3.fromRGB(30, 30, 30); b.Font = Enum.Font.GothamBold; b.TextSize = 12; b.Text = text; b.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", b); b.MouseButton1Click:Connect(func); return b
 end
 
 local BtnESP = CreateBtn("ESP: OFF", 0.2, function() 
@@ -139,5 +132,8 @@ local BtnNotif = CreateBtn("NOTIF: OFF", 0.6, function() _G.Settings.Notif = not
 
 task.spawn(function()
     while true do
-        BtnESP.Text = "ESP: " .. (_G.Settings.EggESP and "ON" or "OFF"); BtnESP.TextColor3 = _G.Settings.EggESP and Color3.new(0,1,0) or Color3.new(1,0,0)
-        BtnNotif.Text = "NOTIF: " .. (_G.Settings.Notif and "ON" or "OFF"); BtnNotif.TextColor3 = _G.Settings.Notif and Color3.new(0
+        BtnESP.Text = "ESP: " .. (_G.Settings.EggESP and "ON" or "OFF"); BtnESP.TextColor3 = _G.Settings.EggESP and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        BtnNotif.Text = "NOTIF: " .. (_G.Settings.Notif and "ON" or "OFF"); BtnNotif.TextColor3 = _G.Settings.Notif and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        task.wait(0.5)
+    end
+end)
