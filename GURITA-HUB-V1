@@ -1,32 +1,30 @@
--- [[ GURITA HUB V39: SILENT FLAT COLOR (STEAL A BRAINROT SPECIAL) ]] --
+-- [[ GURITA HUB: PURE AUTO FLAT COLOR ]] --
+-- Sifat: Langsung Aktif, No UI, No Buttons, No Lag
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
-local PlayerGui = lp:WaitForChild("PlayerGui")
 
-_G.FlatActive = true -- AUTO-ON
-
--- [[ LOGIKA SIKAT MAP (NO LAG VERSION) ]] --
-local function CleanObject(v)
-    -- PROTEKSI: Jangan sentuh karakter Bang Ezra & Player lain
+-- [[ ENGINE INTI ]] --
+local function SikatMap(v)
+    -- Proteksi Karakter & UI (Biar Ava Abang tetep keren)
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
-    if v:IsDescendantOf(PlayerGui) then return end
+    if v:IsA("GuiObject") or v:IsA("ScreenGui") then return end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Paksa jadi plastik mulus
+            -- Paksa jadi polos total
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
             
-            -- Hapus tekstur mesh
+            -- Hapus Tekstur Mesh
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
             
-            -- Hapus SurfaceAppearance (Biang kerok tekstur map)
+            -- Hapus SurfaceAppearance (Biang kerok map gak mau rata)
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
             
@@ -38,57 +36,36 @@ local function CleanObject(v)
     end)
 end
 
--- [[ ENGINE EKSEKUSI (QUEUE SYSTEM) ]] --
-local function StartNuke()
-    local descendants = workspace:GetDescendants()
-    for i, v in pairs(descendants) do
-        if not _G.FlatActive then break end
-        CleanObject(v)
-        
-        -- Jeda per 50 part biar HP/PC Bang Ezra gak panas (Smooth Execution)
-        if i % 50 == 0 then 
-            task.wait() 
+-- [[ SISTEM EKSEKUSI OTOMATIS ]] --
+
+-- 1. Sikat yang sudah ada di map saat ini (Bertahap biar gak lag)
+task.spawn(function()
+    local all = workspace:GetDescendants()
+    for i, v in pairs(all) do
+        SikatMap(v)
+        -- Jeda tiap 100 part supaya executor gak kaget
+        if i % 100 == 0 then task.wait() end
+    end
+end)
+
+-- 2. Pantau part baru yang muncul (StreamingEnabled)
+workspace.DescendantAdded:Connect(function(v)
+    task.wait(0.1) -- Kasih waktu part buat load identitasnya
+    SikatMap(v)
+end)
+
+-- 3. Nuke Lighting (Biar warna map polos merata)
+task.spawn(function()
+    local Lighting = game:GetService("Lighting")
+    Lighting.GlobalShadows = false
+    Lighting.Brightness = 2
+    Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+    
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("Atmosphere") then
+            v:Destroy()
         end
     end
-end
-
--- Pantau kalau ada part map baru muncul (StreamingEnabled Safe)
-workspace.DescendantAdded:Connect(function(v)
-    if _G.FlatActive then
-        task.wait(0.1)
-        CleanObject(v)
-    end
 end)
 
--- [[ JALANKAN OTOMATIS ]] --
-task.spawn(function()
-    print("Gurita Hub: Flat Color Active!")
-    StartNuke()
-end)
-
--- [[ UI MINIMALIS UNTUK CONTROL ]] --
-if PlayerGui:FindFirstChild("GURITA_V39_HUB") then PlayerGui.GURITA_V39_HUB:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V39_HUB"
-
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 180, 0, 70); Main.Position = UDim2.new(0.5, -90, 0.5, -35)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Active = true; Main.Draggable = true
-Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
-
-local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0.9, 0, 0, 40); Btn.Position = UDim2.new(0.05, 0, 0.22, 0)
-Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 13
-Instance.new("UICorner", Btn)
-
-local function UpdateUI()
-    Btn.Text = _G.FlatActive and "FLAT MAP: ON" or "FLAT MAP: OFF"
-    Btn.TextColor3 = _G.FlatActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-end
-
-Btn.MouseButton1Click:Connect(function()
-    _G.FlatActive = not _G.FlatActive
-    UpdateUI()
-    if _G.FlatActive then task.spawn(StartNuke) end
-end)
-
-UpdateUI()
+print("Gurita Hub: Flat Color Loaded & Auto-Active!")
