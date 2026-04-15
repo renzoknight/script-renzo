@@ -1,195 +1,85 @@
--- [[ GURITA HUB: V15 - CLOUD HUNTER ONLY ]] --
--- Update: Filter Ketinggian (Cuma deteksi yang di awan, abaikan karpet/lantai)
+-- [[ GURITA HUB: THE FINAL CLEANER (NO MOTIF AT ALL) ]] --
+-- Perintah: Sikat Global Material, Hapus Motif, No Shadow, Auto-On
 
-local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
-local PlayerGui = lp:WaitForChild("PlayerGui")
+pcall(function()
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default
+end)
+
 local Lighting = game:GetService("Lighting")
-local StarterGui = game:GetService("StarterGui")
-local HttpService = game:GetService("HttpService")
-local UserInputService = game:GetService("UserInputService")
-local VirtualUser = game:GetService("VirtualUser")
+local MaterialService = game:GetService("MaterialService")
 
--- [[ 1. CONFIG ]] --
-local FileName = "GuritaHub_v15.json"
-local StrictTargets = {
-    "egg pedas", "baskito", "churrito", 
-    "quackini", "snackini", "sahur"
-}
-
--- Batas ketinggian minimal biar nggak nyasar ke karpet/base
--- Kita set minimal 50 unit ke atas (Awan biasanya jauh lebih tinggi)
-local MIN_HEIGHT = 50 
-
-_G.Settings = {
-    EggESP = false,
-    Notif = false,
-    WalkSpeed = 16,
-    JumpPower = 50,
-    InfJump = false
-}
-
-local function SaveData()
-    if writefile then pcall(function() writefile(FileName, HttpService:JSONEncode(_G.Settings)) end) end
-end
-
-local function LoadData()
-    if isfile and isfile(FileName) then
-        pcall(function() _G.Settings = HttpService:JSONDecode(readfile(FileName)) end)
+-- [[ 1. NUKE MATERIAL SERVICE (INI BIANG KEROK MOTIF) ]] --
+pcall(function()
+    MaterialService.Use2022Materials = false
+    -- Hapus semua kustomisasi material yang bikin motif muncul di mana-mana
+    local variants = MaterialService:GetChildren()
+    for _, v in pairs(variants) do
+        v:Destroy()
     end
-end
-LoadData()
-
--- [[ 2. ANTI-AFK ]] --
-lp.Idled:Connect(function()
-    VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-    task.wait(1)
-    VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
--- [[ 3. MOVEMENT ]] --
-task.spawn(function()
-    while true do
-        pcall(function()
-            if lp.Character and lp.Character:FindFirstChild("Humanoid") then
-                lp.Character.Humanoid.WalkSpeed = _G.Settings.WalkSpeed
-                lp.Character.Humanoid.JumpPower = _G.Settings.JumpPower
+-- [[ 2. LOGIKA SIKAT TOTAL ]] --
+local function SikatAbis(v)
+    -- Abaikan Karakter Player & UI
+    if v:IsDescendantOf(game:GetService("Players")) or v.Parent:FindFirstChild("Humanoid") then return end
+    if v:IsA("GuiObject") or v:IsA("ScreenGui") then return end
+
+    pcall(function()
+        if v:IsA("BasePart") then
+            -- Paksa ke Material Dasar
+            v.Material = Enum.Material.Plastic
+            v.CastShadow = false
+            v.Reflectance = 0
+            
+            -- Sikat Warna (Hijau Rata Kayak di Foto)
+            if v.Name:lower():find("grass") or v.Name:lower():find("floor") or v.Name:lower():find("ground") then
+                v.Color = Color3.fromRGB(0, 255, 0)
             end
-        end)
-        task.wait(0.5)
-    end
-end)
 
-UserInputService.JumpRequest:Connect(function()
-    if _G.Settings.InfJump and lp.Character and lp.Character:FindFirstChild("Humanoid") then
-        lp.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-end)
-
--- [[ 4. VISUAL OPTIMIZER ]] --
-task.spawn(function()
-    while true do
-        Lighting.ClockTime = 0
-        Lighting.Brightness = 2
-        Lighting.Ambient = Color3.fromRGB(127, 127, 127)
-        task.wait(3)
-    end
-end)
-
--- [[ 5. SMART ESP ENGINE ]] --
-local function CreateESP(target)
-    if not target:FindFirstChild("GuritaMarker") then
-        local h = Instance.new("Highlight")
-        h.Name = "GuritaMarker"; h.FillColor = Color3.fromRGB(255, 0, 0) -- Merah biar kontras di awan
-        h.OutlineColor = Color3.fromRGB(255, 255, 255); h.FillTransparency = 0.3
-        h.Parent = target
-        
-        local b = Instance.new("BillboardGui")
-        b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50)
-        b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
-        b.Parent = target
-        
-        local t = Instance.new("TextLabel")
-        t.Parent = b; t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1
-        t.TextColor3 = Color3.new(1, 1, 1); t.TextStrokeTransparency = 0
-        t.Font = Enum.Font.GothamBlack; t.TextSize = 14
-
-        task.spawn(function()
-            while target and target.Parent and _G.Settings.EggESP do
-                local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-                if root then
-                    local pos = target:IsA("BasePart") and target.Position or (target:FindFirstChildWhichIsA("BasePart") and target:FindFirstChildWhichIsA("BasePart").Position)
-                    if pos then
-                        local dist = (pos - root.Position).Magnitude
-                        t.Text = "☁️ " .. target.Name:upper() .. " ☁️\n[" .. math.floor(dist) .. "m]"
-                    end
+            -- Sikat Anak Objek (SurfaceAppearance/Texture/Decal)
+            for _, child in pairs(v:GetChildren()) do
+                if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") or child:IsA("SpecialMesh") then
+                    child:Destroy()
                 end
-                task.wait(0.5)
-            end
-            if b then b:Destroy() end; if h then h:Destroy() end
-        end)
-    end
-end
-
--- [[ 6. CLOUD SCANNER ]] --
-local function Scan(v)
-    local name = v.Name:lower()
-    local isTarget = false
-    for _, key in pairs(StrictTargets) do
-        if name:find(key) then isTarget = true break end
-    end
-    
-    if isTarget then
-        -- CEK KETINGGIAN (Cuma kalau di awan/di atas)
-        local pos = v:IsA("BasePart") and v.Position or (v:FindFirstChildWhichIsA("BasePart") and v:FindFirstChildWhichIsA("BasePart").Position)
-        
-        if pos and pos.Y > MIN_HEIGHT then
-            -- Bukan di Base/Lobby
-            local p = v.Parent
-            local isBase = false
-            while p and p ~= workspace do
-                if p.Name:lower():find("base") or p.Name:lower():find("lobby") then isBase = true break end
-                p = p.Parent
             end
             
-            if not isBase then
-                if _G.Settings.Notif then
-                    StarterGui:SetCore("SendNotification", {Title = "☁️ CLOUD EGG!", Text = v.Name, Duration = 3})
-                end
-                if _G.Settings.EggESP then CreateESP(v) end
+            -- Sikat ID Mesh
+            if v:IsA("MeshPart") then
+                v.TextureID = ""
             end
         end
-    end
+    end)
 end
 
+-- [[ 3. EKSEKUSI LIGHTING (PENGHAPUS BAYANGAN) ]] --
 task.spawn(function()
-    while true do
-        for _, v in pairs(workspace:GetDescendants()) do
-            if _G.Settings.EggESP then Scan(v) end
-        end
-        task.wait(8)
+    Lighting.GlobalShadows = false
+    Lighting.Brightness = 2
+    Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+    
+    -- Hapus Kabut & Langit
+    for _, child in pairs(Lighting:GetChildren()) do
+        child:Destroy()
+    end
+    
+    local sky = Instance.new("Sky", Lighting)
+    sky.SunAngularSize = 0; sky.MoonAngularSize = 0
+end)
+
+-- [[ 4. RUNTIME SCANNER ]] --
+task.spawn(function()
+    local all = workspace:GetDescendants()
+    for i, v in pairs(all) do
+        SikatAbis(v)
+        if i % 150 == 0 then task.wait() end -- Anti Lag
     end
 end)
 
--- [[ 7. UI ]] --
-if PlayerGui:FindFirstChild("GURITA_V15") then PlayerGui.GURITA_V15:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V15"; SG.ResetOnSpawn = false
-
-local Logo = Instance.new("TextButton", SG)
-Logo.Size = UDim2.new(0, 60, 0, 60); Logo.Position = UDim2.new(0, 15, 0.5, -30)
-Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "G H"; Logo.TextColor3 = Color3.new(1, 1, 0)
-Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 22; Logo.Draggable = true; Logo.Active = true
-Instance.new("UICorner", Logo); Instance.new("UIStroke", Logo).Thickness = 2; Logo.UIStroke.Color = Color3.new(1,1,0)
-
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 240, 0, 280); Main.Position = UDim2.new(0.5, -120, 0.5, -140)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main)
-Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
-
-Logo.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
-local UIList = Instance.new("UIListLayout", Main); UIList.Padding = UDim.new(0, 5); UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-local function CreateBtn(text, func)
-    local b = Instance.new("TextButton", Main)
-    b.Size = UDim2.new(0.9, 0, 0, 40); b.BackgroundColor3 = Color3.fromRGB(25, 25, 25); b.Font = Enum.Font.GothamBold; b.TextSize = 11; b.TextColor3 = Color3.new(1,1,1); b.Text = text
-    Instance.new("UICorner", b); Instance.new("UIStroke", b).Color = Color3.fromRGB(50, 50, 50)
-    b.MouseButton1Click:Connect(func); return b
-end
-
-local BtnESP = CreateBtn("ESP: OFF", function() _G.Settings.EggESP = not _G.Settings.EggESP; SaveData() end)
-local BtnNotif = CreateBtn("NOTIF: OFF", function() _G.Settings.Notif = not _G.Settings.Notif; SaveData() end)
-local BtnSpeed = CreateBtn("SPEED: 16", function() 
-    _G.Settings.WalkSpeed = (_G.Settings.WalkSpeed == 16 and 60 or (_G.Settings.WalkSpeed == 60 and 120 or 16))
-    SaveData() 
+workspace.DescendantAdded:Connect(function(v)
+    task.wait(0.1)
+    SikatAbis(v)
 end)
-local BtnJump = CreateBtn("INF JUMP: OFF", function() _G.Settings.InfJump = not _G.Settings.InfJump; SaveData() end)
 
-task.spawn(function()
-    while true do
-        BtnESP.Text = "ESP: " .. (_G.Settings.EggESP and "ON" or "OFF"); BtnESP.TextColor3 = _G.Settings.EggESP and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        BtnNotif.Text = "NOTIF: " .. (_G.Settings.Notif and "ON" or "OFF"); BtnNotif.TextColor3 = _G.Settings.Notif and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        BtnSpeed.Text = "SPEED: " .. _G.Settings.WalkSpeed
-        BtnJump.Text = "INF JUMP: " .. (_G.Settings.InfJump and "ON" or "OFF"); BtnJump.TextColor3 = _G.Settings.InfJump and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        task.wait(0.5)
-    end
-end)
+print("GURITA HUB: Map Selesai Dibersihkan Total!")
