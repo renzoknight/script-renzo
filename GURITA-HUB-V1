@@ -1,40 +1,38 @@
--- [[ GURITA HUB: V38 - PURE FLAT COLOR (STANDALONE) ]] --
--- Sifat: AUTO-ON, NO TEXTURE, ANTI-LAG
+-- [[ GURITA HUB: V38 - PURE FLAT COLOR (FULL AUTO) ]] --
+-- Sifat: INJECT LANGSUNG POLOS, NO UI, NO BUTTONS
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
-local PlayerGui = lp:WaitForChild("PlayerGui")
 
--- [[ 1. ANTI-LAG SETTINGS ]] --
+-- [[ 1. SETTING ANTI-LAG ]] --
 pcall(function()
     if setfpscap then setfpscap(60) end
     settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default
     settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
 end)
 
-_G.FlatActive = true -- LANGSUNG AUTO-ON
-
 -- [[ 2. ENGINE SIKAT PART (V38 ORIGINAL) ]] --
 local function SikatPart(v)
-    -- Abaikan UI & Karakter Player (Proteksi Avatar)
-    if v:IsDescendantOf(PlayerGui) then return end
+    -- Proteksi: Jangan rubah karakter player/Bang Ezra
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
+    -- Jangan sikat UI gamenya
+    if v:IsA("GuiObject") or v:IsA("ScreenGui") then return end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Ubah Material & Cabut Bayangan
+            -- Ubah jadi plastik mulus tanpa bayangan
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
             
-            -- Cabut Tekstur Mesh
+            -- Sikat Tekstur Mesh
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
             
-            -- Hapus SurfaceAppearance (Biang kerok tekstur bandel)
+            -- Hapus SurfaceAppearance (Biang kerok map berat)
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
             
@@ -46,60 +44,40 @@ local function SikatPart(v)
     end)
 end
 
--- [[ 3. SISTEM EKSEKUSI (QUEUED) ]] --
-local function RunFlatColor()
+-- [[ 3. EKSEKUSI OTOMATIS (QUEUED SYSTEM) ]] --
+task.spawn(function()
+    print("Gurita Hub: Flat Color Auto-Starting...")
     local all = workspace:GetDescendants()
     local count = 0
     for _, v in pairs(all) do
-        if not _G.FlatActive then break end
         SikatPart(v)
         
-        -- Jeda per 50 part biar executor gak freeze (Anti-Lag)
+        -- Jeda per 50 part biar executor Bang Ezra gak freeze
         count = count + 1
         if count >= 50 then 
             count = 0
             task.wait() 
         end
     end
-end
+    print("Gurita Hub: Map Polos Sempurna!")
+end)
 
--- Pantau part baru yang masuk (StreamingEnabled Safe)
+-- Pantau part baru yang spawn (Buat area baru di map)
 workspace.DescendantAdded:Connect(function(v)
-    if _G.FlatActive then
-        task.wait(0.1)
-        SikatPart(v)
+    task.wait(0.1)
+    SikatPart(v)
+end)
+
+-- [[ 4. NUKE LIGHTING (AUTO FLAT VISUAL) ]] --
+task.spawn(function()
+    local Lighting = game:GetService("Lighting")
+    Lighting.GlobalShadows = false
+    Lighting.Brightness = 2
+    Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+    
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") then
+            v:Destroy()
+        end
     end
 end)
-
--- [[ 4. JALANKAN OTOMATIS ]] --
-task.spawn(function()
-    print("Gurita Flat Color V38: Activated!")
-    RunFlatColor()
-end)
-
--- [[ 5. UI SIMPLE (HANYA UNTUK STATUS) ]] --
-if PlayerGui:FindFirstChild("GURITA_FLAT_ONLY") then PlayerGui.GURITA_FLAT_ONLY:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_FLAT_ONLY"
-
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 180, 0, 60); Main.Position = UDim2.new(0.5, -90, 0.5, -30)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Main.Active = true; Main.Draggable = true
-Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
-
-local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0.9, 0, 0, 40); Btn.Position = UDim2.new(0.05, 0, 0.15, 0)
-Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 12
-Instance.new("UICorner", Btn)
-
-local function UpdateUI()
-    Btn.Text = _G.FlatActive and "FLAT MAP: ON" or "FLAT MAP: OFF"
-    Btn.TextColor3 = _G.FlatActive and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-end
-
-Btn.MouseButton1Click:Connect(function()
-    _G.FlatActive = not _G.FlatActive
-    UpdateUI()
-    if _G.FlatActive then task.spawn(RunFlatColor) end
-end)
-
-UpdateUI()
