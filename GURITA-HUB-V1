@@ -1,39 +1,30 @@
--- [[ GURITA HUB - V3 FINAL FIXED ]] --
--- Fitur: Force Flat Color, Egg ESP Sky Island, Anti-Lag Redmi 10
+-- [[ GURITA HUB - V4 OPTIMIZED ]] --
+-- Prioritas: Menu Muncul Duluan, Flat Color Jalan Santai
 
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 
--- 1. DAFTAR TELUR TARGET
+-- [[ 1. DAFTAR TELUR ]] --
 local TargetEggs = {"hydra bunny", "noo my eggs", "hopilikalika", "baskito", "churrito", "quackini", "snackini", "bunny bunny sahur"}
 
--- 2. FUNGSI FORCE FLAT COLOR (ANTI-GAGAL)
-local function ForceFlat(v)
-    pcall(function()
-        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
-            -- Ubah Material Paksa
-            v.Material = Enum.Material.Plastic
-            v.CastShadow = false
-            v.Reflectance = 0
-            
-            -- Hapus Tekstur & Mesh Texture
-            if v:IsA("MeshPart") then
-                v.TextureID = ""
-            end
-            
-            -- Bersihkan Decal/Texture di dalamnya
-            for _, child in pairs(v:GetChildren()) do
-                if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") then
-                    child:Destroy()
-                end
-            end
-        elseif v:IsA("SpecialMesh") then
-            v.TextureId = ""
-        end
-    end)
-end
+-- [[ 2. UI MENU G (MUNCUL PALING AWAL) ]] --
+if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false; SG.DisplayOrder = 9999
 
--- 3. FUNGSI ESP (BIRU TEMBUS PANDANG)
+local Toggle = Instance.new("TextButton", SG)
+Toggle.Size = UDim2.new(0, 60, 0, 60); Toggle.Position = UDim2.new(0, 10, 0.4, 0)
+Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255); Toggle.Text = "G"; Toggle.Font = Enum.Font.GothamBlack
+Toggle.TextColor3 = Color3.new(1, 1, 1); Toggle.TextSize = 30; Instance.new("UICorner", Toggle).CornerRadius = UDim.new(1, 0)
+
+-- Pesan Loading di Layar biar Abang tau script lagi kerja
+local LoadMsg = Instance.new("TextLabel", SG)
+LoadMsg.Size = UDim2.new(0, 200, 0, 30); LoadMsg.Position = UDim2.new(0.5, -100, 0, 50)
+LoadMsg.BackgroundColor3 = Color3.new(0,0,0); LoadMsg.TextColor3 = Color3.new(1,1,1)
+LoadMsg.Text = "Gurita Hub: Menghapus Tekstur..."
+LoadMsg.BackgroundTransparency = 0.5; LoadMsg.Font = Enum.Font.GothamBold; LoadMsg.TextSize = 12
+Instance.new("UICorner", LoadMsg)
+
+-- [[ 3. FUNGSI ESP ]] --
 local function PasangESP(obj)
     if obj:FindFirstChild("GuritaMarker") then return end
     pcall(function()
@@ -52,22 +43,35 @@ local function PasangESP(obj)
                     local pos = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
                     t.Text = obj.Name:upper() .. "\n[" .. math.floor((lp.Character.HumanoidRootPart.Position - pos).Magnitude) .. " Studs]"
                 end
-                task.wait(1.5)
+                task.wait(2)
             end
         end)
     end)
 end
 
--- 4. EKSEKUSI (SISTEM TUNGGU)
+-- [[ 4. LOGIKA FLAT COLOR (BACKGROUND TASK) ]] --
+local function ForceFlat(v)
+    pcall(function()
+        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+            v.Material = Enum.Material.Plastic
+            v.CastShadow = false
+            if v:IsA("MeshPart") then v.TextureID = "" end
+            for _, child in pairs(v:GetChildren()) do
+                if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") then
+                    child:Destroy()
+                end
+            end
+        end
+    end)
+end
+
+-- [[ 5. JALANKAN SECARA BERTAHAP ]] --
 task.spawn(function()
-    -- Matikan Global Lighting Biar Enteng
-    local Lighting = game:GetService("Lighting")
-    Lighting.GlobalShadows = false
-    Lighting.FogEnd = 9e9
-    
     local all = workspace:GetDescendants()
+    local total = #all
+    
     for i, v in pairs(all) do
-        -- Jalankan Flat Color
+        -- Sikat Map
         ForceFlat(v)
         
         -- Cari Telur
@@ -76,28 +80,25 @@ task.spawn(function()
             if name == target then PasangESP(v) end
         end
         
-        -- Jeda Redmi 10 (Sangat Penting)
-        if i % 100 == 0 then task.wait() end
+        -- Istirahat biar Menu G gak freeze (Setiap 80 part)
+        if i % 80 == 0 then
+            LoadMsg.Text = "Cleaning Map: " .. math.floor((i/total)*100) .. "%"
+            task.wait() 
+        end
     end
+    LoadMsg.Text = "Gurita Hub: Ready!"
+    task.wait(2)
+    LoadMsg:Destroy()
 end)
 
--- Deteksi Item Baru (Termasuk Island Event)
+-- Pantau spawn baru (Island event)
 workspace.DescendantAdded:Connect(function(v)
     local name = v.Name:lower()
     for _, target in pairs(TargetEggs) do
         if name == target then task.wait(1) PasangESP(v) end
     end
-    task.wait(0.1)
+    task.wait(0.2)
     ForceFlat(v)
 end)
 
--- 5. UI MENU G (PASTI MUNCUL)
-if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false; SG.DisplayOrder = 9999
-
-local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 60, 0, 60); Toggle.Position = UDim2.new(0, 10, 0.4, 0)
-Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255); Toggle.Text = "G"; Toggle.Font = Enum.Font.GothamBlack
-Toggle.TextColor3 = Color3.new(1, 1, 1); Toggle.TextSize = 30; Instance.new("UICorner", Toggle).CornerRadius = UDim.new(1, 0)
-
-print("GURITA HUB: Force Flat Color & ESP Ready!")
+print("GURITA HUB: Menu prioritised. Map cleaning in background!")
