@@ -1,30 +1,42 @@
--- [[ GURITA HUB: PURE AUTO FLAT COLOR ]] --
--- Sifat: Langsung Aktif, No UI, No Buttons, No Lag
+-- [[ GURITA HUB: GLOBAL MATERIAL NUKE ]] --
+-- Sifat: AUTO-ON, NO UI, NO LAG, NO TEXTURE
 
 local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
+local MaterialService = game:GetService("MaterialService")
+local Lighting = game:GetService("Lighting")
 
--- [[ ENGINE INTI ]] --
-local function SikatMap(v)
-    -- Proteksi Karakter & UI (Biar Ava Abang tetep keren)
+-- [[ 1. NUKE MATERIAL SERVICE ]] --
+-- Ini kuncinya: Matikan semua pengganti material buatan developer gamenya
+pcall(function()
+    MaterialService.Use2022Materials = false
+    -- Kosongkan semua override material global jika ada
+    for _, v in pairs(MaterialService:GetChildren()) do
+        if v:IsA("TerrainDetail") or v:IsA("MaterialVariant") then
+            v:Destroy()
+        end
+    end
+end)
+
+-- [[ 2. FUNGSI PEMBERSIH TOTAL ]] --
+local function ForceFlat(v)
+    -- PROTEKSI KARAKTER (Ava Bang Ezra & Player)
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
-    if v:IsA("GuiObject") or v:IsA("ScreenGui") then return end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Paksa jadi polos total
-            v.Material = Enum.Material.SmoothPlastic
+            -- Paksa ke material paling dasar
+            v.Material = Enum.Material.Plastic
             v.CastShadow = false
             v.Reflectance = 0
             
-            -- Hapus Tekstur Mesh
+            -- Sikat Tekstur Mesh
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
             
-            -- Hapus SurfaceAppearance (Biang kerok map gak mau rata)
+            -- Sikat SurfaceAppearance (Penyebab map gak mau polos)
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
             
@@ -36,36 +48,34 @@ local function SikatMap(v)
     end)
 end
 
--- [[ SISTEM EKSEKUSI OTOMATIS ]] --
+-- [[ 3. AUTOMATION (AUTO-RUN) ]] --
 
--- 1. Sikat yang sudah ada di map saat ini (Bertahap biar gak lag)
+-- Eksekusi awal (Nyapu map yang sudah ke-load)
 task.spawn(function()
     local all = workspace:GetDescendants()
     for i, v in pairs(all) do
-        SikatMap(v)
-        -- Jeda tiap 100 part supaya executor gak kaget
-        if i % 100 == 0 then task.wait() end
+        ForceFlat(v)
+        -- Jeda tipis biar gak lag di map berat
+        if i % 150 == 0 then task.wait() end
     end
 end)
 
--- 2. Pantau part baru yang muncul (StreamingEnabled)
+-- Pantau part baru (Penting buat map yang luas/streaming)
 workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.1) -- Kasih waktu part buat load identitasnya
-    SikatMap(v)
+    task.wait(0.1)
+    ForceFlat(v)
 end)
 
--- 3. Nuke Lighting (Biar warna map polos merata)
+-- [[ 4. LIGHTING OVERRIDE (BIAR MAKIN FLAT) ]] --
 task.spawn(function()
-    local Lighting = game:GetService("Lighting")
     Lighting.GlobalShadows = false
+    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     Lighting.Brightness = 2
-    Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
-    
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("PostEffect") or v:IsA("Atmosphere") then
-            v:Destroy()
+    for _, effect in pairs(Lighting:GetChildren()) do
+        if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Clouds") then
+            effect:Destroy()
         end
     end
 end)
 
-print("Gurita Hub: Flat Color Loaded & Auto-Active!")
+print("Gurita Hub: Global Nuke Active. Map should be Flat now!")
