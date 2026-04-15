@@ -1,33 +1,51 @@
--- [[ GURITA HUB - BIG MENU EDITION ]] --
--- Fitur: Ukuran Tombol Pas di Jempol, ESP Egg Nembus Langit
+-- [[ GURITA HUB - MEGA MENU & REAL ESP ]] --
+-- Spesial buat Bang Ezra (Ukuran Besar & Auto Scan)
 
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 
--- 1. DAFTAR TELUR (LEBIH SENSITIF)
-local TargetEggs = {"hydra", "bunny", "noo", "hopili", "baskito", "churrito", "quackini", "snackini", "sahur"}
+-- 1. DAFTAR TELUR (DENGAN KATA KUNCI PALING SENSITIF)
+local TargetEggs = {
+    "hydra", "bunny", "noo", "hopili", "baskito", 
+    "churrito", "quackini", "snackini", "sahur", "egg"
+}
 
--- 2. FUNGSI ESP (BIRU & GEDE)
-local function PasangESP(obj)
+-- 2. FUNGSI ESP MEGA (BIRU NEON)
+local function PasangMegaESP(obj)
     if obj:FindFirstChild("GuritaMarker") then return end
+    
     pcall(function()
-        local h = Instance.new("Highlight", obj)
-        h.Name = "GuritaMarker"; h.FillColor = Color3.fromRGB(0, 170, 255)
-        h.OutlineColor = Color3.new(1, 1, 1); h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop 
+        -- Highlight Biru Tembus Pandang
+        local h = Instance.new("Highlight")
+        h.Name = "GuritaMarker"
+        h.Parent = obj
+        h.FillColor = Color3.fromRGB(0, 170, 255)
+        h.OutlineColor = Color3.new(1, 1, 1)
+        h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop 
 
-        local b = Instance.new("BillboardGui", obj)
-        b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 6, 0)
+        -- Billboard UI (Tulisan Gede)
+        local b = Instance.new("BillboardGui")
+        b.Name = "GuritaTag"
+        b.Parent = obj
+        b.Size = UDim2.new(0, 250, 0, 80) -- Ukuran Label Gede
+        b.AlwaysOnTop = true
+        b.ExtentsOffset = Vector3.new(0, 10, 0)
         
         local t = Instance.new("TextLabel", b)
-        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.fromRGB(0, 170, 255)
-        t.Font = Enum.Font.GothamBlack; t.TextSize = 16; t.TextStrokeTransparency = 0 -- Text digedein
-        
+        t.Size = UDim2.new(1, 0, 1, 0)
+        t.BackgroundTransparency = 1
+        t.TextColor3 = Color3.fromRGB(0, 170, 255)
+        t.Font = Enum.Font.GothamBlack
+        t.TextSize = 22 -- Tulisan digedein biar keliatan di langit
+        t.TextStrokeTransparency = 0
+        t.Text = "TARGET: " .. obj.Name:upper()
+
         task.spawn(function()
             while obj and obj.Parent do
                 if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
                     local pos = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
                     local dist = (lp.Character.HumanoidRootPart.Position - pos).Magnitude
-                    t.Text = "EGG: " .. obj.Name:upper() .. "\n[" .. math.floor(dist) .. " STUDS]"
+                    t.Text = "TARGET: " .. obj.Name:upper() .. "\n[" .. math.floor(dist) .. " STUDS]"
                 end
                 task.wait(1)
             end
@@ -35,54 +53,73 @@ local function PasangESP(obj)
     end)
 end
 
--- 3. UI GURITA HUB (UKURAN NYAMAN)
-if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false; SG.DisplayOrder = 999
-
--- Tombol "G" (Digedein biar gampang pencet)
-local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 80, 0, 80) -- Ukuran 80x80 (Gampang dipencet)
-Toggle.Position = UDim2.new(0, 20, 0.4, 0)
-Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-Toggle.Text = "G"; Toggle.TextColor3 = Color3.new(1, 1, 1)
-Toggle.Font = Enum.Font.GothamBlack; Toggle.TextSize = 40
-Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 15)
-
--- Main Frame (Digedein juga)
-local MainFrame = Instance.new("Frame", SG)
-MainFrame.Size = UDim2.new(0, 280, 0, 200) -- Frame lebih lebar
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -100)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.Visible = false
-Instance.new("UICorner", MainFrame)
-
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "GURITA HUB - V5"
-Title.TextColor3 = Color3.fromRGB(0, 170, 255); Title.Font = Enum.Font.GothamBlack; Title.TextSize = 22; Title.BackgroundTransparency = 1
-
--- Tombol Scan Eggs
-local BtnScan = Instance.new("TextButton", MainFrame)
-BtnScan.Size = UDim2.new(0, 240, 0, 60); BtnScan.Position = UDim2.new(0, 20, 0, 70)
-BtnScan.BackgroundColor3 = Color3.fromRGB(0, 170, 255); BtnScan.Text = "SCAN SEMUA TELUR"; BtnScan.Font = Enum.Font.GothamBold
-BtnScan.TextColor3 = Color3.new(1, 1, 1); BtnScan.TextSize = 18; Instance.new("UICorner", BtnScan)
-
--- Logika Klik (Pakai Down biar responsif)
-Toggle.MouseButton1Down:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-
-BtnScan.MouseButton1Down:Connect(function()
-    BtnScan.Text = "MENCARI TELUR..."; task.wait(0.5)
-    for _, v in pairs(workspace:GetDescendants()) do
+-- 3. FUNGSI SCAN TELUR (SISTEM PAKSA)
+local function ForceScan()
+    local all = workspace:GetDescendants()
+    for _, v in pairs(all) do
         local name = v.Name:lower()
         for _, target in pairs(TargetEggs) do
-            if string.find(name, target) then PasangESP(v) end
+            if string.find(name, target) then
+                PasangMegaESP(v)
+            end
         end
     end
-    BtnScan.Text = "SCAN BERHASIL!"; task.wait(1); BtnScan.Text = "SCAN SEMUA TELUR"
+end
+
+-- 4. UI GURITA HUB (UKURAN RAKSASA)
+if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false
+
+-- Tombol "G" (Ukuran Besar buat Jempol)
+local Toggle = Instance.new("TextButton", SG)
+Toggle.Size = UDim2.new(0, 90, 0, 90) -- Gede banget!
+Toggle.Position = UDim2.new(0, 25, 0.4, 0)
+Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+Toggle.Text = "G"; Toggle.TextColor3 = Color3.new(1, 1, 1)
+Toggle.Font = Enum.Font.GothamBlack; Toggle.TextSize = 45
+Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 20)
+
+-- Main Menu (Lega)
+local MainFrame = Instance.new("Frame", SG)
+MainFrame.Size = UDim2.new(0, 320, 0, 250) -- Frame Raksasa
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -125)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Visible = false; MainFrame.Active = true; MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame)
+
+-- Judul
+local Ttl = Instance.new("TextLabel", MainFrame)
+Ttl.Size = UDim2.new(1, 0, 0, 60); Ttl.Text = "GURITA HUB V6"; Ttl.TextColor3 = Color3.fromRGB(0, 170, 255)
+Ttl.Font = Enum.Font.GothamBlack; Ttl.TextSize = 26; Ttl.BackgroundTransparency = 1
+
+-- Tombol ESP (Warna Hijau kalau aktif)
+local BtnESP = Instance.new("TextButton", MainFrame)
+BtnESP.Size = UDim2.new(0, 280, 0, 70); BtnESP.Position = UDim2.new(0, 20, 0, 80)
+BtnESP.BackgroundColor3 = Color3.fromRGB(0, 170, 255); BtnESP.Text = "CARI SEMUA TELUR"; BtnESP.Font = Enum.Font.GothamBold
+BtnESP.TextColor3 = Color3.new(1, 1, 1); BtnESP.TextSize = 20; Instance.new("UICorner", BtnESP)
+
+-- Tombol Close
+local Close = Instance.new("TextButton", MainFrame)
+Close.Size = UDim2.new(0, 280, 0, 50); Close.Position = UDim2.new(0, 20, 0, 170)
+Close.BackgroundColor3 = Color3.fromRGB(150, 0, 0); Close.Text = "TUTUP MENU"; Close.Font = Enum.Font.GothamBold
+Close.TextColor3 = Color3.new(1, 1, 1); Close.TextSize = 18; Instance.new("UICorner", Close)
+
+-- LOGIKA KLIK
+Toggle.MouseButton1Down:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+Close.MouseButton1Down:Connect(function() MainFrame.Visible = false end)
+
+BtnESP.MouseButton1Down:Connect(function()
+    BtnESP.Text = "SEDANG MENCARI..."
+    ForceScan()
+    task.wait(1)
+    BtnESP.Text = "SCAN SELESAI!"
+    task.wait(1)
+    BtnESP.Text = "CARI SEMUA TELUR"
 end)
 
--- 4. OTOMATIS JALAN
+-- 5. AUTO FLAT COLOR & SCAN AWAL
 task.spawn(function()
-    -- Global Flat Color (Anti-Lag)
+    -- Anti-Lag
     settings().Rendering.QualityLevel = 1
     game:GetService("Lighting").GlobalShadows = false
     pcall(function()
@@ -90,18 +127,16 @@ task.spawn(function()
         ms.Use2022Materials = false
         for _, v in pairs(ms:GetChildren()) do v:Destroy() end
     end)
-    -- Initial Scan
-    for _, v in pairs(workspace:GetDescendants()) do
-        local name = v.Name:lower()
-        for _, target in pairs(TargetEggs) do
-            if string.find(name, target) then PasangESP(v) end
-        end
-    end
+    -- Jalankan Scan
+    ForceScan()
 end)
 
+-- Pantau item baru
 workspace.DescendantAdded:Connect(function(v)
     local name = v.Name:lower()
     for _, target in pairs(TargetEggs) do
-        if string.find(name, target) then task.wait(1); PasangESP(v) end
+        if string.find(name, target) then task.wait(1); PasangMegaESP(v) end
     end
 end)
+
+print("GURITA HUB: MEGA VERSION LOADED!")
