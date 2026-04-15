@@ -1,29 +1,63 @@
--- [[ GURITA HUB - LITE VERSION ]] --
--- Fokus: Langsung Jalan, Gak Bikin Freeze, Menu Ringan
+-- [[ GURITA HUB - TOUCH FIX VERSION ]] --
+-- Prioritas: Tombol "G" Bisa Dipencet di Redmi 10
 
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 
--- [[ 1. DAFTAR TARGET ]] --
+-- 1. DAFTAR TARGET
 local TargetEggs = {"hydra bunny", "noo my eggs", "hopilikalika", "baskito", "churrito", "quackini", "snackini", "bunny bunny sahur"}
 
--- [[ 2. UI MENU G (VERSI PALING ENTENG) ]] --
+-- 2. UI MENU G (VERSI FORCE TOUCH)
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false
 
+local SG = Instance.new("ScreenGui", PlayerGui)
+SG.Name = "GuritaHubUI"
+SG.DisplayOrder = 999999999 -- Sangat di depan
+SG.ResetOnSpawn = false
+
+-- Tombol Toggle "G"
 local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 50, 0, 50); Toggle.Position = UDim2.new(0, 10, 0.4, 0)
-Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255); Toggle.Text = "G"; Toggle.TextColor3 = Color3.new(1, 1, 1)
-Toggle.Font = Enum.Font.GothamBlack; Toggle.TextSize = 25; Instance.new("UICorner", Toggle).CornerRadius = UDim.new(1, 0)
+Toggle.Name = "Toggle"
+Toggle.Size = UDim2.new(0, 65, 0, 65)
+Toggle.Position = UDim2.new(0, 20, 0.4, 0)
+Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+Toggle.Text = "G"
+Toggle.Font = Enum.Font.GothamBlack
+Toggle.TextColor3 = Color3.new(1, 1, 1)
+Toggle.TextSize = 30
+Toggle.ZIndex = 999999999
+Toggle.Active = true -- Biar nangkep sentuhan
+Toggle.Selectable = true
+Instance.new("UICorner", Toggle).CornerRadius = UDim.new(1, 0)
 
--- [[ 3. GLOBAL FLAT COLOR (PASTI CEPET) ]] --
+-- Menu Frame (Isinya Kosong Dulu buat Tes)
+local MainFrame = Instance.new("Frame", SG)
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 200, 0, 100)
+MainFrame.Position = UDim2.new(0.5, -100, 0.5, -50)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Visible = false
+MainFrame.ZIndex = 999999998
+Instance.new("UICorner", MainFrame)
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "GURITA HUB ACTIVE\n(Menu Berhasil!)"
+Title.TextColor3 = Color3.fromRGB(0, 170, 255)
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 16
+
+-- [[ CARA KLIK BARU (PAS DITEKAN LANGSUNG JALAN) ]] --
+Toggle.MouseButton1Down:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    print("GURITA HUB: Menu Toggled!")
+end)
+
+-- 3. GLOBAL FLAT COLOR (VERSI LITE)
 task.spawn(function()
-    -- Ganti settingan render global (Ini super cepet dibanding nyikat satu-satu)
     settings().Rendering.QualityLevel = 1
     game:GetService("Lighting").GlobalShadows = false
-    game:GetService("Lighting").OutdoorAmbient = Color3.fromRGB(200, 200, 200) -- Bikin map terang terus
-    
-    -- Sikat Material Service (Ini rahasia biar map jadi polos tanpa lag)
     local ms = game:GetService("MaterialService")
     pcall(function()
         ms.Use2022Materials = false
@@ -31,7 +65,7 @@ task.spawn(function()
     end)
 end)
 
--- [[ 4. ESP (KHUSUS EGG) ]] --
+-- 4. ESP EGG
 local function BuatESP(obj)
     if obj:FindFirstChild("GuritaMarker") then return end
     pcall(function()
@@ -56,7 +90,6 @@ local function BuatESP(obj)
     end)
 end
 
--- [[ 5. SCAN EGG (TANPA SIKAT MAP) ]] --
 task.spawn(function()
     for _, v in pairs(workspace:GetDescendants()) do
         local name = v.Name:lower()
@@ -72,5 +105,3 @@ workspace.DescendantAdded:Connect(function(v)
         if name == target then task.wait(1) BuatESP(v) end
     end
 end)
-
-print("GURITA HUB: Lite Load Complete!")
