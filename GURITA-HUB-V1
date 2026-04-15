@@ -1,5 +1,5 @@
--- [[ GURITA HUB: V32 - INFINITE FORCE FLAT COLOR ]] --
--- Fix: Material Mental, Texture Reloading, & StreamingEnabled Issues
+-- [[ GURITA HUB: V33 - GLOBAL RENDER INJECTOR ]] --
+-- Fix: Map Texture Lock, Material Persistence, & Only-Avatar Bug
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -8,7 +8,7 @@ local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
 local HttpService = game:GetService("HttpService")
 
--- [[ 1. CONFIG ]] --
+-- [[ 1. CONFIG & SAVE ]] --
 local FileName = "GuritaHub_Config.json"
 local TargetEggs = {"hydra bunny", "noo my eggs", "baskito", "churrito", "quackini", "snackini", "bunny bunny sahur"}
 local NotifiedEggs = {}
@@ -19,56 +19,54 @@ local function SaveData() if writefile then writefile(FileName, HttpService:JSON
 local function LoadData() if isfile and isfile(FileName) then pcall(function() _G.Settings = HttpService:JSONDecode(readfile(FileName)) end) end end
 LoadData()
 
--- [[ 2. THE "FORCE" FLAT COLOR ENGINE ]] --
-local function SikatHabis(v)
-    -- Proteksi UI supaya gak ilang lagi
+-- [[ 2. GLOBAL FLAT COLOR ENGINE (ULTIMATE) ]] --
+local function ForceFlat(v)
+    -- PROTEKSI UI
     if v:IsDescendantOf(PlayerGui) or v:IsDescendantOf(lp) or v:IsA("ScreenGui") then return end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- Paksa Material & Hapus Bayangan
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
+            -- Jika MeshPart, kita paksa Texture-nya hilang total
             if v:IsA("MeshPart") then
-                v.TextureID = "" -- Cabut tekstur Mesh
+                v.TextureID = ""
             end
         elseif v:IsA("Decal") or v:IsA("Texture") then
-            v.Transparency = 1 -- Buat stiker jadi transparan (lebih aman daripada Destroy)
-        elseif v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("Sky") then
-            v:Destroy() -- Hapus langit & kabut
+            v.Transparency = 1
+            v:Destroy() -- Double kill biar bener-bener ilang
+        elseif v:IsA("SpecialMesh") then
+            v.TextureId = ""
         end
     end)
 end
 
--- Fungsi Pembersih Cahaya
-local function NukeLighting()
+-- Teknik Baru: Force All Elements via Rendering Settings
+local function NukeEnvironment()
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
     Lighting.Brightness = 2
     Lighting.ClockTime = 12
-    Lighting.ExposureCompensation = 0.5
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("PostEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("ColorCorrectionEffect") then
+    
+    -- Hapus semua yang bikin map kelihatan berat/bertekstur
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("Sky") or v:IsA("SunRaysEffect") then
             v:Destroy()
         end
     end
 end
 
--- Jalankan secara agresif (Anti-StreamingEnabled)
+-- Loop Agresif: Memaksa Map (Bukan cuma Player)
 task.spawn(function()
-    NukeLighting()
+    NukeEnvironment()
     while true do
-        for _, v in pairs(workspace:GetDescendants()) do
-            SikatHabis(v)
+        for i, v in pairs(workspace:GetDescendants()) do
+            ForceFlat(v)
+            -- Jeda dikit biar gak freeze pas proses ribuan part map
+            if i % 250 == 0 then task.wait() end 
         end
-        task.wait(10) -- Ulangi setiap 10 detik buat pastiin part baru tetep flat
+        task.wait(10) -- Paksa ulang tiap 10 detik (Anti-StreamingEnabled)
     end
-end)
-
--- Langsung sikat part yang baru muncul (Real-time)
-workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.1)
-    SikatHabis(v)
 end)
 
 -- [[ 3. ESP & NOTIF ]] --
@@ -76,7 +74,7 @@ local function ApplyESP(obj)
     if not _G.Settings.EggESP then return end
     if not obj:FindFirstChild("GuritaMarker") then
         local h = Instance.new("Highlight", obj); h.Name = "GuritaMarker"
-        h.FillColor = Color3.fromRGB(255, 255, 0)
+        h.FillColor = Color3.fromRGB(255, 255, 0); h.OutlineColor = Color3.new(1,1,1)
         
         local b = Instance.new("BillboardGui", obj); b.Name = "GuritaTag"
         b.Size = UDim2.new(0, 150, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 3, 0)
@@ -113,14 +111,13 @@ task.spawn(function()
     end
 end)
 
--- [[ 4. UI CONSTRUCTION ]] --
-if PlayerGui:FindFirstChild("GURITA_V32") then PlayerGui.GURITA_V32:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V32"; SG.ResetOnSpawn = false
+-- [[ 4. UI FIX ]] --
+if PlayerGui:FindFirstChild("GURITA_V33") then PlayerGui.GURITA_V33:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GURITA_V33"; SG.ResetOnSpawn = false
 
 local Logo = Instance.new("TextButton", SG)
 Logo.Size = UDim2.new(0, 50, 0, 50); Logo.Position = UDim2.new(0, 15, 0.5, -25)
-Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "GH"; Logo.TextColor3 = Color3.new(1, 1, 0)
-Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 20; Logo.Draggable = true; Logo.Active = true; Instance.new("UICorner", Logo)
+Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Logo.Text = "V33"; Logo.TextColor3 = Color3.new(1, 1, 0); Logo.Font = Enum.Font.GothamBlack; Logo.Draggable = true; Logo.Active = true; Instance.new("UICorner", Logo)
 
 local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 200, 0, 180); Main.Position = UDim2.new(0.5, -100, 0.5, -90); Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Color3.new(1, 1, 0)
 
