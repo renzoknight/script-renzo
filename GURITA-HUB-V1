@@ -1,60 +1,47 @@
--- [[ GURITA HUB - ULTIMATE NIGHT FLAT & ANTI-LAG ]] --
--- Spesial Redmi 10 | Delta Executor
+-- [[ GURITA HUB - PERMANEN NIGHT FLAT (ANTI-REVERT) ]] --
+-- Spesial Redmi 10 | Fix Langit Gak Bakal Balik Jadi Siang
 
 local Lighting = game:GetService("Lighting")
 local MaterialService = game:GetService("MaterialService")
 
--- [[ 1. SETTINGAN RENDERING (LANGSUNG AKTIF) ]] --
+-- [[ 1. OPTIMASI RENDERING ]] --
 pcall(function()
     settings().Rendering.QualityLevel = 1
-    if setfpscap then setfpscap(45) end -- Stabil di 45 FPS biar gak panas
+    if setfpscap then setfpscap(45) end
 end)
 
--- [[ 2. NUKE LANGIT JADI MALEM POLOS ]] --
-local function BuatMalemPolos()
-    pcall(function()
-        -- Hapus semua isi Lighting (Awan HD, Atmosfer, Sky lama)
-        Lighting:ClearAllChildren()
-        
-        -- Buat Skybox Hitam Pekat No Bintang No Awan
-        local sky = Instance.new("Sky", Lighting)
-        sky.SkyboxBk = "rbxassetid://0"
-        sky.SkyboxDn = "rbxassetid://0"
-        sky.SkyboxFt = "rbxassetid://0"
-        sky.SkyboxLf = "rbxassetid://0"
-        sky.SkyboxRt = "rbxassetid://0"
-        sky.SkyboxUp = "rbxassetid://0"
-        sky.SunAngularSize = 0
-        sky.MoonAngularSize = 0
-        sky.StarCount = 0
-        
-        -- Atur suasana malem tapi map tetep kelihatan
-        Lighting.ClockTime = 0 -- Jam 12 malem
-        Lighting.Brightness = 1
-        Lighting.GlobalShadows = false -- Bayangan mati biar gak lag
-        Lighting.ExposureCompensation = 0.5
-        Lighting.EnvironmentDiffuseScale = 0
-        Lighting.EnvironmentSpecularScale = 0
-    end)
+-- [[ 2. FUNGSI LOCK MALEM POLOS (PERMANEN) ]] --
+local function LockMalemPolos()
+    -- Paksa Waktu & Hapus Efek
+    Lighting.ClockTime = 0
+    Lighting.GlobalShadows = false
+    Lighting.Brightness = 1
+    Lighting.FogEnd = 9e9
+    Lighting.EnvironmentDiffuseScale = 0
+    Lighting.EnvironmentSpecularScale = 0
+    
+    -- Hapus Awan/Atmosfer yang muncul lagi
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("PostEffect") then
+            v:Destroy()
+        end
+    end
+    
+    -- Pasang Sky Hitam Polos (Fix ID 0)
+    local sky = Instance.new("Sky", Lighting)
+    sky.SkyboxBk, sky.SkyboxDn, sky.SkyboxFt, sky.SkyboxLf, sky.SkyboxRt, sky.SkyboxUp = "rbxassetid://0","rbxassetid://0","rbxassetid://0","rbxassetid://0","rbxassetid://0","rbxassetid://0"
+    sky.SunAngularSize, sky.MoonAngularSize, sky.StarCount = 0, 0, 0
 end
 
--- [[ 3. LOGIKA FLAT POLOS (WARNA TETAP ADA) ]] --
-local function SikatJadiPolos(v)
+-- [[ 3. LOGIKA FLAT POLOS (WARNA ASLI) ]] --
+local function SikatPolos(v)
     if v:IsDescendantOf(game.Players.LocalPlayer.Character or workspace) and v.Parent:FindFirstChild("Humanoid") then return end
-
     pcall(function()
         if v:IsA("BasePart") then
-            -- Paksa Material Plastic (Paling Polos/Flat)
             v.Material = Enum.Material.Plastic
             v.CastShadow = false
             v.Reflectance = 0
-            
-            -- Sikat ID Texture di MeshPart (Biar Tembok Pembatas Polos)
-            if v:IsA("MeshPart") then
-                v.TextureID = ""
-            end
-
-            -- Hapus SurfaceAppearance & Tekstur bintik/motif
+            if v:IsA("MeshPart") then v.TextureID = "" end
             for _, child in pairs(v:GetChildren()) do
                 if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") then
                     child:Destroy()
@@ -66,49 +53,40 @@ local function SikatJadiPolos(v)
     end)
 end
 
--- [[ 4. EKSEKUSI GLOBAL BERTAHAP (REDMI 10 SAFE) ]] --
+-- [[ 4. EKSEKUSI & LOOPING JAGA MALEM ]] --
 task.spawn(function()
-    BuatMalemPolos()
-    
-    -- Matikan material baru roblox
+    -- Matiin Material 2022
     pcall(function()
         MaterialService.Use2022Materials = false
         for _, m in pairs(MaterialService:GetChildren()) do m:Destroy() end
     end)
 
-    -- Proses part map pelan-pelan biar gak patah-patah
+    -- Scan Map Awal (Anti-Lag)
     local all = workspace:GetDescendants()
     for i, v in pairs(all) do
-        SikatJadiPolos(v)
-        if i % 20 == 0 then task.wait(0.01) end -- Jeda per 20 part
+        SikatPolos(v)
+        if i % 25 == 0 then task.wait() end 
+    end
+    
+    -- [[ INI KUNCINYA: Jaga Malem Tiap Detik ]] --
+    while true do
+        LockMalemPolos()
+        task.wait(2) -- Cek tiap 2 detik, biar gak lag tapi langit tetep malem
     end
 end)
 
--- Update kalau ada part baru masuk
+-- Pantau part baru
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.5)
-    SikatJadiPolos(v)
+    SikatPolos(v)
 end)
 
--- [[ 5. UI TULISAN BIRU GURITA HUB ]] --
+-- [[ 5. UI GURITA HUB ]] --
 local lp = game.Players.LocalPlayer
 local SG = Instance.new("ScreenGui", lp.PlayerGui); SG.Name = "GuritaHubUI"
-
 local OpenBtn = Instance.new("TextButton", SG)
 OpenBtn.Size = UDim2.new(0, 150, 0, 50); OpenBtn.Position = UDim2.new(0, 20, 0.5, -25)
 OpenBtn.BackgroundTransparency = 1; OpenBtn.Text = "GURITA HUB"; OpenBtn.Font = Enum.Font.GothamBlack
 OpenBtn.TextColor3 = Color3.fromRGB(0, 170, 255); OpenBtn.TextSize = 20; OpenBtn.TextStrokeTransparency = 0.5
 
-local MainFrame = Instance.new("Frame", SG)
-MainFrame.Size = UDim2.new(0, 250, 0, 100); MainFrame.Position = UDim2.new(0.5, -125, 0.5, -50)
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10); MainFrame.Visible = false; MainFrame.Active = true; MainFrame.Draggable = true
-local Stroke = Instance.new("UIStroke", MainFrame); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 2
-Instance.new("UICorner", MainFrame)
-
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 1, 0); Title.Text = "NIGHT FLAT: ACTIVE\nANTI-LAG: AUTO ON"; Title.TextColor3 = Color3.new(1, 1, 1)
-Title.BackgroundTransparency = 1; Title.Font = Enum.Font.GothamBold; Title.TextSize = 12
-
-OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-
-print("GURITA HUB: Langit Malem Polos & Flat Color Loaded!")
+print("GURITA HUB: Permanen Night Flat Active!")
