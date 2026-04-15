@@ -1,49 +1,49 @@
--- [[ GURITA HUB: THE FINAL CLEANER (NO MOTIF AT ALL) ]] --
--- Perintah: Sikat Global Material, Hapus Motif, No Shadow, Auto-On
+-- [[ GURITA HUB: FINAL FLAT COLOR - NO MOTIF VERSION ]] --
+-- Fitur: Abu-abu Solid Border, Hijau Polos Floor, No Shadow, Auto-On
 
+-- [[ 1. ANTI-LAG OPTIMIZATION ]] --
 pcall(function()
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-    settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default-- [[ GURITA HUB: SUPER FLAT COLOR - NO MOTIF VERSION ]] --
--- Perintah: Sikat Habis Motif, Ganti Warna Solid, No Shadow
-
-pcall(function()
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    if setfpscap then setfpscap(60) end
     settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Default
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
 end)
 
+local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local MaterialService = game:GetService("MaterialService")
 
--- [[ 1. LOGIKA WARNA SOLID (GANTI WARNA BUKAN TEKSTUR) ]] --
-local function SikatMotif(v)
-    -- Abaikan Karakter Player
-    if v:IsDescendantOf(game:GetService("Players")) or v.Parent:FindFirstChild("Humanoid") then return end
+-- [[ 2. LOGIKA SIKAT MOTIF & WARNA SOLID ]] --
+local function SikatSempurna(v)
+    -- Jangan sikat karakter player
+    for _, p in pairs(Players:GetPlayers()) do
+        if p.Character and v:IsDescendantOf(p.Character) then return end
+    end
 
     pcall(function()
         if v:IsA("BasePart") then
-            -- PAKSA POLOS
+            -- Paksa Material Paling Polos
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
             
-            -- SIKAT MOTIF PEMBATAS & LANTAI (Ganti Warnanya Langsung)
-            -- Kita pakai deteksi warna/nama untuk nemuin pembatasnya
+            -- WARNA PEMBATAS (Abu-abu Solid, Bukan Item Polos)
             if v.Name:lower():find("border") or v.Name:lower():find("wall") or v.Size.X > 50 or v.Size.Z > 50 then
-                v.Color = Color3.fromRGB(50, 50, 50) -- Abu-abu Solid buat Pembatas
+                v.Color = Color3.fromRGB(120, 120, 120) -- Abu-abu sedang (Biar gak gelap/item)
             end
             
-            if v.Name:lower():find("grass") or v.Name:lower():find("floor") then
-                v.Color = Color3.fromRGB(0, 255, 0) -- Hijau Solid buat Lantai
+            -- WARNA LANTAI/RUMPUT (Hijau Flat Sesuai Foto)
+            if v.Name:lower():find("grass") or v.Name:lower():find("floor") or v.Name:lower():find("ground") then
+                v.Color = Color3.fromRGB(0, 255, 0)
             end
 
-            -- Hapus paksa SurfaceAppearance/Texture/Decal di dalamnya
+            -- Hapus Tekstur/Motif di dalamnya
             for _, child in pairs(v:GetChildren()) do
                 if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") then
                     child:Destroy()
                 end
             end
             
-            -- Sikat TextureID jika MeshPart
+            -- Sikat ID Mesh kalau ada motif nempel di mesh
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
@@ -53,122 +53,42 @@ local function SikatMotif(v)
     end)
 end
 
--- [[ 2. NUKE MATERIAL SERVICE (HAPUS MOTIF GLOBAL) ]] --
+-- [[ 3. EKSEKUSI AUTO & LIGHTING ]] --
 task.spawn(function()
+    -- Matikan Material Service (Nuke Motif Global)
     pcall(function()
         MaterialService.Use2022Materials = false
         for _, v in pairs(MaterialService:GetChildren()) do
-            v:Destroy() -- Hapus semua variant motif kustom
+            v:Destroy()
         end
     end)
-end)
 
--- [[ 3. SETTING CAHAYA RATA (HILANGIN BAYANGAN MOTIF) ]] --
-task.spawn(function()
+    -- Lighting Rata (No Shadow, No Fog)
     Lighting.GlobalShadows = false
-    Lighting.Brightness = 2
+    Lighting.Brightness = 1.5
     Lighting.Ambient = Color3.fromRGB(200, 200, 200)
     Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
     
-    -- Hapus efek yang bikin motif kelihatan tajam
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("PostEffect") or v:IsA("Atmosphere") then
-            v:Destroy()
-        end
-    end
-end)
-
--- [[ 4. EKSEKUSI GLOBAL ]] --
-task.spawn(function()
-    local all = workspace:GetDescendants()
-    for i, v in pairs(all) do
-        SikatMotif(v)
-        if i % 100 == 0 then task.wait() end 
-    end
-end)
-
-workspace.DescendantAdded:Connect(function(v)
-    task.wait(0.1)
-    SikatMotif(v)
-end)
-
-print("GURITA HUB: Pembatas & Lantai Jadi Warna Solid Polos!")
-end)
-
-local Lighting = game:GetService("Lighting")
-local MaterialService = game:GetService("MaterialService")
-
--- [[ 1. NUKE MATERIAL SERVICE (INI BIANG KEROK MOTIF) ]] --
-pcall(function()
-    MaterialService.Use2022Materials = false
-    -- Hapus semua kustomisasi material yang bikin motif muncul di mana-mana
-    local variants = MaterialService:GetChildren()
-    for _, v in pairs(variants) do
-        v:Destroy()
-    end
-end)
-
--- [[ 2. LOGIKA SIKAT TOTAL ]] --
-local function SikatAbis(v)
-    -- Abaikan Karakter Player & UI
-    if v:IsDescendantOf(game:GetService("Players")) or v.Parent:FindFirstChild("Humanoid") then return end
-    if v:IsA("GuiObject") or v:IsA("ScreenGui") then return end
-
-    pcall(function()
-        if v:IsA("BasePart") then
-            -- Paksa ke Material Dasar
-            v.Material = Enum.Material.Plastic
-            v.CastShadow = false
-            v.Reflectance = 0
-            
-            -- Sikat Warna (Hijau Rata Kayak di Foto)
-            if v.Name:lower():find("grass") or v.Name:lower():find("floor") or v.Name:lower():find("ground") then
-                v.Color = Color3.fromRGB(0, 255, 0)
-            end
-
-            -- Sikat Anak Objek (SurfaceAppearance/Texture/Decal)
-            for _, child in pairs(v:GetChildren()) do
-                if child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal") or child:IsA("SpecialMesh") then
-                    child:Destroy()
-                end
-            end
-            
-            -- Sikat ID Mesh
-            if v:IsA("MeshPart") then
-                v.TextureID = ""
-            end
-        end
-    end)
-end
-
--- [[ 3. EKSEKUSI LIGHTING (PENGHAPUS BAYANGAN) ]] --
-task.spawn(function()
-    Lighting.GlobalShadows = false
-    Lighting.Brightness = 2
-    Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-    
-    -- Hapus Kabut & Langit
     for _, child in pairs(Lighting:GetChildren()) do
-        child:Destroy()
+        if child:IsA("PostEffect") or child:IsA("Atmosphere") then
+            child:Destroy()
+        end
     end
-    
-    local sky = Instance.new("Sky", Lighting)
-    sky.SunAngularSize = 0; sky.MoonAngularSize = 0
-end)
 
--- [[ 4. RUNTIME SCANNER ]] --
-task.spawn(function()
+    -- Scan Seluruh Map
     local all = workspace:GetDescendants()
-    for i, v in pairs(all) do
-        SikatAbis(v)
-        if i % 150 == 0 then task.wait() end -- Anti Lag
+    local count = 0
+    for _, v in pairs(all) do
+        SikatSempurna(v)
+        count = count + 1
+        if count >= 100 then count = 0 task.wait() end 
     end
 end)
 
+-- Pantau kalau ada area baru ke-load
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.1)
-    SikatAbis(v)
+    SikatSempurna(v)
 end)
 
-print("GURITA HUB: Map Selesai Dibersihkan Total!")
+print("GURITA HUB: Flat Color Sempurna! Abu-abu Border & Hijau Polos.")
