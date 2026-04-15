@@ -1,5 +1,5 @@
--- [[ GURITA HUB: ULTIMATE FLAT COLOR - FIX RUMPUT & TEMBOK ]] --
--- Spesialis: Steal a Brainrot (Auto-On, No Lag, No Texture)
+-- [[ GURITA HUB: EVENT EDITION - SEMPURNA & AUTO ]] --
+-- Fitur: Hijau Polos (Tidak Mencolok), No Shadow, No Lag, Auto-Active
 
 pcall(function()
     if setfpscap then setfpscap(60) end
@@ -9,75 +9,87 @@ end)
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
+local MaterialService = game:GetService("MaterialService")
 
--- [[ LOGIKA SIKAT TOTAL (TERMASUK RUMPUT & TEMBOK) ]] --
-local function SikatHabis(v)
-    -- Tetap proteksi Karakter Bang Ezra
+-- [[ 1. LOGIKA WARNA HIJAU LEMBUT & POLOS ]] --
+local function SikatEvent(v)
+    -- Proteksi karakter Bang Ezra
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and v:IsDescendantOf(p.Character) then return end
     end
-    if v:IsA("GuiObject") or v:IsA("ScreenGui") then return end
 
     pcall(function()
-        -- 1. Sikat Material & SurfaceAppearance (Tembok & Lantai)
         if v:IsA("BasePart") then
+            -- Bikin Polos
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
             v.Reflectance = 0
             
+            -- Atur Warna Hijau Rumput (Tidak Mencolok/Soft)
+            if v.Name:lower():find("grass") or v.Name:lower():find("rumput") or v.Name:lower():find("floor") then
+                v.Color = Color3.fromRGB(85, 120, 85) -- Hijau daun yang adem di mata
+            end
+
             if v:IsA("MeshPart") then
                 v.TextureID = ""
             end
             
             local sa = v:FindFirstChildOfClass("SurfaceAppearance")
             if sa then sa:Destroy() end
-        
-        -- 2. Sikat Rumput & Detail Tembok (Decal/Texture/Trail/Beam)
-        -- Ini bagian yang biasanya bikin rumput tetep ada teksturnya
-        elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("SpecialMesh") then
-            if v:IsA("SpecialMesh") then
-                v.TextureId = ""
-            else
-                v:Destroy() -- Hapus paksa tekstur rumput/tembok
-            end
+            
+        elseif v:IsA("Decal") or v:IsA("Texture") then
+            v:Destroy()
+        elseif v:IsA("SpecialMesh") then
+            v.TextureId = ""
         end
     end)
 end
 
--- [[ EKSEKUSI AUTO (SISTEM ANTREAN AMAN) ]] --
+-- [[ 2. EKSEKUSI AUTO (SISTEM ANTREAN AMAN) ]] --
 task.spawn(function()
+    -- Sikat Warna Terrain (Jika rumputnya pakai sistem Terrain)
+    local t = workspace:FindFirstChildOfClass("Terrain")
+    if t then
+        t.WaterWaveSize = 0
+        t.WaterWaveSpeed = 0
+        pcall(function()
+            t:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(85, 120, 85))
+        end)
+    end
+
     local all = workspace:GetDescendants()
     local count = 0
     for _, v in pairs(all) do
-        SikatHabis(v)
-        
-        -- Jeda 50 part biar gak lag pas baru aktif
+        SikatEvent(v)
         count = count + 1
-        if count >= 50 then 
-            count = 0
-            task.wait() 
-        end
+        if count >= 50 then count = 0 task.wait() end 
     end
 end)
 
--- Pantau part baru/streaming area baru
 workspace.DescendantAdded:Connect(function(v)
     task.wait(0.1)
-    SikatHabis(v)
+    SikatEvent(v)
 end)
 
--- [[ VISUAL TEDUH (TIDAK MENCOLOK) ]] --
+-- [[ 3. FIX LIGHTING (PENGHAPUS BAYANGAN TOTAL) ]] --
 task.spawn(function()
     Lighting.GlobalShadows = false
-    Lighting.Brightness = 1
-    Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150)
+    Lighting.Brightness = 0.8 -- Tidak terlalu silau
     Lighting.ClockTime = 12
     
-    for _, effect in pairs(Lighting:GetChildren()) do
-        if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Clouds") then
-            effect:Destroy()
+    -- Menghilangkan bayangan di pojokan tembok (Ambient Force)
+    Lighting.Ambient = Color3.fromRGB(150, 150, 150)
+    Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150)
+    
+    pcall(function()
+        MaterialService.Use2022Materials = false
+    end)
+
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") then
+            v:Destroy()
         end
     end
 end)
 
-print("GURITA HUB: Rumput & Tembok Pembatas Selesai Disikat!")
+print("GURITA HUB: Event Color Fixed! Hijau Polos & No Shadow.")
