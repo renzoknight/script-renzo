@@ -1,4 +1,4 @@
--- [[ GURITA HUB V35 - ULTIMATE EGG HUNT EDITION ]] --
+-- [[ GURITA HUB V36 - COMPLETE LIST EDITION ]] --
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 local HttpService = game:GetService("HttpService")
@@ -28,33 +28,34 @@ local SavedData = LoadSettings()
 _G.HuntingMode = SavedData.HuntingMode
 _G.NotifActive = SavedData.NotifActive
 
--- 2. DAFTAR TARGET SESUAI TRIVIA WIKI (FIXED NAMES)
+-- 2. DAFTAR TARGET TOTAL (UPDATE V36)
 local NotifHistory = {}
 local SuperRare = {
     "hydra bunny", 
     "no my egg", 
     "baskito", 
     "churrito bunnito", 
-    "hopilikalika hopilikalako", -- Nama lengkap sesuai foto
-    "quackini snackini",         -- Nama lengkap sesuai foto
-    "harp"                        -- Harp wajib dideteksi (100% Hydra Bunny)
+    "hopilikalika hopilikalako", 
+    "quackini snackini",
+    "harp" 
 }
 
 local NormalTargets = {
+    "bunny tralala egg",   -- Update Baru
+    "eggdin egg dun",      -- Update Baru
+    "easter easter sahur", -- Update Baru
     "bunny bunny sahur", 
     "sky egg", 
     "bunny egg", 
     "snackini"
 }
 
--- Blacklist diperkecil biar nggak salah filter
 local Blacklist = {"brainrot", "npc", "base", "pedestal", "shop"}
 
--- 3. FITUR FLAT COLOR (OVERRIDE BIAR MANTAP)
+-- 3. FLAT COLOR OVERRIDE
 local function ApplyPerformance()
     settings().Rendering.QualityLevel = 1
     game:GetService("Lighting").GlobalShadows = false
-    
     local function Clean(v)
         if v:IsA("BasePart") then
             v.Material = Enum.Material.Plastic
@@ -63,16 +64,14 @@ local function ApplyPerformance()
             v:Destroy()
         end
     end
-
     for _, v in pairs(workspace:GetDescendants()) do Clean(v) end
     workspace.DescendantAdded:Connect(function(v) task.wait(); Clean(v) end)
 end
 
--- 4. ALARM & NOTIFIKASI
+-- 4. ALARM & NOTIF
 local function PlayAlert(tipe)
     if not _G.NotifActive then return end
     local s = Instance.new("Sound", workspace)
-    -- Suara berbeda untuk Harp/Super Rare agar Bang Ezra langsung tahu
     s.SoundId = (tipe == "rare") and "rbxassetid://4590662766" or "rbxassetid://138090596"
     s.Volume = 1; s:Play()
     s.Ended:Connect(function() s:Destroy() end)
@@ -81,32 +80,17 @@ end
 local function KirimNotifRare(obj)
     if NotifHistory[obj] or not _G.NotifActive then return end
     NotifHistory[obj] = true 
-    
     local isHarp = obj.Name:lower():find("harp")
     local col = isHarp and Color3.new(1, 1, 0) or Color3.new(1, 0, 0)
-    
-    local sg = Instance.new("ScreenGui", PlayerGui)
-    local f = Instance.new("Frame", sg)
-    f.Size = UDim2.new(0, 300, 0, 80); f.Position = UDim2.new(1, 50, 0.8, 0)
-    f.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Instance.new("UICorner", f)
-    
-    local t1 = Instance.new("TextLabel", f)
-    t1.Size = UDim2.new(1, 0, 0, 30); t1.Position = UDim2.new(0, 15, 0.1, 0)
-    t1.Text = isHarp and "!!! HARP DETECTED !!!" or "RARE EGG FOUND!"; t1.TextColor3 = Color3.new(1, 1, 1); t1.Font = "GothamBold"; t1.TextSize = 14; t1.BackgroundTransparency = 1; t1.TextXAlignment = "Left"
-
+    local sg = Instance.new("ScreenGui", PlayerGui); local f = Instance.new("Frame", sg)
+    f.Size = UDim2.new(0, 300, 0, 80); f.Position = UDim2.new(1, 50, 0.8, 0); f.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Instance.new("UICorner", f)
     local t2 = Instance.new("TextLabel", f)
-    t2.Size = UDim2.new(1, 0, 0, 30); t2.Position = UDim2.new(0, 15, 0.5, 0)
-    t2.Text = obj.Name:upper(); t2.TextColor3 = col; t2.Font = "GothamBold"; t2.TextSize = 16; t2.BackgroundTransparency = 1; t2.TextXAlignment = "Left"
-
-    PlayAlert("rare")
-    f:TweenPosition(UDim2.new(1, -320, 0.8, 0), "Out", "Back", 0.5)
-    task.delay(5, function()
-        if f then f:TweenPosition(UDim2.new(1, 50, 0.8, 0), "In", "Quad", 0.5) end
-        task.wait(0.6); sg:Destroy()
-    end)
+    t2.Size = UDim2.new(1, 0, 1, 0); t2.Position = UDim2.new(0, 15, 0, 0); t2.Text = obj.Name:upper(); t2.TextColor3 = col; t2.Font = "GothamBold"; t2.TextSize = 16; t2.BackgroundTransparency = 1; t2.TextXAlignment = "Left"
+    PlayAlert("rare"); f:TweenPosition(UDim2.new(1, -320, 0.8, 0), "Out", "Back", 0.5)
+    task.delay(5, function() if f then f:TweenPosition(UDim2.new(1, 50, 0.8, 0), "In", "Quad", 0.5) end; task.wait(0.6); sg:Destroy() end)
 end
 
--- 5. LOGIKA DETEKSI (ESP)
+-- 5. ESP LOGIC
 local function CekTarget(n)
     n = n:lower()
     for _, b in pairs(Blacklist) do if n:find(b) then return false end end
@@ -120,22 +104,18 @@ local function PasangESP(obj)
     pcall(function()
         local tipe = CekTarget(obj.Name)
         if not tipe then return end
-        
         if tipe == "rare" then KirimNotifRare(obj) end
         local col = (tipe == "rare") and Color3.new(1, 0, 0) or Color3.fromRGB(0, 170, 255)
-
         local b = Instance.new("BillboardGui", obj)
         b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 6, 0)
         local t = Instance.new("TextLabel", b)
         t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = col; t.Font = "GothamBlack"; t.TextSize = 18; t.TextStrokeTransparency = 0
-        
         task.spawn(function()
             while obj and obj.Parent and _G.HuntingMode do
                 local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
                 if hrp then
                     local p = obj:IsA("Model") and obj:GetModelCFrame().p or obj.Position
-                    local dist = math.floor((hrp.Position - p).Magnitude)
-                    t.Text = obj.Name:upper() .. "\n[" .. dist .. " STUDS]"
+                    t.Text = obj.Name:upper() .. "\n[" .. math.floor((hrp.Position - p).Magnitude) .. "s]"
                 end
                 task.wait(1)
             end
@@ -144,7 +124,7 @@ local function PasangESP(obj)
     end)
 end
 
--- 6. UI SYSTEM
+-- 6. UI & EXECUTION (Menu G)
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
 local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false
 local Toggle = Instance.new("TextButton", SG)
@@ -166,17 +146,11 @@ end
 UpdateUI()
 Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
 BtnHunt.MouseButton1Down:Connect(function()
-    _G.HuntingMode = not _G.HuntingMode
-    UpdateUI(); SaveSettings()
+    _G.HuntingMode = not _G.HuntingMode; UpdateUI(); SaveSettings()
     if _G.HuntingMode then for _, v in pairs(workspace:GetDescendants()) do if CekTarget(v.Name) then PasangESP(v) end end end
 end)
 BtnNotif.MouseButton1Down:Connect(function() _G.NotifActive = not _G.NotifActive; UpdateUI(); SaveSettings() end)
 
--- 7. EXECUTE
 ApplyPerformance()
-if _G.HuntingMode then
-    for _, v in pairs(workspace:GetDescendants()) do if CekTarget(v.Name) then PasangESP(v) end end
-end
-workspace.DescendantAdded:Connect(function(v)
-    if _G.HuntingMode and CekTarget(v.Name) then task.wait(1.5); PasangESP(v) end
-end)
+if _G.HuntingMode then for _, v in pairs(workspace:GetDescendants()) do if CekTarget(v.Name) then PasangESP(v) end end end
+workspace.DescendantAdded:Connect(function(v) if _G.HuntingMode and CekTarget(v.Name) then task.wait(1.5); PasangESP(v) end end)
