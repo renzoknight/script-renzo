@@ -1,66 +1,59 @@
--- [[ GURITA HUB V45 - LAG-FREE ESP & NOTIF ]] --
+-- [[ GURITA HUB V46 - AUTO SAVE & LOAD EDITION ]] --
 
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 local HttpService = game:GetService("HttpService")
+local FileName = "GuritaHubV46.json"
 
--- 1. FPS BOOST (Tetap Aktif Tapi Ringan)
-local function SimpleOptimize()
+-- 1. FUNGSI SAVE & LOAD
+local function SaveSettings()
+    local data = { HuntingMode = _G.HuntingMode }
+    if writefile then
+        writefile(FileName, HttpService:JSONEncode(data))
+    end
+end
+
+local function LoadSettings()
+    if isfile and isfile(FileName) then
+        local success, res = pcall(function()
+            return HttpService:JSONDecode(readfile(FileName))
+        end)
+        if success then return res.HuntingMode end
+    end
+    return false
+end
+
+_G.HuntingMode = LoadSettings()
+
+-- 2. FPS BOOST & FLAT COLOR
+local function BoostFPS()
     pcall(function()
         settings().Rendering.QualityLevel = 1
         game:GetService("Lighting").GlobalShadows = false
         for _, v in pairs(workspace:GetDescendants()) do
             if v:IsA("Decal") or v:IsA("Texture") then v:Destroy() end
+            if v:IsA("BasePart") then v.Material = Enum.Material.Plastic; v.Reflectance = 0 end
         end
     end)
 end
-task.spawn(SimpleOptimize)
+task.spawn(BoostFPS)
 
--- 2. TARGET LIST
+-- 3. TARGET LIST
 local NotifHistory = {}
 local SuperRare = {"hydra", "no my egg", "baskito", "churrito", "hopilikalika", "quackini", "harp"}
 local NormalTargets = {"tralala", "eggdin", "easter", "sahur", "sky egg", "bunny egg"}
 
--- 3. OPTIMIZED NOTIF (Pakai Debounce)
-local function KirimNotifRare(objName)
-    if NotifHistory[objName] then return end
-    NotifHistory[objName] = true
+-- 4. ESP & NOTIF LOGIC
+local function PasangESP(obj)
+    if not _G.HuntingMode or obj:FindFirstChild("GuritaTag") then return end
     
     task.spawn(function()
-        local s = Instance.new("Sound", workspace)
-        s.SoundId = "rbxassetid://4590662766"; s.Volume = 0.5; s:Play()
-        
-        local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "GuritaNotif"
-        local f = Instance.new("Frame", sg)
-        f.Size = UDim2.new(0, 250, 0, 60); f.Position = UDim2.new(1, 10, 0.8, 0)
-        f.BackgroundColor3 = Color3.fromRGB(20, 0, 0); Instance.new("UICorner", f)
-        
-        local t = Instance.new("TextLabel", f)
-        t.Size = UDim2.new(1, 0, 1, 0); t.Text = "RARE: " .. objName:upper()
-        t.TextColor3 = Color3.new(1, 1, 1); t.Font = "GothamBold"; t.BackgroundTransparency = 1
-        
-        f:TweenPosition(UDim2.new(1, -260, 0.8, 0), "Out", "Quad", 0.3)
-        task.wait(4)
-        if f then f:TweenPosition(UDim2.new(1, 10, 0.8, 0), "In", "Quad", 0.3) end
-        task.wait(0.4); sg:Destroy(); s:Destroy()
-    end)
-end
-
--- 4. SMART ESP (Hemat CPU)
-local function PasangESP(obj)
-    -- Filter awal: Kalau bukan Model/BasePart atau di bawah Island, langsung buang.
-    if not _G.HuntingMode or obj:FindFirstChild("GuritaTag") then return end
-    if not obj:IsA("Model") and not obj:IsA("BasePart") then return end
-
-    task.spawn(function()
-        -- Tunggu nama load (Penting buat ngurangin lag saat spawn massal)
-        task.wait(1)
+        task.wait(1) -- Biar nama keload
         local name = obj.Name:lower()
-        if name == "part" or name == "model" or name == "folder" then return end
+        if name == "part" or name == "model" then return end
         
-        -- Cek Ketinggian Island
         local pos = (obj:IsA("Model") and obj.PrimaryPart) and obj.PrimaryPart.Position or (obj:IsA("BasePart") and obj.Position)
-        if not pos or pos.Y < 100 then return end
+        if not pos or pos.Y < 100 then return end -- Filter Island
 
         local tipe = nil
         for _, r in pairs(SuperRare) do if name:find(r) then tipe = "rare"; break end end
@@ -69,53 +62,61 @@ local function PasangESP(obj)
         end
 
         if not tipe then return end
-        if tipe == "rare" then KirimNotifRare(obj.Name) end
 
-        -- Buat Billboard (Sederhana saja biar ga berat)
+        -- Notif Rare
+        if tipe == "rare" and not NotifHistory[obj.Name] then
+            NotifHistory[obj.Name] = true
+            local s = Instance.new("Sound", workspace)
+            s.SoundId = "rbxassetid://4590662766"; s.Volume = 0.7; s:Play()
+            s.Ended:Connect(function() s:Destroy() end)
+        end
+
+        -- Billboard
         local col = (tipe == "rare") and Color3.new(1, 0, 0) or Color3.fromRGB(0, 170, 255)
         local b = Instance.new("BillboardGui", obj)
         b.Name = "GuritaTag"; b.Size = UDim2.new(0, 150, 0, 40); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 5, 0)
         local t = Instance.new("TextLabel", b)
         t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = col; t.Font = "GothamBold"; t.TextSize = 13; t.TextStrokeTransparency = 0.5
         
-        -- Update Jarak (SANGAT JARANG / 2 Detik sekali)
         while obj and obj.Parent and _G.HuntingMode do
             local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local d = math.floor((hrp.Position - pos).Magnitude)
                 t.Text = obj.Name:upper() .. "\n[" .. d .. "s]"
             end
-            task.wait(2) -- Inilah yang bikin enteng
+            task.wait(2) -- Lag-free update
         end
         if b then b:Destroy() end
     end)
 end
 
--- 5. MENU UI
+-- 5. UI MENU G
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
 local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false
 local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 50, 0, 50); Toggle.Position = UDim2.new(0, 10, 0.5, 0); Toggle.Text = "G"; Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255); Instance.new("UICorner", Toggle)
-local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 100); Main.Position = UDim2.new(0.5, -100, 0.5, -50); Main.Visible = false; Instance.new("UICorner", Main)
-local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0, 160, 0, 50); Btn.Position = UDim2.new(0, 20, 0, 25); Btn.Font = "GothamBold"; Instance.new("UICorner", Btn)
+Toggle.Size = UDim2.new(0, 55, 0, 55); Toggle.Position = UDim2.new(0, 10, 0.5, 0); Toggle.Text = "G"; Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255); Instance.new("UICorner", Toggle)
 
-_G.HuntingMode = _G.HuntingMode or false
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 220, 0, 110); Main.Position = UDim2.new(0.5, -110, 0.5, -55); Main.Visible = false; Main.BackgroundColor3 = Color3.fromRGB(20,20,20); Instance.new("UICorner", Main)
+local Btn = Instance.new("TextButton", Main)
+Btn.Size = UDim2.new(0, 180, 0, 50); Btn.Position = UDim2.new(0, 20, 0, 30); Btn.Font = "GothamBold"; Instance.new("UICorner", Btn)
+
 local function UpdateUI()
-    Btn.Text = _G.HuntingMode and "STATUS: ON" or "STATUS: OFF"
+    Btn.Text = _G.HuntingMode and "STATUS: ACTIVE" or "STATUS: OFF"
     Btn.BackgroundColor3 = _G.HuntingMode and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
 end
 
 UpdateUI()
 Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
 Btn.MouseButton1Down:Connect(function()
-    _G.HuntingMode = not _G.HuntingMode; UpdateUI()
-    if _G.HuntingMode then 
-        for _, v in pairs(workspace:GetDescendants()) do task.spawn(PasangESP, v) end 
-    end
+    _G.HuntingMode = not _G.HuntingMode
+    UpdateUI()
+    SaveSettings() -- Simpan pilihan ke file
+    if _G.HuntingMode then for _, v in pairs(workspace:GetDescendants()) do PasangESP(v) end end
 end)
 
-workspace.DescendantAdded:Connect(function(v)
-    if _G.HuntingMode then PasangESP(v) end
-end)
+-- 6. AUTO START
+if _G.HuntingMode then
+    for _, v in pairs(workspace:GetDescendants()) do task.spawn(PasangESP, v) end
+end
+workspace.DescendantAdded:Connect(function(v) if _G.HuntingMode then PasangESP(v) end end)
