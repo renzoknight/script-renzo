@@ -1,121 +1,128 @@
--- [[ GURITA HUB V46 - AUTO SAVE & LOAD EDITION ]] --
+-- [[ GURITA HUB V48 - G H EDITION & INFINITE RANGE ]] --
 
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 local HttpService = game:GetService("HttpService")
-local FileName = "GuritaHubV46.json"
+local FileName = "GuritaHubV48.json"
 
--- 1. FUNGSI SAVE & LOAD
-local function SaveSettings()
-    local data = { HuntingMode = _G.HuntingMode }
-    if writefile then
-        writefile(FileName, HttpService:JSONEncode(data))
-    end
-end
-
-local function LoadSettings()
-    if isfile and isfile(FileName) then
-        local success, res = pcall(function()
-            return HttpService:JSONDecode(readfile(FileName))
-        end)
-        if success then return res.HuntingMode end
-    end
-    return false
-end
-
-_G.HuntingMode = LoadSettings()
-
--- 2. FPS BOOST & FLAT COLOR
-local function BoostFPS()
-    pcall(function()
+-- 1. SMOOTH OPTIMIZE (ANTI-LAG)
+local function SmoothOptimize()
+    task.spawn(function()
         settings().Rendering.QualityLevel = 1
         game:GetService("Lighting").GlobalShadows = false
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("Decal") or v:IsA("Texture") then v:Destroy() end
-            if v:IsA("BasePart") then v.Material = Enum.Material.Plastic; v.Reflectance = 0 end
+        local allObjects = workspace:GetDescendants()
+        for i, v in pairs(allObjects) do
+            if i % 150 == 0 then task.wait() end 
+            if v:IsA("BasePart") then
+                v.Material = Enum.Material.Plastic; v.Reflectance = 0
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v:Destroy()
+            end
         end
     end)
 end
-task.spawn(BoostFPS)
+
+-- 2. SAVE/LOAD
+local function SaveSettings()
+    if writefile then pcall(function() writefile(FileName, HttpService:JSONEncode({ HuntingMode = _G.HuntingMode })) end) end
+end
+local function LoadSettings()
+    if isfile and isfile(FileName) then
+        local s, res = pcall(function() return HttpService:JSONDecode(readfile(FileName)) end)
+        if s then return res.HuntingMode end
+    end
+    return false
+end
+_G.HuntingMode = LoadSettings()
 
 -- 3. TARGET LIST
 local NotifHistory = {}
 local SuperRare = {"hydra", "no my egg", "baskito", "churrito", "hopilikalika", "quackini", "harp"}
 local NormalTargets = {"tralala", "eggdin", "easter", "sahur", "sky egg", "bunny egg"}
 
--- 4. ESP & NOTIF LOGIC
+-- 4. ESP LOGIC (INFINITE RANGE)
 local function PasangESP(obj)
     if not _G.HuntingMode or obj:FindFirstChild("GuritaTag") then return end
-    
     task.spawn(function()
-        task.wait(1) -- Biar nama keload
+        task.wait(1.5)
         local name = obj.Name:lower()
         if name == "part" or name == "model" then return end
         
         local pos = (obj:IsA("Model") and obj.PrimaryPart) and obj.PrimaryPart.Position or (obj:IsA("BasePart") and obj.Position)
-        if not pos or pos.Y < 100 then return end -- Filter Island
+        if not pos or pos.Y < 100 then return end
 
         local tipe = nil
         for _, r in pairs(SuperRare) do if name:find(r) then tipe = "rare"; break end end
         if not tipe then
             for _, e in pairs(NormalTargets) do if name:find(e) then tipe = "normal"; break end end
         end
-
         if not tipe then return end
 
-        -- Notif Rare
         if tipe == "rare" and not NotifHistory[obj.Name] then
             NotifHistory[obj.Name] = true
             local s = Instance.new("Sound", workspace)
-            s.SoundId = "rbxassetid://4590662766"; s.Volume = 0.7; s:Play()
+            s.SoundId = "rbxassetid://4590662766"; s.Volume = 0.6; s:Play()
             s.Ended:Connect(function() s:Destroy() end)
         end
 
-        -- Billboard
         local col = (tipe == "rare") and Color3.new(1, 0, 0) or Color3.fromRGB(0, 170, 255)
         local b = Instance.new("BillboardGui", obj)
-        b.Name = "GuritaTag"; b.Size = UDim2.new(0, 150, 0, 40); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0, 5, 0)
+        b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50)
+        b.AlwaysOnTop = true; b.MaxDistance = math.huge -- JARAK TANPA BATAS
+        b.ExtentsOffset = Vector3.new(0, 6, 0)
+        
         local t = Instance.new("TextLabel", b)
-        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = col; t.Font = "GothamBold"; t.TextSize = 13; t.TextStrokeTransparency = 0.5
+        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = col
+        t.Font = "GothamBlack"; t.TextSize = 14; t.TextStrokeTransparency = 0; t.TextStrokeColor3 = Color3.new(0,0,0)
         
         while obj and obj.Parent and _G.HuntingMode do
             local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
-                local d = math.floor((hrp.Position - pos).Magnitude)
-                t.Text = obj.Name:upper() .. "\n[" .. d .. "s]"
+                t.Text = obj.Name:upper() .. "\n[" .. math.floor((hrp.Position - pos).Magnitude) .. "s]"
             end
-            task.wait(2) -- Lag-free update
+            task.wait(2)
         end
         if b then b:Destroy() end
     end)
 end
 
--- 5. UI MENU G
+-- 5. UI G H (DESAIN BARU)
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
 local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false
+
+-- Tombol G H Tanpa Background
 local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 55, 0, 55); Toggle.Position = UDim2.new(0, 10, 0.5, 0); Toggle.Text = "G"; Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255); Instance.new("UICorner", Toggle)
+Toggle.Size = UDim2.new(0, 100, 0, 50); Toggle.Position = UDim2.new(0, 10, 0.45, 0)
+Toggle.BackgroundTransparency = 1; Toggle.Text = "G H"
+Toggle.TextColor3 = Color3.fromRGB(0, 170, 255); Toggle.Font = "GothamBlack"; Toggle.TextSize = 35
+Toggle.TextStrokeTransparency = 0.5; Toggle.TextStrokeColor3 = Color3.new(0,0,1)
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 220, 0, 110); Main.Position = UDim2.new(0.5, -110, 0.5, -55); Main.Visible = false; Main.BackgroundColor3 = Color3.fromRGB(20,20,20); Instance.new("UICorner", Main)
+Main.Size = UDim2.new(0, 220, 0, 110); Main.Position = UDim2.new(0.5, -110, 0.5, -55)
+Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10); Main.Visible = false
+local Corner = Instance.new("UICorner", Main); Corner.CornerRadius = UDim.new(0, 15)
+local Stroke = Instance.new("UIStroke", Main); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 2
+
 local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0, 180, 0, 50); Btn.Position = UDim2.new(0, 20, 0, 30); Btn.Font = "GothamBold"; Instance.new("UICorner", Btn)
+Btn.Size = UDim2.new(0, 180, 0, 50); Btn.Position = UDim2.new(0, 20, 0, 30); Btn.Font = "GothamBlack"
+Btn.TextSize = 18; Btn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Btn)
+-- Efek Biru di Pinggir Teks Tombol
+local BtnStroke = Instance.new("UIStroke", Btn); BtnStroke.Color = Color3.fromRGB(0, 170, 255); BtnStroke.Thickness = 1.5
 
 local function UpdateUI()
-    Btn.Text = _G.HuntingMode and "STATUS: ACTIVE" or "STATUS: OFF"
-    Btn.BackgroundColor3 = _G.HuntingMode and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+    Btn.Text = _G.HuntingMode and "ACTIVE" or "OFF"
+    Btn.BackgroundColor3 = _G.HuntingMode and Color3.fromRGB(0, 80, 0) or Color3.fromRGB(80, 0, 0)
 end
 
 UpdateUI()
 Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
 Btn.MouseButton1Down:Connect(function()
-    _G.HuntingMode = not _G.HuntingMode
-    UpdateUI()
-    SaveSettings() -- Simpan pilihan ke file
+    _G.HuntingMode = not _G.HuntingMode; UpdateUI(); SaveSettings()
     if _G.HuntingMode then for _, v in pairs(workspace:GetDescendants()) do PasangESP(v) end end
 end)
 
--- 6. AUTO START
+-- 6. RUN
+SmoothOptimize()
 if _G.HuntingMode then
     for _, v in pairs(workspace:GetDescendants()) do task.spawn(PasangESP, v) end
 end
