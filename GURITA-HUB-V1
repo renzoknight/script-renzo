@@ -1,18 +1,25 @@
--- [[ GURITA HUB V48 - G H EDITION & INFINITE RANGE ]] --
+-- [[ GURITA HUB V49 - SOFT LIGHT & G H EDITION ]] --
 
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 local HttpService = game:GetService("HttpService")
-local FileName = "GuritaHubV48.json"
+local FileName = "GuritaHubV49.json"
 
--- 1. SMOOTH OPTIMIZE (ANTI-LAG)
+-- 1. SMOOTH OPTIMIZE & SOFT LIGHTING (Cahaya dikurangi biar ga silau)
 local function SmoothOptimize()
     task.spawn(function()
         settings().Rendering.QualityLevel = 1
-        game:GetService("Lighting").GlobalShadows = false
+        local lighting = game:GetService("Lighting")
+        
+        lighting.GlobalShadows = false
+        lighting.Brightness = 1 -- Turun dari default yang biasanya bikin silau
+        lighting.Ambient = Color3.fromRGB(150, 150, 150) -- Cahaya dalam ruangan lebih soft
+        lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150) -- Cahaya luar tidak putih pekat
+        lighting.ClockTime = 12 -- Set ke siang hari biar konsisten
+        
         local allObjects = workspace:GetDescendants()
         for i, v in pairs(allObjects) do
-            if i % 150 == 0 then task.wait() end 
+            if i % 200 == 0 then task.wait() end 
             if v:IsA("BasePart") then
                 v.Material = Enum.Material.Plastic; v.Reflectance = 0
             elseif v:IsA("Decal") or v:IsA("Texture") then
@@ -61,19 +68,19 @@ local function PasangESP(obj)
         if tipe == "rare" and not NotifHistory[obj.Name] then
             NotifHistory[obj.Name] = true
             local s = Instance.new("Sound", workspace)
-            s.SoundId = "rbxassetid://4590662766"; s.Volume = 0.6; s:Play()
+            s.SoundId = "rbxassetid://4590662766"; s.Volume = 0.5; s:Play()
             s.Ended:Connect(function() s:Destroy() end)
         end
 
         local col = (tipe == "rare") and Color3.new(1, 0, 0) or Color3.fromRGB(0, 170, 255)
         local b = Instance.new("BillboardGui", obj)
         b.Name = "GuritaTag"; b.Size = UDim2.new(0, 200, 0, 50)
-        b.AlwaysOnTop = true; b.MaxDistance = math.huge -- JARAK TANPA BATAS
+        b.AlwaysOnTop = true; b.MaxDistance = math.huge
         b.ExtentsOffset = Vector3.new(0, 6, 0)
         
         local t = Instance.new("TextLabel", b)
         t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = col
-        t.Font = "GothamBlack"; t.TextSize = 14; t.TextStrokeTransparency = 0; t.TextStrokeColor3 = Color3.new(0,0,0)
+        t.Font = "GothamBlack"; t.TextSize = 13; t.TextStrokeTransparency = 0.2
         
         while obj and obj.Parent and _G.HuntingMode do
             local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
@@ -86,32 +93,31 @@ local function PasangESP(obj)
     end)
 end
 
--- 5. UI G H (DESAIN BARU)
+-- 5. UI G H (TRANSPARENT & BLUE STROKE)
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
 local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false
 
--- Tombol G H Tanpa Background
+-- Tombol G H (Hanya Teks)
 local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 100, 0, 50); Toggle.Position = UDim2.new(0, 10, 0.45, 0)
+Toggle.Size = UDim2.new(0, 80, 0, 40); Toggle.Position = UDim2.new(0, 15, 0.45, 0)
 Toggle.BackgroundTransparency = 1; Toggle.Text = "G H"
-Toggle.TextColor3 = Color3.fromRGB(0, 170, 255); Toggle.Font = "GothamBlack"; Toggle.TextSize = 35
-Toggle.TextStrokeTransparency = 0.5; Toggle.TextStrokeColor3 = Color3.new(0,0,1)
+Toggle.TextColor3 = Color3.fromRGB(0, 170, 255); Toggle.Font = "GothamBlack"; Toggle.TextSize = 32
+Toggle.TextStrokeTransparency = 0.4; Toggle.TextStrokeColor3 = Color3.fromRGB(0, 50, 150)
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 220, 0, 110); Main.Position = UDim2.new(0.5, -110, 0.5, -55)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10); Main.Visible = false
-local Corner = Instance.new("UICorner", Main); Corner.CornerRadius = UDim.new(0, 15)
-local Stroke = Instance.new("UIStroke", Main); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 2
+Main.Size = UDim2.new(0, 200, 0, 100); Main.Position = UDim2.new(0.5, -100, 0.5, -50)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false
+local Corner = Instance.new("UICorner", Main); Corner.CornerRadius = UDim.new(0, 12)
+local Stroke = Instance.new("UIStroke", Main); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 1.5
 
 local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0, 180, 0, 50); Btn.Position = UDim2.new(0, 20, 0, 30); Btn.Font = "GothamBlack"
-Btn.TextSize = 18; Btn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Btn)
--- Efek Biru di Pinggir Teks Tombol
-local BtnStroke = Instance.new("UIStroke", Btn); BtnStroke.Color = Color3.fromRGB(0, 170, 255); BtnStroke.Thickness = 1.5
+Btn.Size = UDim2.new(0, 160, 0, 50); Btn.Position = UDim2.new(0, 20, 0, 25); Btn.Font = "GothamBlack"
+Btn.TextSize = 16; Btn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Btn)
+local BtnStroke = Instance.new("UIStroke", Btn); BtnStroke.Color = Color3.fromRGB(0, 170, 255); BtnStroke.Thickness = 1
 
 local function UpdateUI()
     Btn.Text = _G.HuntingMode and "ACTIVE" or "OFF"
-    Btn.BackgroundColor3 = _G.HuntingMode and Color3.fromRGB(0, 80, 0) or Color3.fromRGB(80, 0, 0)
+    Btn.BackgroundColor3 = _G.HuntingMode and Color3.fromRGB(0, 60, 0) or Color3.fromRGB(60, 0, 0)
 end
 
 UpdateUI()
