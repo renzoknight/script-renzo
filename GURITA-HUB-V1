@@ -1,24 +1,21 @@
--- [[ GURITA HUB V49 - SOFT LIGHT & G H EDITION ]] --
+-- [[ GURITA HUB V51 - OFFICIAL MENU DESIGN ]] --
 
 local lp = game.Players.LocalPlayer
 local PlayerGui = lp:WaitForChild("PlayerGui")
 local HttpService = game:GetService("HttpService")
-local FileName = "GuritaHubV49.json"
+local FileName = "GuritaHubV51.json"
 
--- 1. SMOOTH OPTIMIZE & SOFT LIGHTING (Cahaya dikurangi biar ga silau)
+-- 1. SMOOTH OPTIMIZE & SOFT LIGHTING
 local function SmoothOptimize()
     task.spawn(function()
         settings().Rendering.QualityLevel = 1
         local lighting = game:GetService("Lighting")
-        
         lighting.GlobalShadows = false
-        lighting.Brightness = 1 -- Turun dari default yang biasanya bikin silau
-        lighting.Ambient = Color3.fromRGB(150, 150, 150) -- Cahaya dalam ruangan lebih soft
-        lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150) -- Cahaya luar tidak putih pekat
-        lighting.ClockTime = 12 -- Set ke siang hari biar konsisten
+        lighting.Brightness = 1
+        lighting.Ambient = Color3.fromRGB(130, 130, 130)
+        lighting.OutdoorAmbient = Color3.fromRGB(130, 130, 130)
         
-        local allObjects = workspace:GetDescendants()
-        for i, v in pairs(allObjects) do
+        for i, v in pairs(workspace:GetDescendants()) do
             if i % 200 == 0 then task.wait() end 
             if v:IsA("BasePart") then
                 v.Material = Enum.Material.Plastic; v.Reflectance = 0
@@ -93,38 +90,52 @@ local function PasangESP(obj)
     end)
 end
 
--- 5. UI G H (TRANSPARENT & BLUE STROKE)
+-- 5. UI GURITA HUB (NEW DESIGN)
 if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
 local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false
 
--- Tombol G H (Hanya Teks)
+-- Tombol G H Samping (Transparan)
 local Toggle = Instance.new("TextButton", SG)
 Toggle.Size = UDim2.new(0, 80, 0, 40); Toggle.Position = UDim2.new(0, 15, 0.45, 0)
-Toggle.BackgroundTransparency = 1; Toggle.Text = "G H"
-Toggle.TextColor3 = Color3.fromRGB(0, 170, 255); Toggle.Font = "GothamBlack"; Toggle.TextSize = 32
-Toggle.TextStrokeTransparency = 0.4; Toggle.TextStrokeColor3 = Color3.fromRGB(0, 50, 150)
+Toggle.BackgroundTransparency = 1; Toggle.Text = "G H"; Toggle.TextColor3 = Color3.fromRGB(0, 170, 255)
+Toggle.Font = "GothamBlack"; Toggle.TextSize = 32; Toggle.TextStrokeTransparency = 0.4; Toggle.TextStrokeColor3 = Color3.fromRGB(0, 50, 150)
 
+-- Frame Menu
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 100); Main.Position = UDim2.new(0.5, -100, 0.5, -50)
+Main.Size = UDim2.new(0, 240, 0, 180); Main.Position = UDim2.new(0.5, -120, 0.5, -90)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false
-local Corner = Instance.new("UICorner", Main); Corner.CornerRadius = UDim.new(0, 12)
-local Stroke = Instance.new("UIStroke", Main); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 1.5
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 15)
+local Stroke = Instance.new("UIStroke", Main); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 2
 
+-- Judul 1: GURITA HUB
+local Title1 = Instance.new("TextLabel", Main)
+Title1.Size = UDim2.new(1, 0, 0, 30); Title1.Position = UDim2.new(0, 0, 0, 15)
+Title1.Text = "GURITA HUB"; Title1.TextColor3 = Color3.fromRGB(0, 170, 255)
+Title1.Font = "GothamBlack"; Title1.TextSize = 22; Title1.BackgroundTransparency = 1
+local TitleStroke1 = Instance.new("UIStroke", Title1); TitleStroke1.Color = Color3.fromRGB(0, 50, 150); TitleStroke1.Thickness = 1.5
+
+-- Judul 2: EGG HUNT GH
+local Title2 = Instance.new("TextLabel", Main)
+Title2.Size = UDim2.new(1, 0, 0, 20); Title2.Position = UDim2.new(0, 0, 0, 45)
+Title2.Text = "EGG HUNT GH"; Title2.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+Title2.Font = "GothamBold"; Title2.TextSize = 14; Title2.BackgroundTransparency = 1
+
+-- Tombol Active
 local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0, 160, 0, 50); Btn.Position = UDim2.new(0, 20, 0, 25); Btn.Font = "GothamBlack"
-Btn.TextSize = 16; Btn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Btn)
-local BtnStroke = Instance.new("UIStroke", Btn); BtnStroke.Color = Color3.fromRGB(0, 170, 255); BtnStroke.Thickness = 1
+Btn.Size = UDim2.new(0, 200, 0, 60); Btn.Position = UDim2.new(0, 20, 0, 85); Btn.Font = "GothamBlack"
+Btn.TextSize = 18; Btn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Btn)
+local BtnStroke = Instance.new("UIStroke", Btn); BtnStroke.Color = Color3.fromRGB(0, 170, 255); BtnStroke.Thickness = 1.2
 
 local function UpdateUI()
-    Btn.Text = _G.HuntingMode and "ACTIVE" or "OFF"
-    Btn.BackgroundColor3 = _G.HuntingMode and Color3.fromRGB(0, 60, 0) or Color3.fromRGB(60, 0, 0)
+    Btn.Text = _G.HuntingMode and "STATUS: ACTIVE" or "STATUS: OFF"
+    Btn.BackgroundColor3 = _G.HuntingMode and Color3.fromRGB(0, 80, 0) or Color3.fromRGB(80, 0, 0)
 end
 
 UpdateUI()
 Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
 Btn.MouseButton1Down:Connect(function()
     _G.HuntingMode = not _G.HuntingMode; UpdateUI(); SaveSettings()
-    if _G.HuntingMode then for _, v in pairs(workspace:GetDescendants()) do PasangESP(v) end end
+    if _G.HuntingMode then for _, v in pairs(workspace:GetDescendants()) do task.spawn(PasangESP, v) end end
 end)
 
 -- 6. RUN
