@@ -1,163 +1,88 @@
--- [[ GURITA HUB V55 - NOTIF EGG SPAWN GH EDITION ]] --
+-- [[ GURITA HUB - AUTO AIM PLAYER TESTER ]] --
 
 local lp = game.Players.LocalPlayer
+local mouse = lp:GetMouse()
 local PlayerGui = lp:WaitForChild("PlayerGui")
-local HttpService = game:GetService("HttpService")
-local FileName = "GuritaHubV55.json"
 
--- 1. SAVE/LOAD SYSTEM
-local function SaveSettings()
-    if writefile then 
-        local data = { HuntingMode = _G.HuntingMode, NotifMode = _G.NotifMode }
-        pcall(function() writefile(FileName, HttpService:JSONEncode(data)) end) 
-    end
-end
+-- Variable Kontrol
+_G.AutoAimPlayer = false
 
-local function LoadSettings()
-    if isfile and isfile(FileName) then
-        local s, res = pcall(function() return HttpService:JSONDecode(readfile(FileName)) end)
-        if s then 
-            _G.HuntingMode = res.HuntingMode
-            _G.NotifMode = res.NotifMode
-            return
+-- 1. LOGIKA PENCARI TARGET (KHUSUS PLAYER)
+local function GetTarget()
+    local closest, dist = nil, 400 -- Jarak FOV (radius kunci di layar)
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v ~= lp and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = v.Character.HumanoidRootPart
+            local pos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
+            
+            if onScreen then
+                local mag = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
+                if mag < dist then
+                    closest = hrp
+                    dist = mag
+                end
+            end
         end
     end
-    _G.HuntingMode = false
-    _G.NotifMode = false
+    return closest
 end
-LoadSettings()
 
--- 2. LIGHTING & OPTIMIZE (SOFT)
-local function SmoothOptimize()
-    task.spawn(function()
-        settings().Rendering.QualityLevel = 1
-        local lighting = game:GetService("Lighting")
-        lighting.GlobalShadows = false
-        lighting.Brightness = 1
-        lighting.Ambient = Color3.fromRGB(130, 130, 130)
-        lighting.OutdoorAmbient = Color3.fromRGB(130, 130, 130)
-        for i, v in pairs(workspace:GetDescendants()) do
-            if i % 300 == 0 then task.wait() end 
-            if v:IsA("BasePart") then v.Material = Enum.Material.Plastic; v.Reflectance = 0
-            elseif v:IsA("Decal") or v:IsA("Texture") then v:Destroy() end
+-- 2. SISTEM MEMBELOKKAN TEMBAKAN (NAME_CALL HOOK)
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = {...}
+    local method = getnamecallmethod()
+    
+    if _G.AutoAimPlayer and (method == "FireServer" or method == "InvokeServer") then
+        local target = GetTarget()
+        if target then
+            -- Cari argumen Vector3 (posisi tembakan) dan paksa ke badan target
+            for i, arg in pairs(args) do
+                if typeof(arg) == "Vector3" then
+                    args[i] = target.Position
+                end
+            end
         end
-    end)
-end
-
--- 3. TARGETS
-local NotifHistory = {}
-local NotifQueue = {} 
-local SuperRare = {"hydra", "no my egg", "los bunitos", "baskito", "churrito", "hopilikalika", "quackini", "harp"}
-local NormalTargets = {"tralala", "eggdin", "easter", "sahur", "sky egg", "buntto egg"}
-
--- 4. NOTIF SYSTEM (POPUP + SOUND)
-local function ShowPopup(objName)
-    task.spawn(function()
-        local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "GuritaNotif"
-        local f = Instance.new("Frame", sg)
-        f.Size = UDim2.new(0, 280, 0, 50); f.Position = UDim2.new(0.5, -140, -0.1, 0)
-        f.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Instance.new("UICorner", f)
-        local s = Instance.new("UIStroke", f); s.Color = Color3.fromRGB(0, 170, 255); s.Thickness = 2
-        
-        local t = Instance.new("TextLabel", f)
-        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1,1,1)
-        t.Text = "RARE SPAWN: " .. objName:upper(); t.Font = "GothamBlack"; t.TextSize = 14
-        
-        -- Sound Trigger
-        local snd = Instance.new("Sound", workspace)
-        snd.SoundId = "rbxassetid://4590662766"; snd.Volume = 0.7; snd:Play()
-        
-        f:TweenPosition(UDim2.new(0.5, -140, 0.05, 0), "Out", "Back", 0.5)
-        task.wait(3.5)
-        f:TweenPosition(UDim2.new(0.5, -140, -0.1, 0), "In", "Quad", 0.5)
-        task.wait(0.6); sg:Destroy(); snd:Destroy()
-    end)
-end
-
-task.spawn(function()
-    while true do
-        if #NotifQueue > 0 then
-            local nextObj = table.remove(NotifQueue, 1)
-            ShowPopup(nextObj)
-            task.wait(4.5) -- Jeda antar notif biar adem
-        end
-        task.wait(0.5)
     end
+    return oldNamecall(self, unpack(args))
 end)
 
--- 5. ESP LOGIC
-local function PasangESP(obj)
-    if not _G.HuntingMode or obj:FindFirstChild("GuritaTag") then return end
-    task.spawn(function()
-        task.wait(1.5)
-        local name = obj.Name:lower()
-        if name == "part" or name == "model" then return end
-        local pos = (obj:IsA("Model") and obj.PrimaryPart) and obj.PrimaryPart.Position or (obj:IsA("BasePart") and obj.Position)
-        if not pos or pos.Y < 100 then return end
+-- 3. UI MENU UJI COBA
+if PlayerGui:FindFirstChild("TesterUI") then PlayerGui.TesterUI:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "TesterUI"; SG.ResetOnSpawn = false
 
-        local tipe = nil
-        for _, r in pairs(SuperRare) do if name:find(r) then tipe = "rare"; break end end
-        if not tipe then for _, e in pairs(NormalTargets) do if name:find(e) then tipe = "normal"; break end end end
-        if not tipe then return end
-
-        if tipe == "rare" and _G.NotifMode and not NotifHistory[obj.Name] then
-            NotifHistory[obj.Name] = true
-            table.insert(NotifQueue, obj.Name)
-        end
-
-        local col = (tipe == "rare") and Color3.new(1, 0, 0) or Color3.fromRGB(0, 170, 255)
-        local b = Instance.new("BillboardGui", obj)
-        b.Name = "GuritaTag"; b.Size = UDim2.new(0, 180, 0, 45); b.AlwaysOnTop = true; b.MaxDistance = math.huge
-        local t = Instance.new("TextLabel", b)
-        t.Size = UDim2.new(1, 0, 1, 0); t.BackgroundTransparency = 1; t.TextColor3 = col
-        t.Font = "GothamBlack"; t.TextSize = 12; t.TextStrokeTransparency = 0.3
-        
-        while obj and obj.Parent and _G.HuntingMode do
-            local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then t.Text = obj.Name:upper() .. "\n[" .. math.floor((hrp.Position - pos).Magnitude) .. "s]" end
-            task.wait(2)
-        end
-        if b then b:Destroy() end
-    end)
-end
-
--- 6. UI MENU GURITA HUB
-if PlayerGui:FindFirstChild("GuritaHubUI") then PlayerGui.GuritaHubUI:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaHubUI"; SG.ResetOnSpawn = false
+-- Tombol Kecil G H
 local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 80, 0, 40); Toggle.Position = UDim2.new(0, 15, 0.45, 0); Toggle.BackgroundTransparency = 1; Toggle.Text = "G H"; Toggle.TextColor3 = Color3.fromRGB(0, 170, 255); Toggle.Font = "GothamBlack"; Toggle.TextSize = 32
+Toggle.Size = UDim2.new(0, 60, 0, 30); Toggle.Position = UDim2.new(0, 10, 0.5, 0)
+Toggle.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Toggle.Text = "G H"; Toggle.TextColor3 = Color3.new(0, 1, 1)
+Toggle.Font = "GothamBlack"; Toggle.TextSize = 14; Instance.new("UICorner", Toggle)
+Instance.new("UIStroke", Toggle).Color = Color3.new(0, 1, 1)
 
+-- Frame Menu
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 250, 0, 240); Main.Position = UDim2.new(0.5, -125, 0.5, -120); Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10); Main.Visible = false; Instance.new("UICorner", Main)
-local Stroke = Instance.new("UIStroke", Main); Stroke.Color = Color3.fromRGB(0, 170, 255); Stroke.Thickness = 2
+Main.Size = UDim2.new(0, 200, 0, 120); Main.Position = UDim2.new(0.5, -100, 0.4, 0)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main)
+local s = Instance.new("UIStroke", Main); s.Color = Color3.new(0, 1, 1); s.Thickness = 2
 
 local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 60); Title.Position = UDim2.new(0,0,0,10)
-Title.Text = "GURITA HUB\nEGG HUNT NOTIF EGG SPAWN GH"; Title.TextColor3 = Color3.fromRGB(0, 170, 255); Title.Font = "GothamBlack"; Title.TextSize = 13; Title.BackgroundTransparency = 1
+Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "AIM TESTER GH"; Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = "GothamBlack"; Title.TextSize = 14; Title.BackgroundTransparency = 1
 
-local function CreateBtn(pos)
-    local b = Instance.new("TextButton", Main)
-    b.Size = UDim2.new(0, 210, 0, 50); b.Position = pos; b.Font = "GothamBlack"; b.TextSize = 13; b.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", b)
-    local s = Instance.new("UIStroke", b); s.Color = Color3.fromRGB(0, 170, 255); s.Thickness = 1.2
-    return b
-end
-
-local BtnESP = CreateBtn(UDim2.new(0, 20, 0, 80))
-local BtnNotif = CreateBtn(UDim2.new(0, 20, 0, 150))
+local Btn = Instance.new("TextButton", Main)
+Btn.Size = UDim2.new(0, 160, 0, 45); Btn.Position = UDim2.new(0, 20, 0, 50)
+Btn.Font = "GothamBold"; Btn.TextSize = 12; Btn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", Btn)
 
 local function UpdateUI()
-    BtnESP.Text = "ESP EGG: " .. (_G.HuntingMode and "ON" or "OFF")
-    BtnESP.BackgroundColor3 = _G.HuntingMode and Color3.fromRGB(0, 80, 0) or Color3.fromRGB(80, 0, 0)
-    BtnNotif.Text = "NOTIF SPAWN: " .. (_G.NotifMode and "ON" or "OFF")
-    BtnNotif.BackgroundColor3 = _G.NotifMode and Color3.fromRGB(0, 80, 0) or Color3.fromRGB(80, 0, 0)
+    Btn.Text = _G.AutoAimPlayer and "AUTO AIM: ACTIVE" or "AUTO AIM: OFF"
+    Btn.BackgroundColor3 = _G.AutoAimPlayer and Color3.fromRGB(0, 120, 200) or Color3.fromRGB(80, 0, 0)
 end
 
-UpdateUI()
 Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
-BtnESP.MouseButton1Down:Connect(function() _G.HuntingMode = not _G.HuntingMode; UpdateUI(); SaveSettings(); if _G.HuntingMode then for _,v in pairs(workspace:GetDescendants()) do PasangESP(v) end end end)
-BtnNotif.MouseButton1Down:Connect(function() _G.NotifMode = not _G.NotifMode; UpdateUI(); SaveSettings() end)
+Btn.MouseButton1Down:Connect(function() 
+    _G.AutoAimPlayer = not _G.AutoAimPlayer
+    UpdateUI()
+end)
 
--- 7. RUN
-SmoothOptimize()
-if _G.HuntingMode then for _, v in pairs(workspace:GetDescendants()) do task.spawn(PasangESP, v) end end
-workspace.DescendantAdded:Connect(function(v) if _G.HuntingMode then PasangESP(v) end end)
+UpdateUI()
+print("Tester Auto Aim Player Berhasil Dimuat!")
