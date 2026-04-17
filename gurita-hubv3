@@ -1,14 +1,13 @@
--- [[ GURITA HUB V64 - ADAPTIVE SILENT AIM ]] --
+-- [[ GURITA HUB V65 - MOUSE OBJECT OVERRIDE ]] --
 
 local lp = game.Players.LocalPlayer
 local mouse = lp:GetMouse()
 local camera = workspace.CurrentCamera
 local PlayerGui = lp:WaitForChild("PlayerGui")
-local NetFolder = game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("Net")
 
 _G.AutoAimPlayer = false
 
--- 1. CARI PLAYER TERDEKAT
+-- 1. CARI PLAYER TERDEKAT (KHUSUS YANG DI LAYAR)
 local function GetClosestPlayer()
     local closest, dist = nil, 400
     for _, v in pairs(game.Players:GetPlayers()) do
@@ -27,37 +26,35 @@ local function GetClosestPlayer()
     return closest
 end
 
--- 2. HOOKING SISTEM (ADAPTIVE MODE)
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local args = {...}
-    local method = getnamecallmethod()
-    
-    -- Cek apakah Remote ini ada di dalam folder Net (tempat Remote acak tadi ngumpul)
-    if _G.AutoAimPlayer and method == "FireServer" and self:IsDescendantOf(NetFolder) then
-        -- Cek apakah argumennya mirip sama pola Web Slinger/Laser (Vector3 di index 1)
-        if typeof(args[1]) == "Vector3" then
+-- 2. OVERRIDE MOUSE INPUT (BUKAN REMOTE HOOK)
+-- Cara ini bikin laser tetep keluar karena kita nggak otak-atik Remotenya
+local mt = getrawmetatable(game)
+local oldIndex = mt.__index
+setreadonly(mt, false)
+
+mt.__index = newcclosure(function(self, index)
+    if _G.AutoAimPlayer and not checkcaller() then
+        if self == mouse then
             local target = GetClosestPlayer()
             if target then
-                -- SUNTIK POSISI: Ganti tujuan ke badan musuh
-                args[1] = target.Position
-                -- SUNTIK TARGET: Ganti objek yang kena (Carpet/Ground) jadi badan musuh
-                args[2] = target
-                
-                return oldNamecall(self, unpack(args))
+                if index == "Hit" then
+                    return target.CFrame -- Nipu posisi tembakan
+                elseif index == "Target" then
+                    return target -- Nipu benda yang kena
+                end
             end
         end
     end
-    return oldNamecall(self, ...)
+    return oldIndex(self, index)
 end)
 
--- 3. UI PANEL V64
-if PlayerGui:FindFirstChild("GuritaV64") then PlayerGui.GuritaV64:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaV64"; SG.ResetOnSpawn = false
+-- 3. UI PANEL V65 (MODERN & SIMPLE)
+if PlayerGui:FindFirstChild("GuritaV65") then PlayerGui.GuritaV65:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaV65"; SG.ResetOnSpawn = false
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 220, 0, 110); Main.Position = UDim2.new(0.5, -110, 0.05, 0)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10); Instance.new("UICorner", Main)
+Main.Size = UDim2.new(0, 200, 0, 100); Main.Position = UDim2.new(0.5, -100, 0.05, 0)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Instance.new("UICorner", Main)
 local s = Instance.new("UIStroke", Main); s.Color = Color3.fromRGB(0, 170, 255); s.Thickness = 2
 
 local Btn = Instance.new("TextButton", Main)
@@ -65,7 +62,7 @@ Btn.Size = UDim2.new(1, -20, 1, -20); Btn.Position = UDim2.new(0, 10, 0, 10)
 Btn.Font = "GothamBlack"; Btn.TextSize = 14; Btn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Btn)
 
 local function UpdateUI()
-    Btn.Text = "AUTO AIM PLAYER: " .. (_G.AutoAimPlayer and "ON" or "OFF")
+    Btn.Text = "AUTO AIM: " .. (_G.AutoAimPlayer and "ACTIVE" or "OFF")
     Btn.BackgroundColor3 = _G.AutoAimPlayer and Color3.fromRGB(0, 120, 200) or Color3.fromRGB(150, 0, 0)
 end
 
@@ -75,4 +72,4 @@ Btn.MouseButton1Down:Connect(function()
 end)
 
 UpdateUI()
-print("Gurita Hub V64 - Adaptive Silent Aim Ready!")
+print("Gurita Hub V65 - Mouse Override Loaded!")
