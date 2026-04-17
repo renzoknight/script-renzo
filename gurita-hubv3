@@ -1,4 +1,4 @@
--- [[ GURITA HUB - AUTO AIM PLAYER V3 LIGHT ]] --
+-- [[ GURITA HUB - SILENT AIM PLAYER V4 ]] --
 
 local lp = game.Players.LocalPlayer
 local mouse = lp:GetMouse()
@@ -7,8 +7,8 @@ local PlayerGui = lp:WaitForChild("PlayerGui")
 
 _G.AutoAimPlayer = false
 
--- 1. CARI PLAYER TERDEKAT (OPTIMIZED)
-local function GetTarget()
+-- 1. CARI PLAYER TERDEKAT (FOV 300)
+local function GetClosestPlayer()
     local closest, dist = nil, 300
     for _, v in pairs(game.Players:GetPlayers()) do
         if v ~= lp and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
@@ -27,27 +27,29 @@ local function GetTarget()
     return closest
 end
 
--- 2. AUTO AIM PAS KLIK (RINGAN)
-local function DoAim()
-    if _G.AutoAimPlayer then
-        local target = GetTarget()
+-- 2. SILENT AIM LOGIC (Membelokkan Mouse Target & Hit)
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", function(self, index)
+    if not checkcaller() and _G.AutoAimPlayer and self == mouse then
+        local target = GetClosestPlayer()
         if target then
-            -- Gerakin kamera dikit ke target pas klik biar slinger/laser auto kena
-            camera.CFrame = CFrame.new(camera.CFrame.Position, target.Position)
+            if index == "Target" then
+                return target
+            elseif index == "Hit" then
+                return target.CFrame
+            end
         end
     end
-end
+    return oldIndex(self, index)
+end)
 
--- Deteksi Klik (Biar gak nyecan terus-terusan, cuma pas klik aja)
-mouse.Button1Down:Connect(DoAim)
-
--- 3. UI MENU SIMPLE
-if PlayerGui:FindFirstChild("TesterV3") then PlayerGui.TesterV3:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "TesterV3"; SG.ResetOnSpawn = false
+-- 3. UI MENU G H V4
+if PlayerGui:FindFirstChild("TesterV4") then PlayerGui.TesterV4:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "TesterV4"; SG.ResetOnSpawn = false
 
 local Toggle = Instance.new("TextButton", SG)
 Toggle.Size = UDim2.new(0, 70, 0, 35); Toggle.Position = UDim2.new(0, 10, 0.5, 0)
-Toggle.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Toggle.Text = "G H V3"; Toggle.TextColor3 = Color3.new(0, 1, 1)
+Toggle.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Toggle.Text = "G H V4"; Toggle.TextColor3 = Color3.new(0, 1, 1)
 Toggle.Font = "GothamBlack"; Toggle.TextSize = 12; Instance.new("UICorner", Toggle)
 Instance.new("UIStroke", Toggle).Color = Color3.new(0, 1, 1)
 
@@ -61,8 +63,8 @@ Btn.Size = UDim2.new(0, 170, 0, 45); Btn.Position = UDim2.new(0, 15, 0, 50)
 Btn.Font = "GothamBlack"; Btn.TextSize = 12; Btn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Btn)
 
 local function UpdateUI()
-    Btn.Text = _G.AutoAimPlayer and "AIM PLAYER: ON" or "AIM PLAYER: OFF"
-    Btn.BackgroundColor3 = _G.AutoAimPlayer and Color3.fromRGB(0, 100, 150) or Color3.fromRGB(100, 0, 0)
+    Btn.Text = _G.AutoAimPlayer and "SILENT AIM: ON" or "SILENT AIM: OFF"
+    Btn.BackgroundColor3 = _G.AutoAimPlayer and Color3.fromRGB(0, 120, 200) or Color3.fromRGB(80, 0, 0)
 end
 
 Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
