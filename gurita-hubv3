@@ -1,15 +1,14 @@
--- [[ GURITA HUB - AUTO AIM PLAYER TESTER ]] --
+-- [[ GURITA HUB - AUTO AIM PLAYER TESTER V2 ]] --
 
 local lp = game.Players.LocalPlayer
 local mouse = lp:GetMouse()
 local PlayerGui = lp:WaitForChild("PlayerGui")
 
--- Variable Kontrol
 _G.AutoAimPlayer = false
 
--- 1. LOGIKA PENCARI TARGET (KHUSUS PLAYER)
-local function GetTarget()
-    local closest, dist = nil, 400 -- Jarak FOV (radius kunci di layar)
+-- 1. LOGIKA CARI PLAYER TERDEKAT
+local function GetClosestPlayer()
+    local closest, dist = nil, 400
     for _, v in pairs(game.Players:GetPlayers()) do
         if v ~= lp and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = v.Character.HumanoidRootPart
@@ -27,55 +26,42 @@ local function GetTarget()
     return closest
 end
 
--- 2. SISTEM MEMBELOKKAN TEMBAKAN (NAME_CALL HOOK)
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local args = {...}
-    local method = getnamecallmethod()
-    
-    if _G.AutoAimPlayer and (method == "FireServer" or method == "InvokeServer") then
-        local target = GetTarget()
-        if target then
-            -- Cari argumen Vector3 (posisi tembakan) dan paksa ke badan target
-            for i, arg in pairs(args) do
-                if typeof(arg) == "Vector3" then
-                    args[i] = target.Position
-                end
-            end
-        end
+-- 2. REDIRECT MOUSE TARGET (CARA BARU)
+-- Ini bakal maksa mouse.Target seolah-olah lagi nempel di musuh pas klik
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", function(self, index)
+    if self == mouse and index == "Target" and _G.AutoAimPlayer then
+        local t = GetClosestPlayer()
+        if t then return t end
     end
-    return oldNamecall(self, unpack(args))
+    if self == mouse and index == "Hit" and _G.AutoAimPlayer then
+        local t = GetClosestPlayer()
+        if t then return t.CFrame end
+    end
+    return oldIndex(self, index)
 end)
 
--- 3. UI MENU UJI COBA
-if PlayerGui:FindFirstChild("TesterUI") then PlayerGui.TesterUI:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "TesterUI"; SG.ResetOnSpawn = false
+-- 3. UI MENU (Sama kayak tadi biar gak ribet)
+if PlayerGui:FindFirstChild("TesterV2") then PlayerGui.TesterV2:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "TesterV2"; SG.ResetOnSpawn = false
 
--- Tombol Kecil G H
 local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 60, 0, 30); Toggle.Position = UDim2.new(0, 10, 0.5, 0)
-Toggle.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Toggle.Text = "G H"; Toggle.TextColor3 = Color3.new(0, 1, 1)
-Toggle.Font = "GothamBlack"; Toggle.TextSize = 14; Instance.new("UICorner", Toggle)
-Instance.new("UIStroke", Toggle).Color = Color3.new(0, 1, 1)
+Toggle.Size = UDim2.new(0, 70, 0, 35); Toggle.Position = UDim2.new(0, 10, 0.5, 0)
+Toggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Toggle.Text = "G H V2"; Toggle.TextColor3 = Color3.new(0, 1, 0.5)
+Toggle.Font = "GothamBlack"; Toggle.TextSize = 12; Instance.new("UICorner", Toggle)
 
--- Frame Menu
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 120); Main.Position = UDim2.new(0.5, -100, 0.4, 0)
+Main.Size = UDim2.new(0, 200, 0, 130); Main.Position = UDim2.new(0.5, -100, 0.4, 0)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Main.Visible = false; Instance.new("UICorner", Main)
-local s = Instance.new("UIStroke", Main); s.Color = Color3.new(0, 1, 1); s.Thickness = 2
-
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 40); Title.Text = "AIM TESTER GH"; Title.TextColor3 = Color3.new(1,1,1)
-Title.Font = "GothamBlack"; Title.TextSize = 14; Title.BackgroundTransparency = 1
+Instance.new("UIStroke", Main).Color = Color3.new(0, 1, 0.5)
 
 local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0, 160, 0, 45); Btn.Position = UDim2.new(0, 20, 0, 50)
-Btn.Font = "GothamBold"; Btn.TextSize = 12; Btn.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", Btn)
+Btn.Size = UDim2.new(0, 170, 0, 50); Btn.Position = UDim2.new(0, 15, 0, 50)
+Btn.Font = "GothamBlack"; Btn.TextSize = 12; Btn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Btn)
 
 local function UpdateUI()
-    Btn.Text = _G.AutoAimPlayer and "AUTO AIM: ACTIVE" or "AUTO AIM: OFF"
-    Btn.BackgroundColor3 = _G.AutoAimPlayer and Color3.fromRGB(0, 120, 200) or Color3.fromRGB(80, 0, 0)
+    Btn.Text = _G.AutoAimPlayer and "AIM PLAYER: ACTIVE" or "AIM PLAYER: OFF"
+    Btn.BackgroundColor3 = _G.AutoAimPlayer and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(100, 0, 0)
 end
 
 Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
@@ -85,4 +71,3 @@ Btn.MouseButton1Down:Connect(function()
 end)
 
 UpdateUI()
-print("Tester Auto Aim Player Berhasil Dimuat!")
