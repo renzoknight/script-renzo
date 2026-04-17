@@ -1,24 +1,25 @@
--- [[ GURITA HUB - SILENT AIM PLAYER V4 ]] --
+-- [[ GURITA HUB V60 - SILENT AIM RE-INJECTOR ]] --
 
 local lp = game.Players.LocalPlayer
 local mouse = lp:GetMouse()
 local camera = workspace.CurrentCamera
-local PlayerGui = lp:WaitForChild("PlayerGui")
+local Net = game:GetService("ReplicatedStorage").Packages.Net
+local RemoteName = "RE/2bb23bfe7d10041c4b3e572f3e8bbfe860849d2daa7bb33a08501c4482045c4b"
+local Remote = Net:FindFirstChild(RemoteName)
 
 _G.AutoAimPlayer = false
 
--- 1. CARI PLAYER TERDEKAT (FOV 300)
+-- 1. LOGIKA CARI PLAYER TERDEKAT
 local function GetClosestPlayer()
-    local closest, dist = nil, 300
+    local closest, dist = nil, 400
     for _, v in pairs(game.Players:GetPlayers()) do
         if v ~= lp and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = v.Character.HumanoidRootPart
             local pos, onScreen = camera:WorldToViewportPoint(hrp.Position)
-            
             if onScreen then
                 local mag = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
                 if mag < dist then
-                    closest = hrp
+                    closest = v.Character
                     dist = mag
                 end
             end
@@ -27,50 +28,50 @@ local function GetClosestPlayer()
     return closest
 end
 
--- 2. SILENT AIM LOGIC (Membelokkan Mouse Target & Hit)
-local oldIndex
-oldIndex = hookmetamethod(game, "__index", function(self, index)
-    if not checkcaller() and _G.AutoAimPlayer and self == mouse then
-        local target = GetClosestPlayer()
-        if target then
-            if index == "Target" then
-                return target
-            elseif index == "Hit" then
-                return target.CFrame
-            end
+-- 2. HOOKING REMOTE (SUNTIK DATA)
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = {...}
+    local method = getnamecallmethod()
+    
+    -- Cek apakah game lagi manggil Remote Laser/Slinger tadi
+    if _G.AutoAimPlayer and self.Name == RemoteName and method == "FireServer" then
+        local targetChar = GetClosestPlayer()
+        if targetChar then
+            local hrp = targetChar.HumanoidRootPart
+            -- Ganti posisi klik jadi posisi badan musuh
+            args[1] = hrp.Position 
+            -- Ganti objek target jadi badan musuh
+            args[2] = hrp 
+            return oldNamecall(self, unpack(args))
         end
     end
-    return oldIndex(self, index)
+    return oldNamecall(self, ...)
 end)
 
--- 3. UI MENU G H V4
-if PlayerGui:FindFirstChild("TesterV4") then PlayerGui.TesterV4:Destroy() end
-local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "TesterV4"; SG.ResetOnSpawn = false
-
-local Toggle = Instance.new("TextButton", SG)
-Toggle.Size = UDim2.new(0, 70, 0, 35); Toggle.Position = UDim2.new(0, 10, 0.5, 0)
-Toggle.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Toggle.Text = "G H V4"; Toggle.TextColor3 = Color3.new(0, 1, 1)
-Toggle.Font = "GothamBlack"; Toggle.TextSize = 12; Instance.new("UICorner", Toggle)
-Instance.new("UIStroke", Toggle).Color = Color3.new(0, 1, 1)
+-- 3. UI MINIMALIS UNTUK TES
+local PlayerGui = lp:WaitForChild("PlayerGui")
+if PlayerGui:FindFirstChild("GuritaV60") then PlayerGui.GuritaV60:Destroy() end
+local SG = Instance.new("ScreenGui", PlayerGui); SG.Name = "GuritaV60"; SG.ResetOnSpawn = false
 
 local Main = Instance.new("Frame", SG)
-Main.Size = UDim2.new(0, 200, 0, 120); Main.Position = UDim2.new(0.5, -100, 0.4, 0)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10); Main.Visible = false; Instance.new("UICorner", Main)
-Instance.new("UIStroke", Main).Color = Color3.new(0, 1, 1)
+Main.Size = UDim2.new(0, 200, 0, 100); Main.Position = UDim2.new(0.5, -100, 0.1, 0)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Instance.new("UICorner", Main)
+local s = Instance.new("UIStroke", Main); s.Color = Color3.fromRGB(0, 170, 255); s.Thickness = 2
 
 local Btn = Instance.new("TextButton", Main)
-Btn.Size = UDim2.new(0, 170, 0, 45); Btn.Position = UDim2.new(0, 15, 0, 50)
-Btn.Font = "GothamBlack"; Btn.TextSize = 12; Btn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Btn)
+Btn.Size = UDim2.new(1, -20, 1, -20); Btn.Position = UDim2.new(0, 10, 0, 10)
+Btn.Font = "GothamBlack"; Btn.TextSize = 14; Btn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Btn)
 
 local function UpdateUI()
-    Btn.Text = _G.AutoAimPlayer and "SILENT AIM: ON" or "SILENT AIM: OFF"
-    Btn.BackgroundColor3 = _G.AutoAimPlayer and Color3.fromRGB(0, 120, 200) or Color3.fromRGB(80, 0, 0)
+    Btn.Text = "AUTO AIM: " .. (_G.AutoAimPlayer and "ON" or "OFF")
+    Btn.BackgroundColor3 = _G.AutoAimPlayer and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(150, 0, 0)
 end
 
-Toggle.MouseButton1Down:Connect(function() Main.Visible = not Main.Visible end)
-Btn.MouseButton1Down:Connect(function() 
+Btn.MouseButton1Down:Connect(function()
     _G.AutoAimPlayer = not _G.AutoAimPlayer
     UpdateUI()
 end)
 
 UpdateUI()
+print("Gurita Hub V60 Loaded - Target: " .. RemoteName)
