@@ -1,81 +1,78 @@
--- [[ GURITA GRAPPLE FLY - TESTER VERSION ]] --
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("COACH PRIVATE", "Midnight")
 
-local lp = game.Players.LocalPlayer
-local mouse = lp:GetMouse()
-local camera = workspace.CurrentCamera
-local Net = game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("Net")
-local uis = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
-_G.GrappleFlyActive = false
-local flySpeed = 80
+local AutoShootAktif = false 
+local BatasJarak = 200 
 
--- 1. FUNGSI NYARI REMOTE ALAT YANG LAGI DIPAKE
-local function GetCurrentRemote()
-    for _, v in pairs(Net:GetChildren()) do
-        if v:IsA("RemoteEvent") and string.find(v.Name, "RE/") then
-            return v
-        end
-    end
-    return nil
-end
+local Tab = Window:NewTab("Main")
+local Section = Tab:NewSection("Combat")
 
--- 2. LOGIKA TERBANG (SPAM PULL)
-task.spawn(function()
-    while true do
-        task.wait(0.05) -- Jeda biar nggak kena spam detect tapi tetep narik
-        if _G.GrappleFlyActive then
-            local char = lp.Character
-            local remote = GetCurrentRemote()
+Section:NewToggle("Auto Shoot Zombie", "Otomatis nembak tanpa gerakin kamera", function(state)
+    AutoShootAktif = state 
+end)
+
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.Name = "CoachMenuToggle"
+
+ToggleButton.Parent = ScreenGui
+ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+ToggleButton.Position = UDim2.new(0, 10, 0, 150)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 24
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Text = "Z"
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(1, 0)
+UICorner.Parent = ToggleButton
+
+ToggleButton.MouseButton1Click:Connect(function()
+    Library:ToggleUI()
+end)
+
+local function dapatkanTargetZombie()
+    local targetTerdekat = nil
+    local jarakTerdekat = BatasJarak
+
+    for _, objek in pairs(workspace:GetChildren()) do
+        if objek:IsA("Model") and objek ~= LocalPlayer.Character then
+            local apakahIniPlayer = Players:GetPlayerFromCharacter(objek)
             
-            if char and char:FindFirstChild("HumanoidRootPart") and remote then
-                local root = char.HumanoidRootPart
-                local camCF = camera.CFrame
+            if not apakahIniPlayer then
+                local kepala = objek:FindFirstChild("Head")
+                local humanoid = objek:FindFirstChildOfClass("Humanoid")
                 
-                -- Tentukan arah tujuan berdasarkan tombol yang dipencet
-                local moveDir = Vector3.new(0, 0, 0)
-                if uis:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camCF.LookVector end
-                if uis:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camCF.LookVector end
-                if uis:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camCF.RightVector end
-                if uis:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camCF.RightVector end
-                
-                -- Kalau nggak mencet apa-apa, nahan di udara (melayang)
-                if moveDir.Magnitude == 0 then
-                    moveDir = Vector3.new(0, 0.1, 0) -- Nahan dikit biar nggak jatuh
+                if kepala and humanoid and humanoid.Health > 0 then
+                    local jarak = (LocalPlayer.Character.HumanoidRootPart.Position - kepala.Position).Magnitude
+                    
+                    if jarak < jarakTerdekat then
+                        jarakTerdekat = jarak
+                        targetTerdekat = objek
+                    end
                 end
-                
-                -- Posisi imajiner buat narik jaring (20 meter depan karakter)
-                local targetPos = root.Position + (moveDir * 20)
-                
-                -- Kirim perintah ke server seolah-olah kita nembak jaring ke situ
-                remote:FireServer(targetPos, workspace.Map:FindFirstChildOfClass("Part") or workspace.Map)
             end
         end
     end
-end)
+    return targetTerdekat
+end
 
--- 3. MENU TESTER SEDERHANA
-local sg = Instance.new("ScreenGui", lp.PlayerGui)
-sg.Name = "GrappleTester"
-
-local frame = Instance.new("Frame", sg)
-frame.Size = UDim2.new(0, 180, 0, 80)
-frame.Position = UDim2.new(0.5, -90, 0.1, 0)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-frame.Active = true
-frame.Draggable = true -- Biar bisa digeser
-
-local btn = Instance.new("TextButton", frame)
-btn.Size = UDim2.new(1, -20, 1, -20)
-btn.Position = UDim2.new(0, 10, 0, 10)
-btn.Font = "GothamBlack"
-btn.TextSize = 14
-btn.TextColor3 = Color3.new(1, 1, 1)
-btn.Text = "GRAPPLE FLY: OFF"
-btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-Instance.new("UICorner", btn)
-
-btn.MouseButton1Click:Connect(function()
-    _G.GrappleFlyActive = not _G.GrappleFlyActive
-    btn.Text = "GRAPPLE FLY: " .. (_G.GrappleFlyActive and "ON" or "OFF")
-    btn.BackgroundColor3 = _G.GrappleFlyActive and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(150, 0, 0)
+RunService.RenderStepped:Connect(function()
+    if AutoShootAktif == true and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local target = dapatkanTargetZombie()
+        
+        if target then
+            VirtualUser:Button1Down(Vector2.new(0, 0), Camera.CFrame)
+            task.wait(0.05)
+        end
+    end
 end)
