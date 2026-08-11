@@ -1,90 +1,244 @@
--- [[ GURITA HUB V4.0 - CINEMATIC SKY & FLAT WORLD ]] --
-
+-- Layanan yang dibutuhkan
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
-local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- 1. PROTEKSI (Biar Ezra & Awan tetep aman)
-local function IsProtected(v)
-    if v:IsDescendantOf(lp.Character) then return true end
-    if v:IsA("Sky") or v:IsA("Clouds") or v:IsA("Atmosphere") then return true end
-    return false
+local player = Players.LocalPlayer
+local placeId = game.PlaceId
+local SEARCH_DELAY = 5 
+
+-- NAMA FILE UNTUK MENYIMPAN SETTINGAN SECARA PERMANEN DI EXECUTOR
+local CONFIG_FILE = "BloxFruits_AutoHop_Config.json"
+
+-- PENGATURAN DEFAULT
+local config = {
+	autoHopActive = false,
+	selectedTeam = "Pirates" -- Pilihan: "Pirates" (Bajak Laut) atau "Marines" (Marinir)
+}
+
+-- LOAD CONFIGURASI DARI FILE EXECUTOR (Agar permanen)
+if writefile and readfile and isfile then
+	if isfile(CONFIG_FILE) then
+		local success, decoded = pcall(function()
+			return HttpService:JSONDecode(readfile(CONFIG_FILE))
+		end)
+		if success and type(decoded) == "table" then
+			config = decoded
+		end
+	else
+		-- Buat file config awal jika belum ada
+		writefile(CONFIG_FILE, HttpService:JSONEncode(config))
+	end
 end
 
--- 2. FLAT COLOR (Mode Paling Enteng)
-local function ApplyFlat(v)
-    if (v:IsA("BasePart") or v:IsA("MeshPart")) and not IsProtected(v) then
-        pcall(function()
-            v.Material = Enum.Material.Plastic
-            v.CastShadow = false
-            if v:IsA("MeshPart") then v.TextureID = "" end
-            for _, child in pairs(v:GetChildren()) do
-                if child:IsA("Texture") or child:IsA("Decal") then
-                    child:Destroy()
-                end
-            end
-        end)
-    end
+-- Fungsi untuk menyimpan ulang config
+local function saveConfig()
+	if writefile then
+		pcall(function()
+			writefile(CONFIG_FILE, HttpService:JSONEncode(config))
+		end)
+	end
 end
 
--- 3. SHADER-STYLE SKY (Bagus tapi GAK BERAT)
-local function SetCinematicSky()
-    -- Bersihkan langit lama
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("Sky") or v:IsA("Atmosphere") then v:Destroy() end
-    end
-
-    -- Skybox HD Cerah
-    local Sky = Instance.new("Sky", Lighting)
-    Sky.SkyboxBk = "rbxassetid://151165214"
-    Sky.SkyboxDn = "rbxassetid://151165191"
-    Sky.SkyboxFt = "rbxassetid://151165224"
-    Sky.SkyboxLf = "rbxassetid://151165231"
-    Sky.SkyboxRt = "rbxassetid://151165274"
-    Sky.SkyboxUp = "rbxassetid://151165281"
-    Sky.SunAngularSize = 15
-
-    -- Awan ala Shader (Volumetric Clouds)
-    local terrain = workspace:FindFirstChildOfClass("Terrain")
-    if terrain then
-        local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds", terrain)
-        clouds.Enabled = true
-        clouds.Cover = 0.6    -- Awan lumayan banyak
-        clouds.Density = 0.4  -- Gak terlalu padet biar gak leg
-        clouds.Color = Color3.new(1, 1, 1)
-    end
-
-    -- Atmosphere biar efek cahayanya kayak Shaders
-    local atmo = Instance.new("Atmosphere", Lighting)
-    atmo.Density = 0.25
-    atmo.Offset = 0.1
-    atmo.Color = Color3.fromRGB(190, 190, 190)
-    atmo.Decay = Color3.fromRGB(100, 100, 100)
-    atmo.Glare = 0.1
-    atmo.Haze = 0.5 -- Efek kabut tipis cinematic
-    
-    Lighting.ClockTime = 14
-    Lighting.Brightness = 2.5
-    Lighting.ExposureCompensation = 0.2
+-- Cek TeleportData agar status tetap terbawa saat hop server
+local teleportData = TeleportService:GetLocalPlayerTeleportData()
+if teleportData and type(teleportData) == "table" and teleportData.autoHop ~= nil then
+	config.autoHopActive = teleportData.autoHop
 end
 
--- 4. RUNNER (Anti-Lag System)
-task.spawn(function()
-    SetCinematicSky()
-    
-    local d = workspace:GetDescendants()
-    for i = 1, #d do 
-        ApplyFlat(d[i]) 
-        -- Jeda per 200 part biar gak kaget CPU-nya
-        if i % 200 == 0 then task.wait() end 
-    end
+-- ==========================================================
+-- MEMBUAT TAMPILAN MENU (GUI) DI LAYAR
+-- ==========================================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BloxFruitsAutoHopGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Main Frame (Kotak Menu)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 220, 0, 140)
+mainFrame.Position = UDim2.new(0, 50, 0, 50)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+-- Judul Menu
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 14
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.Text = "Auto Hop & Team Manager"
+titleLabel.Parent = mainFrame
+
+-- Tombol Toggle On/Off Auto Hop
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 200, 0, 35)
+toggleBtn.Position = UDim2.new(0, 10, 0, 45)
+toggleBtn.BackgroundColor3 = config.autoHopActive and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.TextSize = 14
+toggleBtn.Font = Enum.Font.SourceSansBold
+toggleBtn.Text = config.autoHopActive and "Auto Hop: ON" or "Auto Hop: OFF"
+toggleBtn.Parent = mainFrame
+
+-- Tombol Ganti Tim (Pirates / Marines)
+local teamBtn = Instance.new("TextButton")
+teamBtn.Size = UDim2.new(0, 200, 0, 35)
+teamBtn.Position = UDim2.new(0, 10, 0, 90)
+teamBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+teamBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+teamBtn.TextSize = 14
+teamBtn.Font = Enum.Font.SourceSansBold
+teamBtn.Text = "Tim: " .. config.selectedTeam
+teamBtn.Parent = mainFrame
+
+-- ==========================================================
+-- FUNGSI AUTO JOIN TIM (Menghilangkan Pop-up Papan Peringkat)
+-- ==========================================================
+local function autoSelectTeam()
+	print("[Blox Fruits] Mencoba memilih tim otomatis: " .. config.selectedTeam)
+	
+	-- Metode 1: Menggunakan RemoteEvent bawaan Blox Fruits untuk memilih tim
+	local re = ReplicatedStorage:FindFirstChild("Remotes") 
+		and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+		
+	if re then
+		pcall(function()
+			re:InvokeServer("SetTeam", config.selectedTeam)
+		end)
+	end
+end
+
+-- ==========================================================
+-- FUNGSI PENCARIAN BUAH
+-- ==========================================================
+local function findFruit()
+	for _, obj in ipairs(Workspace:GetChildren()) do
+		if obj:IsA("Tool") and (obj.Name:find("Fruit") or obj:FindFirstChild("Handle")) then
+			return obj
+		end
+	end
+	return nil
+end
+
+-- ==========================================================
+-- LOGIKA UTAMA AUTO HOP & PENCARIAN
+-- ==========================================================
+local function startFruitSearch()
+	if not config.autoHopActive then return end
+
+	print("[Blox Fruits] Masuk ke server, merapikan tim...")
+	task.wait(2)
+	
+	-- Eksekusi otomatis pilih tim agar pop-up hilang total
+	autoSelectTeam()
+	task.wait(2) -- Jeda setelah memilih tim agar map termuat sempurna
+
+	local detectedFruit = findFruit()
+	
+	if detectedFruit then
+		print("==========================================")
+		print("[SUKSES] Buah ditemukan di server ini!")
+		print("Nama Buah : " .. detectedFruit.Name)
+		print("Status    : DIAM / TIDAK HOP (Menunggu diambil)")
+		print("==========================================")
+		
+		-- Matikan auto hop otomatis agar Anda bisa mengambil buahnya dengan tenang
+		config.autoHopActive = false
+		saveConfig()
+		
+		toggleBtn.Text = "Buah Ketemu! (OFF)"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
+		
+		-- Teleport karakter mendekati buah
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and detectedFruit:FindFirstChild("Handle") then
+			player.Character.HumanoidRootPart.CFrame = detectedFruit.Handle.CFrame + Vector3.new(0, 5, 0)
+		end
+		
+		return 
+	end
+
+	print("[Blox Fruits] Buah tidak ada. Melakukan Auto Hop...")
+	
+	local success, result = pcall(function()
+		local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
+		return HttpService:JSONDecode(game:HttpGet(url))
+	end)
+
+	if success and result and result.data then
+		local servers = {}
+		for _, server in ipairs(result.data) do
+			if server.playing < server.maxPlayers and server.id ~= game.JobId then
+				table.insert(servers, server.id)
+			end
+		end
+
+		if #servers > 0 then
+			local randomServerId = servers[math.random(1, #servers)]
+			-- Pindah server dengan membawa status pengaturan aktif
+			TeleportService:TeleportToPlaceInstance(placeId, randomServerId, player, { autoHop = true })
+		else
+			warn("Server penuh. Mencoba ulang...")
+			task.wait(SEARCH_DELAY)
+			startFruitSearch()
+		end
+	else
+		warn("Gagal ambil data server. Mencoba ulang...")
+		task.wait(SEARCH_DELAY)
+		startFruitSearch()
+	end
+end
+
+-- ==========================================================
+-- INTERAKSI TOMBOL GUI
+-- ==========================================================
+
+-- Tombol On/Off Auto Hop
+toggleBtn.MouseButton1Click:Connect(function()
+	config.autoHopActive = not config.autoHopActive
+	saveConfig() -- Simpan permanen ke file executor
+	
+	if config.autoHopActive then
+		toggleBtn.Text = "Auto Hop: ON"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+		print("[Blox Fruits] Auto Hop diaktifkan.")
+		startFruitSearch()
+	else
+		toggleBtn.Text = "Auto Hop: OFF"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+		print("[Blox Fruits] Auto Hop dimatikan.")
+	end
 end)
 
--- Delay 2 detik buat part baru biar gak tarik FPS pas jalan
-workspace.DescendantAdded:Connect(function(v)
-    task.delay(2, function()
-        ApplyFlat(v)
-    end)
+-- Tombol Ganti Tim (Pirates <-> Marines)
+teamBtn.MouseButton1Click:Connect(function()
+	if config.selectedTeam == "Pirates" then
+		config.selectedTeam = "Marines"
+	else
+		config.selectedTeam = "Pirates"
+	end
+	
+	teamBtn.Text = "Tim: " .. config.selectedTeam
+	saveConfig() -- Simpan permanen pilihan tim
+	print("[Blox Fruits] Tim diubah menjadi: " .. config.selectedTeam)
+	
+	-- Langsung eksekusi pilihan tim saat tombol diklik
+	autoSelectTeam()
 end)
 
-print("Gurita V4.0: Cinematic Sky & No Lag!")
+-- Jalankan otomatis saat script pertama kali di-inject jika statusnya ON
+if config.autoHopActive then
+	task.spawn(function()
+		startFruitSearch()
+	end)
+else
+	-- Tetap jalankan auto select team sekali jika pemain baru masuk tanpa aktifkan auto hop
+	task.spawn(function()
+		task.wait(2)
+		autoSelectTeam()
+	end)
+end
