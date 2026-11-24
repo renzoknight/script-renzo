@@ -31,13 +31,14 @@ local autoReturnEnabled = false
 local returningActive = false
 local smeltEnabled = false
 local smeltToken = 0
+local smeltBusy = false
 local autoMissionEnabled = false
 local missionRunToken = 0
 local missionTeleportDelay = 25 -- Jeda 25 detik sebelum teleport ke misi
 local autoExecEnabled = false
 local flySpeed = 420 -- Bisa di-custom dari input GUI
-local arriveDistance = 6.5
-local stepTimeout = 12
+local arriveDistance = 5.5
+local stepTimeout = 10
 local MAX_DIST_FROM_START = 2500
 
 local anchorStartPos = nil
@@ -49,7 +50,8 @@ local MISSION_COORD = Vector3.new(107, -16, -88)
 local SMELT_COORD = Vector3.new(-15, -16, -120)
 
 local BLOCKED_WORDS = {
-	"portal", "infoboard", "lobby", "hub", "spawn", "return", "back", "menu", "exit", "shop"
+	"portal", "infoboard", "lobby", "hub", "spawn", "return", "back", "menu", "exit", "shop",
+	"cape", "halo", "crown", "ugc", "claim", "pedestal", "podium", "valkenheim"
 }
 
 local function makePosKey(pos)
@@ -190,55 +192,56 @@ local function getTargetPosition(obj)
 end
 
 local function pressKeyE(holdSec)
+	local dur = holdSec or 0.04
 	pcall(function()
 		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
 	end)
-	task.wait(holdSec or 0.14)
+	if dur > 0 then
+		task.wait(dur)
+	end
 	pcall(function()
 		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 	end)
 end
 
 local function triggerPromptFast(prompt)
-	if not prompt or not prompt.Parent then
-		pressKeyE(0.14)
-		return false
-	end
-
-	pcall(function()
-		prompt.Enabled = true
-		prompt.RequiresLineOfSight = false
-		prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 60)
-	end)
-
-	local fired = false
-	if typeof(fireproximityprompt) == "function" then
-		local ok = pcall(function()
-			fireproximityprompt(prompt)
-		end)
-		if ok then
-			fired = true
-		end
-	end
-
-	if not fired then
+	if prompt and prompt.Parent and not isBlockedObject(prompt) then
 		pcall(function()
-			prompt:InputHoldBegin()
-			task.wait(0.05)
-			prompt:InputHoldEnd()
+			prompt.Enabled = true
+			prompt.RequiresLineOfSight = false
+			prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 65)
+		end)
+
+		local fired = false
+		if typeof(fireproximityprompt) == "function" then
+			local ok = pcall(function()
+				fireproximityprompt(prompt)
+			end)
+			if ok then
+				fired = true
+			end
+		end
+
+		if not fired then
+			pcall(function()
+				prompt:InputHoldBegin()
+				prompt:InputHoldEnd()
+			end)
+		end
+
+		pcall(function()
+			ProximityPromptService:PromptTriggered(prompt, localPlayer)
 		end)
 	end
 
-	pcall(function()
-		ProximityPromptService:PromptTriggered(prompt, localPlayer)
-	end)
-
+	-- Selalu kirim E cepat agar mesin langsung terpasang di titik kuning tanpa telat
+	pressKeyE(0.04)
 	return true
 end
 
 local function triggerPrompt(prompt)
-	if not prompt or not prompt.Parent then
-		pressKeyE(0.16)
+	if not prompt or not prompt.Parent or isBlockedObject(prompt) then
+		pressKeyE(0.1)
 		return false
 	end
 
@@ -261,7 +264,7 @@ local function triggerPrompt(prompt)
 	if not fired then
 		pcall(function()
 			prompt:InputHoldBegin()
-			task.wait(math.max(prompt.HoldDuration, 0.08))
+			task.wait(math.clamp(tonumber(prompt.HoldDuration) or 0.05, 0.03, 0.15))
 			prompt:InputHoldEnd()
 		end)
 	end
@@ -273,14 +276,54 @@ local function triggerPrompt(prompt)
 	return true
 end
 
--- Cari prompt / mesin "SCAN FOR GOLD" (bukan portal) untuk ambil mesin pelebur
+local function findPromptNearPos(refPos, maxDist)
+	if not refPos then
+		return nil
+	end
+	local bestPrompt = nil
+	local bestDist = maxDist or 35
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("ProximityPrompt") and obj.Enabled and not isBlockedObject(obj) then
+			local pPos = getTargetPosition(obj)
+			if pPos then
+				local d = (pPos - refPos).Magnitude
+				if d <= bestDist then
+					bestDist = d
+					bestPrompt = obj
+				end
+			end
+		end
+	end
+	return bestPrompt
+end
+
+-- Cek keberadaan target di area/map (mengabaikan objek terblokir seperti podium jubah)
+function findPromptNearCoord(coord, maxDist)
+	local bestPrompt = nil
+	local bestDist = maxDist or 22
+	for _, desc in ipairs(workspace:GetDescendants()) do
+		if desc:IsA("ProximityPrompt") and desc.Enabled and not isBlockedObject(desc) then
+			local pos = getInstanceWorldPos(desc.Parent) or getInstanceWorldPos(desc)
+			if pos then
+				local d = (pos - coord).Magnitude
+				if d <= bestDist then
+					bestDist = d
+					bestPrompt = desc
+				end
+			end
+		end
+	end
+	return bestPrompt
+end
+
+-- Cari prompt / mesin "SCAN FOR GOLD" (bukan portal, bukan podium jubah) untuk ambil mesin pelebur
 local function findGoldMachineTakeTarget(originPos)
 	local bestPos = nil
 	local bestPrompt = nil
 	local bestScore = math.huge
 
 	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("ProximityPrompt") then
+		if obj:IsA("ProximityPrompt") and not isBlockedObject(obj) then
 			local act = string.lower(tostring(obj.ActionText or ""))
 			local objTxt = string.lower(tostring(obj.ObjectText or ""))
 			local fullLow = string.lower(obj:GetFullName())
@@ -313,24 +356,25 @@ local function findGoldMachineTakeTarget(originPos)
 		end
 	end
 
-	-- Cek juga model/part ScanningStand atau tulisan SCAN FOR GOLD jika prompt tersembunyi
 	if not bestPos then
 		for _, obj in ipairs(workspace:GetDescendants()) do
-			local fullLow = string.lower(obj:GetFullName())
-			local nameLow = string.lower(obj.Name)
-			local isPortal = string.find(fullLow, "portal", 1, true)
-			if not isPortal and (
-				string.find(nameLow, "scanningstand", 1, true)
-				or string.find(nameLow, "scan", 1, true)
-				or string.find(nameLow, "smelt", 1, true)
-			) then
-				local pos = getInstanceWorldPos(obj)
-				if pos then
-					local d = originPos and (pos - originPos).Magnitude or 0
-					if d < bestScore then
-						bestScore = d
-						bestPos = pos
-						bestPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+			if not isBlockedObject(obj) then
+				local fullLow = string.lower(obj:GetFullName())
+				local nameLow = string.lower(obj.Name)
+				local isPortal = string.find(fullLow, "portal", 1, true)
+				if not isPortal and (
+					string.find(nameLow, "scanningstand", 1, true)
+					or string.find(nameLow, "scan", 1, true)
+					or string.find(nameLow, "smelt", 1, true)
+				) then
+					local pos = getInstanceWorldPos(obj)
+					if pos then
+						local d = originPos and (pos - originPos).Magnitude or 0
+						if d < bestScore then
+							bestScore = d
+							bestPos = pos
+							bestPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+						end
 					end
 				end
 			end
@@ -346,7 +390,7 @@ local function findGoldMachineTakeTarget(originPos)
 		return lastMachinePos, nil
 	end
 
-	local fallbackPrompt = findPromptNearCoord and findPromptNearCoord(SMELT_COORD, 30)
+	local fallbackPrompt = findPromptNearCoord(SMELT_COORD, 28)
 	if fallbackPrompt then
 		return SMELT_COORD, fallbackPrompt
 	end
@@ -385,7 +429,7 @@ local function apakahOrePenuh()
 end
 
 local function shouldPauseGold()
-	return returningActive or (autoReturnEnabled and apakahOrePenuh())
+	return smeltBusy or returningActive or (autoReturnEnabled and apakahOrePenuh())
 end
 
 local function flyToPosition(label, goalPos)
@@ -429,7 +473,7 @@ local function flyToPosition(label, goalPos)
 		local safeDt = math.min(dt, 0.05)
 		local dir = delta.Unit
 		local activeFlySpeed = math.max(tonumber(flySpeed) or 420, 40)
-		local speedNow = (dist < 22) and math.max(activeFlySpeed * 0.75, 160) or activeFlySpeed
+		local speedNow = (dist < 24) and math.max(activeFlySpeed * 0.72, 150) or activeFlySpeed
 		local stepDist = math.min(speedNow * safeDt, dist)
 		local nextPos = currentPos + dir * stepDist
 
@@ -515,7 +559,7 @@ local function kePortalMapUtamaJikaFull()
 	local bestDist = math.huge
 
 	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("ProximityPrompt") then
+		if obj:IsA("ProximityPrompt") and not isBlockedObject(obj) then
 			local act = string.lower(obj.ActionText or "")
 			local objTxt = string.lower(obj.ObjectText or "")
 			local fullLow = string.lower(obj:GetFullName())
@@ -561,7 +605,6 @@ local function kePortalMapUtamaJikaFull()
 		targetPos = Vector3.new(582.7000122070312, -0.9881315231323242, 1962.6180419921875)
 	end
 
-	print("[GoldMission] Menuju portal:", targetPos)
 	for _ = 1, 5 do
 		char, hrp, hum = getCharParts()
 		if not hrp then
@@ -583,46 +626,6 @@ local function kePortalMapUtamaJikaFull()
 	return true
 end
 
-local function findPromptNearPos(refPos, maxDist)
-	if not refPos then
-		return nil
-	end
-	local bestPrompt = nil
-	local bestDist = maxDist or 30
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("ProximityPrompt") and obj.Enabled and not isBlockedObject(obj) then
-			local pPos = getTargetPosition(obj)
-			if pPos then
-				local d = (pPos - refPos).Magnitude
-				if d <= bestDist then
-					bestDist = d
-					bestPrompt = obj
-				end
-			end
-		end
-	end
-	return bestPrompt
-end
-
--- Cek keberadaan target di area/map agar tidak teleport terus jika di luar map
-function findPromptNearCoord(coord, maxDist)
-	local bestPrompt = nil
-	local bestDist = maxDist or 22
-	for _, desc in ipairs(workspace:GetDescendants()) do
-		if desc:IsA("ProximityPrompt") then
-			local pos = getInstanceWorldPos(desc.Parent) or getInstanceWorldPos(desc)
-			if pos then
-				local d = (pos - coord).Magnitude
-				if d <= bestDist then
-					bestDist = d
-					bestPrompt = desc
-				end
-			end
-		end
-	end
-	return bestPrompt
-end
-
 local function canTakeTurn(roleName)
 	if autoMissionEnabled and smeltEnabled then
 		if not sharedTurnOwner then
@@ -641,7 +644,7 @@ local function releaseTurn(roleName)
 	end
 end
 
--- Loop utama AUTO GOLD: letak ke titik kuning yang belum diletak (tidak nunggu selesai), lalu pindah ke kuning lain; jika kuning sudah habis/selesai baru ambil mesin di tempat SCAN FOR GOLD (bukan portal)
+-- Loop utama AUTO GOLD: E super cepat saat tiba di titik kuning, lalu lanjut kuning lain; habis baru ambil mesin SCAN FOR GOLD
 task.spawn(function()
 	while true do
 		if kePortalMapUtamaJikaFull() then
@@ -650,7 +653,7 @@ task.spawn(function()
 		end
 
 		if not missionEnabled or shouldPauseGold() then
-			task.wait(0.1)
+			task.wait(0.08)
 			continue
 		end
 
@@ -664,24 +667,24 @@ task.spawn(function()
 			anchorStartPos = hrp.Position
 		end
 
-		local nextGoldPos, anyGoldExists = findNextUnplacedGoldPos(hrp.Position)
+		local nextGoldPos = findNextUnplacedGoldPos(hrp.Position)
 		if nextGoldPos then
-			flyToPosition("Kuning Peleburan", nextGoldPos + Vector3.new(0, 2.5, 0))
+			flyToPosition("Kuning Peleburan", nextGoldPos + Vector3.new(0, 2.2, 0))
 			if missionEnabled and not shouldPauseGold() then
-				local actionPrompt = findPromptNearPos(nextGoldPos, 30)
-				if actionPrompt then
-					triggerPromptFast(actionPrompt)
-				else
-					pressKeyE(0.1)
+				local _, curHrp = getCharParts()
+				if curHrp then
+					curHrp.AssemblyLinearVelocity = Vector3.zero
+					curHrp.CFrame = CFrame.new(nextGoldPos + Vector3.new(0, 2.2, 0))
 				end
-				-- Langsung tandai sudah diletak tanpa menunggu animasi/proses selesai
+				local actionPrompt = findPromptNearPos(nextGoldPos, 35)
+				triggerPromptFast(actionPrompt)
 				markGoldPlaced(nextGoldPos)
 			end
-			task.wait(0.15)
+			task.wait(0.08)
 			continue
 		end
 
-		-- Jika kuning-kuning sudah habis/hilang atau semua sudah ditandai, ambil mesin pelebur di tempat SCAN FOR GOLD (bukan portal)
+		-- Jika kuning-kuning sudah habis/hilang atau semua sudah ditandai, ambil mesin pelebur di tempat SCAN FOR GOLD
 		if missionEnabled and not shouldPauseGold() then
 			placedGoldMarkers = {}
 			local machinePos, machinePrompt = findGoldMachineTakeTarget(hrp.Position)
@@ -692,11 +695,10 @@ task.spawn(function()
 					if nearPrompt then
 						triggerPrompt(nearPrompt)
 					else
-						pressKeyE(0.2)
+						pressKeyE(0.12)
 					end
 				end
 
-				-- Tunggu sebentar hingga kuning-kuning baru muncul setelah ambil mesin
 				local waitStart = os.clock()
 				while missionEnabled and not shouldPauseGold() and (os.clock() - waitStart) < 2.2 do
 					if #findAllGoldLocations() > 0 then
@@ -709,7 +711,7 @@ task.spawn(function()
 			end
 		end
 
-		task.wait(0.1)
+		task.wait(0.08)
 	end
 end)
 
@@ -977,6 +979,7 @@ closeBtn.InputBegan:Connect(function(input)
 		autoReturnEnabled = false
 		returningActive = false
 		smeltEnabled = false
+		smeltBusy = false
 		autoMissionEnabled = false
 		autoExecEnabled = false
 		sharedTurnOwner = nil
@@ -1010,22 +1013,22 @@ task.spawn(function()
 		pcall(function()
 			VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
 		end)
-		task.wait(holdSec or 0.15)
+		task.wait(holdSec or 0.12)
 		pcall(function()
 			VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 		end)
 	end
 
 	local function triggerMissionPrompt(prompt)
-		if not prompt or not prompt.Parent then
-			pressMissionKeyE(0.18)
+		if not prompt or not prompt.Parent or isBlockedObject(prompt) then
+			pressMissionKeyE(0.14)
 			return false
 		end
 		pcall(function()
 			prompt.Enabled = true
 		end)
 		local holdTime = tonumber(prompt.HoldDuration) or 0
-		local durasiTekan = (holdTime > 0) and (holdTime + 0.15) or 0.18
+		local durasiTekan = (holdTime > 0) and (holdTime + 0.12) or 0.14
 		pcall(function()
 			prompt:InputHoldBegin()
 		end)
@@ -1091,7 +1094,7 @@ task.spawn(function()
 			if hrp then
 				hrp.AssemblyLinearVelocity = Vector3.zero
 				hrp.CFrame = CFrame.new(MISSION_COORD + Vector3.new(0, 2, 0))
-				task.wait(0.35)
+				task.wait(0.25)
 				if not autoMissionEnabled or token ~= missionRunToken then
 					break
 				end
@@ -1124,7 +1127,7 @@ task.spawn(function()
 	end)
 end)
 
--- AUTO PELEBURAN (-15, -16, -120) - cek target dulu & giliran aman
+-- AUTO PELEBURAN (-15, -16, -120) - 2x submit per siklus (anti-spam) & anti-bentrok jubah UGC
 local function runSmeltCycle(tok)
 	while smeltEnabled and tok == smeltToken do
 		if not canTakeTurn("smelt") then
@@ -1134,25 +1137,52 @@ local function runSmeltCycle(tok)
 
 		local prompt = findPromptNearCoord(SMELT_COORD, 22)
 		if not prompt then
+			smeltBusy = false
 			releaseTurn("smelt")
 			task.wait(3)
 			continue
 		end
 
-		local _, hrp = getCharParts()
+		smeltBusy = true
+		local _, hrp, hum = getCharParts()
 		if hrp then
+			if hum then
+				hum.PlatformStand = false
+			end
 			hrp.AssemblyLinearVelocity = Vector3.zero
 			hrp.CFrame = CFrame.new(SMELT_COORD + Vector3.new(0, 2.5, 0))
-			task.wait(0.3)
-			if not smeltEnabled or tok ~= smeltToken then
-				break
+			task.wait(0.2)
+
+			-- Submit maksimal 2 kali per siklus agar tidak spam terus-menerus
+			for submitIdx = 1, 2 do
+				if not smeltEnabled or tok ~= smeltToken then
+					break
+				end
+				local activePrompt = findPromptNearCoord(SMELT_COORD, 22) or prompt
+				if activePrompt and activePrompt.Parent and not isBlockedObject(activePrompt) then
+					triggerPrompt(activePrompt)
+				else
+					pressKeyE(0.08)
+				end
+				if submitIdx < 2 then
+					task.wait(0.35)
+				end
 			end
-			triggerPrompt(prompt)
 		end
 
+		smeltBusy = false
 		releaseTurn("smelt")
-		task.wait(1.5)
+
+		-- Jeda antar siklus supaya tidak langsung nge-spam ulang
+		local waitSec = 4
+		while smeltEnabled and tok == smeltToken and waitSec > 0 do
+			local step = math.min(waitSec, 0.25)
+			task.wait(step)
+			waitSec -= step
+		end
 	end
+
+	smeltBusy = false
 	if sharedTurnOwner == "smelt" then
 		sharedTurnOwner = autoMissionEnabled and "mission" or nil
 	end
@@ -1176,6 +1206,9 @@ end
 smeltToggleBtn.MouseButton1Click:Connect(function()
 	smeltEnabled = not smeltEnabled
 	smeltToken += 1
+	if not smeltEnabled then
+		smeltBusy = false
+	end
 	if not (autoMissionEnabled and smeltEnabled) then
 		sharedTurnOwner = nil
 	elseif not sharedTurnOwner then
