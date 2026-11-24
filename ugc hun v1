@@ -32,11 +32,13 @@ local returningActive = false
 local smeltEnabled = false
 local smeltToken = 0
 local smeltBusy = false
+local smeltCooldownSec = 8 -- Jeda setelah 2x submit agar tidak spam
 local autoMissionEnabled = false
 local missionRunToken = 0
 local missionTeleportDelay = 25 -- Jeda 25 detik sebelum teleport ke misi
 local autoExecEnabled = false
 local flySpeed = 420 -- Bisa di-custom dari input GUI
+local eDelay = 0.03 -- Makin kecil makin cepat E, makin besar makin lambat E
 local arriveDistance = 5.5
 local stepTimeout = 10
 local MAX_DIST_FROM_START = 2500
@@ -191,14 +193,13 @@ local function getTargetPosition(obj)
 	return nil
 end
 
-local function pressKeyE(holdSec)
-	local dur = holdSec or 0.04
+-- Makin kecil eDelay = makin cepat E; makin besar eDelay = makin lambat E
+local function pressKeyE(customDelay)
+	local d = math.clamp(tonumber(customDelay) or tonumber(eDelay) or 0.03, 0.01, 5)
 	pcall(function()
 		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
 	end)
-	if dur > 0 then
-		task.wait(dur)
-	end
+	task.wait(d)
 	pcall(function()
 		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 	end)
@@ -234,14 +235,13 @@ local function triggerPromptFast(prompt)
 		end)
 	end
 
-	-- Selalu kirim E cepat agar mesin langsung terpasang di titik kuning tanpa telat
-	pressKeyE(0.04)
+	pressKeyE(eDelay)
 	return true
 end
 
 local function triggerPrompt(prompt)
 	if not prompt or not prompt.Parent or isBlockedObject(prompt) then
-		pressKeyE(0.1)
+		pressKeyE(0.08)
 		return false
 	end
 
@@ -264,7 +264,7 @@ local function triggerPrompt(prompt)
 	if not fired then
 		pcall(function()
 			prompt:InputHoldBegin()
-			task.wait(math.clamp(tonumber(prompt.HoldDuration) or 0.05, 0.03, 0.15))
+			task.wait(math.clamp(tonumber(prompt.HoldDuration) or 0.05, 0.03, 0.12))
 			prompt:InputHoldEnd()
 		end)
 	end
@@ -297,7 +297,6 @@ local function findPromptNearPos(refPos, maxDist)
 	return bestPrompt
 end
 
--- Cek keberadaan target di area/map (mengabaikan objek terblokir seperti podium jubah)
 function findPromptNearCoord(coord, maxDist)
 	local bestPrompt = nil
 	local bestDist = maxDist or 22
@@ -316,7 +315,6 @@ function findPromptNearCoord(coord, maxDist)
 	return bestPrompt
 end
 
--- Cari prompt / mesin "SCAN FOR GOLD" (bukan portal, bukan podium jubah) untuk ambil mesin pelebur
 local function findGoldMachineTakeTarget(originPos)
 	local bestPos = nil
 	local bestPrompt = nil
@@ -644,7 +642,7 @@ local function releaseTurn(roleName)
 	end
 end
 
--- Loop utama AUTO GOLD: E super cepat saat tiba di titik kuning, lalu lanjut kuning lain; habis baru ambil mesin SCAN FOR GOLD
+-- Loop utama AUTO GOLD: E mengikuti eDelay (makin kecil makin cepat, makin besar makin lambat)
 task.spawn(function()
 	while true do
 		if kePortalMapUtamaJikaFull() then
@@ -653,7 +651,7 @@ task.spawn(function()
 		end
 
 		if not missionEnabled or shouldPauseGold() then
-			task.wait(0.08)
+			task.wait(0.05)
 			continue
 		end
 
@@ -680,7 +678,7 @@ task.spawn(function()
 				triggerPromptFast(actionPrompt)
 				markGoldPlaced(nextGoldPos)
 			end
-			task.wait(0.08)
+			task.wait(math.clamp((tonumber(eDelay) or 0.03) * 0.5, 0.01, 0.5))
 			continue
 		end
 
@@ -695,7 +693,7 @@ task.spawn(function()
 					if nearPrompt then
 						triggerPrompt(nearPrompt)
 					else
-						pressKeyE(0.12)
+						pressKeyE(0.08)
 					end
 				end
 
@@ -711,7 +709,7 @@ task.spawn(function()
 			end
 		end
 
-		task.wait(0.08)
+		task.wait(0.05)
 	end
 end)
 
@@ -724,7 +722,7 @@ screenGui.DisplayOrder = 999
 screenGui.Parent = guiParent
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(220, 304)
+frame.Size = UDim2.fromOffset(220, 338)
 frame.Position = UDim2.fromScale(0.72, 0.30)
 frame.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
 frame.BorderSizePixel = 0
@@ -814,10 +812,46 @@ toggleBtn.Parent = frame
 
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 
+-- Input Delay E di bawah AUTO GOLD (makin kecil makin cepat, makin besar makin lambat)
+local eDelayFrame = Instance.new("Frame")
+eDelayFrame.Size = UDim2.fromOffset(204, 30)
+eDelayFrame.Position = UDim2.fromOffset(8, 95)
+eDelayFrame.BackgroundColor3 = Color3.fromRGB(22, 28, 42)
+eDelayFrame.BorderSizePixel = 0
+eDelayFrame.Parent = frame
+
+Instance.new("UICorner", eDelayFrame).CornerRadius = UDim.new(0, 6)
+
+local eDelayLabel = Instance.new("TextLabel")
+eDelayLabel.Size = UDim2.new(0.56, 0, 1, 0)
+eDelayLabel.Position = UDim2.fromOffset(8, 0)
+eDelayLabel.BackgroundTransparency = 1
+eDelayLabel.Text = "E DELAY (KCL=CPT):"
+eDelayLabel.TextColor3 = Color3.fromRGB(130, 240, 185)
+eDelayLabel.TextXAlignment = Enum.TextXAlignment.Left
+eDelayLabel.Font = Enum.Font.GothamBold
+eDelayLabel.TextSize = 10
+eDelayLabel.Parent = eDelayFrame
+
+local eDelayInput = Instance.new("TextBox")
+eDelayInput.Size = UDim2.new(0.40, -6, 0.76, 0)
+eDelayInput.Position = UDim2.new(0.58, 0, 0.12, 0)
+eDelayInput.BackgroundColor3 = Color3.fromRGB(36, 46, 68)
+eDelayInput.Text = tostring(eDelay)
+eDelayInput.PlaceholderText = "0.03"
+eDelayInput.TextColor3 = Color3.fromRGB(165, 255, 205)
+eDelayInput.Font = Enum.Font.GothamBold
+eDelayInput.TextSize = 11
+eDelayInput.ClearTextOnFocus = false
+eDelayInput.BorderSizePixel = 0
+eDelayInput.Parent = eDelayFrame
+
+Instance.new("UICorner", eDelayInput).CornerRadius = UDim.new(0, 5)
+
 -- Input Custom Fly Speed
 local speedBoxFrame = Instance.new("Frame")
 speedBoxFrame.Size = UDim2.fromOffset(204, 30)
-speedBoxFrame.Position = UDim2.fromOffset(8, 95)
+speedBoxFrame.Position = UDim2.fromOffset(8, 129)
 speedBoxFrame.BackgroundColor3 = Color3.fromRGB(22, 28, 42)
 speedBoxFrame.BorderSizePixel = 0
 speedBoxFrame.Parent = frame
@@ -852,7 +886,7 @@ Instance.new("UICorner", flySpeedInput).CornerRadius = UDim.new(0, 5)
 
 local returnToggleBtn = Instance.new("TextButton")
 returnToggleBtn.Size = UDim2.fromOffset(204, 32)
-returnToggleBtn.Position = UDim2.fromOffset(8, 130)
+returnToggleBtn.Position = UDim2.fromOffset(8, 164)
 returnToggleBtn.BackgroundColor3 = Color3.fromRGB(32, 36, 48)
 returnToggleBtn.Text = "AUTO RETURN : OFF"
 returnToggleBtn.TextColor3 = Color3.fromRGB(205, 215, 230)
@@ -865,7 +899,7 @@ Instance.new("UICorner", returnToggleBtn).CornerRadius = UDim.new(0, 6)
 
 local smeltToggleBtn = Instance.new("TextButton")
 smeltToggleBtn.Size = UDim2.fromOffset(204, 32)
-smeltToggleBtn.Position = UDim2.fromOffset(8, 167)
+smeltToggleBtn.Position = UDim2.fromOffset(8, 201)
 smeltToggleBtn.BackgroundColor3 = Color3.fromRGB(120, 32, 38)
 smeltToggleBtn.Text = "AUTO PELEBURAN: OFF"
 smeltToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
@@ -878,7 +912,7 @@ Instance.new("UICorner", smeltToggleBtn).CornerRadius = UDim.new(0, 6)
 
 local missionTeleToggleBtn = Instance.new("TextButton")
 missionTeleToggleBtn.Size = UDim2.fromOffset(204, 32)
-missionTeleToggleBtn.Position = UDim2.fromOffset(8, 204)
+missionTeleToggleBtn.Position = UDim2.fromOffset(8, 238)
 missionTeleToggleBtn.BackgroundColor3 = Color3.fromRGB(120, 32, 38)
 missionTeleToggleBtn.Text = "AUTO MISI: OFF"
 missionTeleToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
@@ -891,7 +925,7 @@ Instance.new("UICorner", missionTeleToggleBtn).CornerRadius = UDim.new(0, 6)
 
 local autoExecToggleBtn = Instance.new("TextButton")
 autoExecToggleBtn.Size = UDim2.fromOffset(204, 32)
-autoExecToggleBtn.Position = UDim2.fromOffset(8, 241)
+autoExecToggleBtn.Position = UDim2.fromOffset(8, 275)
 autoExecToggleBtn.BackgroundColor3 = Color3.fromRGB(120, 32, 38)
 autoExecToggleBtn.Text = "AUTO EXEC: OFF"
 autoExecToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
@@ -903,6 +937,22 @@ autoExecToggleBtn.Parent = frame
 Instance.new("UICorner", autoExecToggleBtn).CornerRadius = UDim.new(0, 6)
 
 local saveAllSettings
+
+local function applyCustomEDelayFromText(raw)
+	local cleaned = tostring(raw or ""):gsub("[^%d%.]", "")
+	local num = tonumber(cleaned)
+	if num and num >= 0.01 and num <= 5 then
+		eDelay = math.floor(num * 1000 + 0.5) / 1000
+	end
+	eDelayInput.Text = tostring(eDelay)
+	if saveAllSettings then
+		saveAllSettings()
+	end
+end
+
+eDelayInput.FocusLost:Connect(function()
+	applyCustomEDelayFromText(eDelayInput.Text)
+end)
 
 local function applyCustomFlySpeedFromText(raw)
 	local cleaned = tostring(raw or ""):gsub("[^%d%.]", "")
@@ -1127,7 +1177,7 @@ task.spawn(function()
 	end)
 end)
 
--- AUTO PELEBURAN (-15, -16, -120) - 2x submit per siklus (anti-spam) & anti-bentrok jubah UGC
+-- AUTO PELEBURAN (-15, -16, -120) - 2x submit lalu jeda panjang biar tidak spam
 local function runSmeltCycle(tok)
 	while smeltEnabled and tok == smeltToken do
 		if not canTakeTurn("smelt") then
@@ -1153,7 +1203,7 @@ local function runSmeltCycle(tok)
 			hrp.CFrame = CFrame.new(SMELT_COORD + Vector3.new(0, 2.5, 0))
 			task.wait(0.2)
 
-			-- Submit maksimal 2 kali per siklus agar tidak spam terus-menerus
+			-- Submit maksimal 2 kali per siklus
 			for submitIdx = 1, 2 do
 				if not smeltEnabled or tok ~= smeltToken then
 					break
@@ -1165,7 +1215,7 @@ local function runSmeltCycle(tok)
 					pressKeyE(0.08)
 				end
 				if submitIdx < 2 then
-					task.wait(0.35)
+					task.wait(0.4)
 				end
 			end
 		end
@@ -1173,8 +1223,8 @@ local function runSmeltCycle(tok)
 		smeltBusy = false
 		releaseTurn("smelt")
 
-		-- Jeda antar siklus supaya tidak langsung nge-spam ulang
-		local waitSec = 4
+		-- Jeda panjang setelah 2x submit agar tidak spam berulang
+		local waitSec = smeltCooldownSec
 		while smeltEnabled and tok == smeltToken and waitSec > 0 do
 			local step = math.min(waitSec, 0.25)
 			task.wait(step)
@@ -1297,6 +1347,7 @@ task.spawn(function()
 
 	saveAllSettings = function()
 		local currentSpeed = tonumber(flySpeed) or 420
+		local currentEDelay = tonumber(eDelay) or 0.03
 		local data = {
 			autoGold = (missionEnabled == true) or isOnText(toggleBtn),
 			returnToggle = (autoReturnEnabled == true) or isOnText(returnToggleBtn),
@@ -1304,6 +1355,7 @@ task.spawn(function()
 			mission = (autoMissionEnabled == true) or isOnText(missionTeleToggleBtn),
 			autoExec = (autoExecEnabled == true) or isOnText(autoExecToggleBtn),
 			flySpeed = currentSpeed,
+			eDelay = currentEDelay,
 		}
 
 		for k, v in pairs(data) do
@@ -1325,7 +1377,13 @@ task.spawn(function()
 		mission = (diskSaved and diskSaved.mission == true) or (memSaved.mission == true),
 		autoExec = (diskSaved and diskSaved.autoExec == true) or (memSaved.autoExec == true),
 		flySpeed = (diskSaved and tonumber(diskSaved.flySpeed)) or (tonumber(memSaved.flySpeed)) or flySpeed,
+		eDelay = (diskSaved and tonumber(diskSaved.eDelay)) or (tonumber(memSaved.eDelay)) or eDelay,
 	}
+
+	if saved.eDelay and saved.eDelay >= 0.01 and saved.eDelay <= 5 then
+		eDelay = saved.eDelay
+		eDelayInput.Text = tostring(eDelay)
+	end
 
 	if saved.flySpeed and saved.flySpeed >= 40 and saved.flySpeed <= 5000 then
 		flySpeed = saved.flySpeed
