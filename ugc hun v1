@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local CoreGui = game:GetService("CoreGui")
 
 local localPlayer = Players.LocalPlayer
@@ -24,6 +25,13 @@ end
 
 -- Pengaturan utama
 local missionEnabled = false
+local autoReturnEnabled = false
+local returningActive = false
+local smeltEnabled = false
+local smeltToken = 0
+local autoMissionEnabled = false
+local missionRunToken = 0
+local autoExecEnabled = false
 local flySpeed = 230
 local arriveDistance = 5.5
 local stepTimeout = 18
@@ -120,12 +128,14 @@ local function getTargetPosition(obj)
 end
 
 local function triggerPrompt(prompt)
-	if not prompt or not prompt.Parent or not prompt.Enabled or isBlockedObject(prompt) then
+	if not prompt or not prompt.Parent then
 		return false
 	end
 
 	pcall(function()
-		prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 25)
+		prompt.Enabled = true
+		prompt.RequiresLineOfSight = false
+		prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 50)
 	end)
 
 	local fired = false
@@ -146,12 +156,55 @@ local function triggerPrompt(prompt)
 		end)
 	end
 
+	pcall(function()
+		ProximityPromptService:PromptTriggered(prompt, localPlayer)
+	end)
+
 	return true
+end
+
+local function apakahOrePenuh()
+	local roots = {}
+	local pg = localPlayer and localPlayer:FindFirstChildOfClass("PlayerGui")
+	if pg then
+		table.insert(roots, pg)
+	end
+	if typeof(gethui) == "function" then
+		local ok, hui = pcall(gethui)
+		if ok and hui then
+			table.insert(roots, hui)
+		end
+	end
+
+	for _, root in ipairs(roots) do
+		for _, v in ipairs(root:GetDescendants()) do
+			if v:IsA("TextLabel") or v:IsA("TextButton") then
+				local txt = string.lower(tostring(v.Text or ""):gsub("<[^>]->", ""))
+				if string.find(txt, "ore is full", 1, true)
+					or string.find(txt, "gold hunters lobby", 1, true)
+					or (string.find(txt, "full", 1, true) and string.find(txt, "ore", 1, true))
+				then
+					return true
+				end
+			end
+		end
+	end
+
+	return false
+end
+
+local function shouldPauseGold()
+	return returningActive or (autoReturnEnabled and apakahOrePenuh())
 end
 
 local function flyToPosition(label, goalPos)
 	local char, hrp, hum = getCharParts()
 	if not char or not hrp or not hum or not goalPos then
+		return false
+	end
+
+	if shouldPauseGold() then
+		hrp.AssemblyLinearVelocity = Vector3.zero
 		return false
 	end
 
@@ -163,7 +216,7 @@ local function flyToPosition(label, goalPos)
 	local startClock = os.clock()
 	local reached = false
 
-	while missionEnabled and (os.clock() - startClock) < stepTimeout do
+	while missionEnabled and not shouldPauseGold() and (os.clock() - startClock) < stepTimeout do
 		char, hrp, hum = getCharParts()
 		if not char or not hrp or not hum then
 			break
@@ -180,6 +233,10 @@ local function flyToPosition(label, goalPos)
 		end
 
 		local dt = RunService.Heartbeat:Wait()
+		if not missionEnabled or shouldPauseGold() then
+			break
+		end
+
 		local safeDt = math.min(dt, 0.05)
 		local dir = delta.Unit
 		local speedNow = (dist < 18) and math.max(flySpeed * 0.55, 85) or flySpeed
@@ -216,188 +273,7 @@ local function findScanningStand()
 	end
 	return nil
 end
-local autoReturnAktif = true
 
-local function apakahOrePenuh()
-	local pg = lp and lp:FindFirstChildOfClass("PlayerGui")
-	if not pg then return false end
-
-	local toast = pg:FindFirstChild("Toast")
-	local content = toast and toast:FindFirstChild("@CONTENT")
-	local clue = content and content:FindFirstChild("@CLUE")
-
-	if clue and (clue:IsA("TextLabel") or clue:IsA("TextButton")) and clue.Visible then
-		local txt = string.lower(tostring(clue.Text or ""):gsub("<[^>]->", ""))
-		if string.find(txt, "ore is full", 1, true) then
-			return true
-		end
-	end
-
-	return false
-end
-
-local function kePortalMapUtamaJikaFull()
-	if not autoReturnAktif or not apakahOrePenuh() then
-		return false
-	end
-
-	local char = lp and lp.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart")
-	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	if not hrp then return false end
-
-	local bestPos, bestPrompt = nil, nil
-	local bestDist = math.huge
-
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("ProximityPrompt") and obj.Enabled then
-			local act = string.lower(obj.ActionText or "")
-			local objTxt = string.lower(obj.ObjectText or "")
-			local fullLow = string.lower(obj:GetFullName())
-
-			if string.find(act, "teleport", 1, true)
-				or string.find(objTxt, "pemburu emas", 1, true)
-				or string.find(fullLow, "portal", 1, true)
-			then
-				local p = obj.Parent
-				local pos = nil
-				if p and p:IsA("BasePart") then
-					pos = p.Position
-				elseif p and p:IsA("Attachment") then
-					pos = p.WorldPosition
-				else
-					local m = obj:FindFirstAncestorOfClass("Model")
-					if m then pos = m:GetPivot().Position end
-				end
-
-				if pos then
-					local dist = (pos - hrp.Position).Magnitude
-					if dist < bestDist then
-						bestDist = dist
-						bestPos = pos
-						bestPrompt = obj
-					end
-				end
-			end
-		end
-	end
-
-	if bestPos and bestPrompt then
-		local goal = CFrame.new(bestPos + Vector3.new(0, 2, 0))
-		local dur = math.clamp((hrp.Position - goal.Position).Magnitude / 95, 0.1, 15)
-		if hum then hum.PlatformStand = true end
-		local tw = game:GetService("TweenService"):Create(
-			hrp,
-			TweenInfo.new(dur, Enum.EasingStyle.Linear),
-			{ CFrame = goal }
-		)
-		tw:Play()
-		tw.Completed:Wait()
-		if hum then hum.PlatformStand = false end
-
-		task.wait(0.35)
-		if typeof(fireproximityprompt) == "function" then
-			pcall(fireproximityprompt, bestPrompt)
-		else
-			bestPrompt:InputHoldBegin()
-			task.wait(math.max(bestPrompt.HoldDuration or 0, 0.1))
-			bestPrompt:InputHoldEnd()
-		end
-		return true
-	end
-
-	return false
-end
-
-local function findPromptNearPos(refPos, maxDist)
-	if not refPos then
-		return nil
-	end
-	local bestPrompt = nil
-	local bestDist = maxDist or 30
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("ProximityPrompt") and obj.Enabled and not isBlockedObject(obj) then
-			local pPos = getTargetPosition(obj)
-			if pPos then
-				local d = (pPos - refPos).Magnitude
-				if d <= bestDist then
-					bestDist = d
-					bestPrompt = obj
-				end
-			end
-		end
-	end
-	return bestPrompt
-end
-
-local GuiService = game:GetService("GuiService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
-local function terbangKePortalJikaGoldPenuh()
-	local pg = localPlayer and localPlayer:FindFirstChildOfClass("PlayerGui")
-	if not pg then return false end
-
-	local penuh = false
-	for _, v in ipairs(pg:GetDescendants()) do
-		if v:IsA("TextLabel") or v:IsA("TextButton") then
-			local t = string.lower(v.Text or "")
-			local a, b = string.match(t, "(%d+)%s*/%s*(%d+)")
-			if (a and b and tonumber(b) > 0 and tonumber(a) >= tonumber(b))
-				or ((string.find(t, "full", 1, true) or string.find(t, "penuh", 1, true)) and #t <= 18) then
-				penuh = true
-				break
-			end
-		end
-	end
-	if not penuh then return false end
-
-	local _, hrp = getCharParts()
-	if not hrp then return false end
-
-	local bestPos = nil
-	local bestPrompt = nil
-	local bestDist = math.huge
-
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("ProximityPrompt") and obj.Enabled then
-			local act = string.lower(obj.ActionText or "")
-			local objTxt = string.lower(obj.ObjectText or "")
-			local fullLow = string.lower(obj:GetFullName())
-			if string.find(act, "teleport", 1, true) or string.find(objTxt, "pemburu emas", 1, true) or string.find(fullLow, "portal", 1, true) then
-				local pPos = getTargetPosition(obj)
-				if not pPos then
-					local parent = obj.Parent
-					if parent and parent:IsA("BasePart") then
-						pPos = parent.Position
-					elseif parent and parent:IsA("Attachment") then
-						pPos = parent.WorldPosition
-					else
-						local m = obj:FindFirstAncestorOfClass("Model")
-						if m then pPos = m:GetPivot().Position end
-					end
-				end
-				if pPos then
-					local d = (pPos - hrp.Position).Magnitude
-					if d < bestDist then
-						bestDist = d
-						bestPos = pPos
-						bestPrompt = obj
-					end
-				end
-			end
-		end
-	end
-
-	if bestPos then
-		flyToPosition("PortalPemburuEmas", bestPos + Vector3.new(0, 2, 0))
-		if bestPrompt then
-			triggerPrompt(bestPrompt)
-		end
-		return true
-	end
-
-	return false
-end
 local function findGoldLocationPos(originPos)
 	local bestPos = nil
 	local bestDist = math.huge
@@ -425,15 +301,126 @@ local function findGoldLocationPos(originPos)
 	return bestPos
 end
 
+local function kePortalMapUtamaJikaFull()
+	if not autoReturnEnabled then
+		returningActive = false
+		return false
+	end
+
+	if not apakahOrePenuh() then
+		returningActive = false
+		return false
+	end
+
+	returningActive = true
+
+	local char, hrp, hum = getCharParts()
+	if not char or not hrp then
+		return true
+	end
+
+	local targetPos, targetPrompt = nil, nil
+	local bestDist = math.huge
+
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("ProximityPrompt") then
+			local act = string.lower(obj.ActionText or "")
+			local objTxt = string.lower(obj.ObjectText or "")
+			local fullLow = string.lower(obj:GetFullName())
+
+			local isScanPrompt = string.find(act, "scan", 1, true)
+				or string.find(objTxt, "scan", 1, true)
+				or string.find(fullLow, "scan_prompt", 1, true)
+
+			local isPortalPrompt = not isScanPrompt and (
+				string.find(fullLow, "portal", 1, true)
+				or (string.find(act, "teleport", 1, true) and not string.find(fullLow, "scan", 1, true))
+				or string.find(objTxt, "pemburu emas", 1, true)
+				or string.find(objTxt, "gold hunters", 1, true)
+			)
+
+			if isPortalPrompt then
+				local p = obj.Parent
+				local pos = nil
+				if p and p:IsA("BasePart") then
+					pos = p.Position
+				elseif p and p:IsA("Attachment") then
+					pos = p.WorldPosition
+				else
+					local partAnc = obj:FindFirstAncestorWhichIsA("BasePart")
+					if partAnc then
+						pos = partAnc.Position
+					end
+				end
+
+				if pos then
+					local d = (pos - hrp.Position).Magnitude
+					if d < bestDist then
+						bestDist = d
+						targetPos = pos
+						targetPrompt = obj
+					end
+				end
+			end
+		end
+	end
+
+	if not targetPos then
+		targetPos = Vector3.new(582.7000122070312, -0.9881315231323242, 1962.6180419921875)
+	end
+
+	print("[GoldMission] Menuju portal:", targetPos)
+	for _ = 1, 5 do
+		char, hrp, hum = getCharParts()
+		if not hrp then
+			break
+		end
+		if hum then
+			hum.PlatformStand = false
+		end
+		hrp.AssemblyLinearVelocity = Vector3.zero
+		hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 1.5, 0))
+
+		if targetPrompt and targetPrompt.Parent then
+			triggerPrompt(targetPrompt)
+		end
+
+		task.wait(0.25)
+	end
+
+	return true
+end
+
+local function findPromptNearPos(refPos, maxDist)
+	if not refPos then
+		return nil
+	end
+	local bestPrompt = nil
+	local bestDist = maxDist or 30
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("ProximityPrompt") and obj.Enabled and not isBlockedObject(obj) then
+			local pPos = getTargetPosition(obj)
+			if pPos then
+				local d = (pPos - refPos).Magnitude
+				if d <= bestDist then
+					bestDist = d
+					bestPrompt = obj
+				end
+			end
+		end
+	end
+	return bestPrompt
+end
+
 -- Loop utama misi
 task.spawn(function()
 	while true do
-		
-    if kePortalMapUtamaJikaFull() then
-		    task.wait(2)
-		    continue
-    end		
-		if not missionEnabled then
+		if kePortalMapUtamaJikaFull() then
+			task.wait(1)
+			continue
+		end
+
+		if not missionEnabled or shouldPauseGold() then
 			task.wait(0.15)
 			continue
 		end
@@ -453,20 +440,20 @@ task.spawn(function()
 		if not goldPos then
 			local stand = findScanningStand()
 			local standPos = getTargetPosition(stand)
-			if stand and standPos then
+			if stand and standPos and not shouldPauseGold() then
 				flyToPosition("ScanningStand", standPos + Vector3.new(0, 2.5, 0))
-				if missionEnabled then
+				if missionEnabled and not shouldPauseGold() then
 					local scanPrompt = findPromptNearPos(standPos, 30)
 					if scanPrompt then
 						triggerPrompt(scanPrompt)
 					end
 				end
-			else
+			elseif not shouldPauseGold() then
 				print("[GoldMission] ScanningStand belum ketemu")
 			end
 
 			local waitStart = os.clock()
-			while missionEnabled and (os.clock() - waitStart) < 2.2 do
+			while missionEnabled and not shouldPauseGold() and (os.clock() - waitStart) < 2.2 do
 				local _, curHrp = getCharParts()
 				goldPos = findGoldLocationPos(curHrp and curHrp.Position or hrp.Position)
 				if goldPos then
@@ -476,14 +463,18 @@ task.spawn(function()
 			end
 		end
 
-		if not missionEnabled then
+		if not missionEnabled or shouldPauseGold() then
 			continue
 		end
-		if autoReturnEnabled and terbangKePortalJikaGoldPenuh() then task.wait(1.5) continue end
 
-		if goldPos then
+		if kePortalMapUtamaJikaFull() then
+			task.wait(1)
+			continue
+		end
+
+		if goldPos and not shouldPauseGold() then
 			flyToPosition("LocationBeam", goldPos + Vector3.new(0, 2.5, 0))
-			if missionEnabled then
+			if missionEnabled and not shouldPauseGold() then
 				local digPrompt = findPromptNearPos(goldPos, 30)
 				if digPrompt then
 					triggerPrompt(digPrompt)
@@ -510,9 +501,7 @@ frame.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 8)
-corner.Parent = frame
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
 
 local stroke = Instance.new("UIStroke")
 stroke.Color = Color3.fromRGB(255, 195, 35)
@@ -525,9 +514,7 @@ header.BackgroundColor3 = Color3.fromRGB(24, 30, 44)
 header.BorderSizePixel = 0
 header.Parent = frame
 
-local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 8)
-headerCorner.Parent = header
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 8)
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -34, 1, 0)
@@ -551,9 +538,7 @@ closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 15
 closeBtn.Parent = header
 
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 6)
-closeCorner.Parent = closeBtn
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local dragging = false
 local dragStart, startPos
@@ -598,11 +583,7 @@ toggleBtn.TextSize = 13
 toggleBtn.BorderSizePixel = 0
 toggleBtn.Parent = frame
 
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(0, 6)
-btnCorner.Parent = toggleBtn
-
-local autoReturnEnabled = false
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 
 local returnToggleBtn = Instance.new("TextButton")
 returnToggleBtn.Size = UDim2.fromOffset(204, 34)
@@ -656,12 +637,24 @@ autoExecToggleBtn.Parent = frame
 
 Instance.new("UICorner", autoExecToggleBtn).CornerRadius = UDim.new(0, 6)
 
+local saveAllSettings
+
+local function refreshReturnVisual()
+	returnToggleBtn.Text = autoReturnEnabled and "AUTO RETURN : ON" or "AUTO RETURN : OFF"
+	returnToggleBtn.BackgroundColor3 = autoReturnEnabled and Color3.fromRGB(145, 95, 20) or Color3.fromRGB(32, 36, 48)
+	returnToggleBtn.TextColor3 = autoReturnEnabled and Color3.fromRGB(255, 230, 140) or Color3.fromRGB(205, 215, 230)
+	if saveAllSettings then
+		saveAllSettings()
+	end
+end
+
 returnToggleBtn.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		autoReturnEnabled = not autoReturnEnabled
-		returnToggleBtn.Text = autoReturnEnabled and "AUTO RETURN : ON" or "AUTO RETURN : OFF"
-		returnToggleBtn.BackgroundColor3 = autoReturnEnabled and Color3.fromRGB(145, 95, 20) or Color3.fromRGB(32, 36, 48)
-		returnToggleBtn.TextColor3 = autoReturnEnabled and Color3.fromRGB(255, 230, 140) or Color3.fromRGB(205, 215, 230)
+		if not autoReturnEnabled then
+			returningActive = false
+		end
+		refreshReturnVisual()
 	end
 end)
 
@@ -669,6 +662,9 @@ local function refreshBtn()
 	toggleBtn.Text = missionEnabled and "AUTO GOLD : ON" or "AUTO GOLD : OFF"
 	toggleBtn.BackgroundColor3 = missionEnabled and Color3.fromRGB(22, 110, 65) or Color3.fromRGB(28, 36, 52)
 	toggleBtn.TextColor3 = missionEnabled and Color3.fromRGB(145, 255, 190) or Color3.fromRGB(215, 225, 240)
+	if saveAllSettings then
+		saveAllSettings()
+	end
 end
 
 toggleBtn.InputBegan:Connect(function(input)
@@ -694,26 +690,31 @@ end)
 closeBtn.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		missionEnabled = false
+		autoReturnEnabled = false
+		returningActive = false
+		smeltEnabled = false
+		autoMissionEnabled = false
+		autoExecEnabled = false
 		anchorStartPos = nil
+		if saveAllSettings then
+			saveAllSettings()
+		end
 		screenGui:Destroy()
 	end
 end)
 
+-- AUTO MISI (107, -16, -88)
+local refreshMissionVisual
+local runAutoMissionCycle
+
 task.spawn(function()
-	if typeof(missionTeleToggleBtn) ~= "Instance" then
-		return
-	end
-
-	local ProximityPromptService = game:GetService("ProximityPromptService")
 	local VirtualInputManager = game:GetService("VirtualInputManager")
-	local lpMission = game:GetService("Players").LocalPlayer
-
+	local lpMission = Players.LocalPlayer
 	local MISSION_COORD = Vector3.new(107, -16, -88)
 
 	local function findNearestMissionPrompt(refPos)
 		local bestPrompt = nil
 		local bestDist = math.huge
-
 		for _, desc in ipairs(workspace:GetDescendants()) do
 			if desc:IsA("ProximityPrompt") then
 				local parent = desc.Parent
@@ -725,7 +726,6 @@ task.spawn(function()
 				elseif parent and parent:IsA("Model") then
 					pos = (parent.PrimaryPart and parent.PrimaryPart.Position) or parent:GetPivot().Position
 				end
-
 				if pos then
 					local distKeTitik = (pos - MISSION_COORD).Magnitude
 					local distKeRef = (pos - refPos).Magnitude
@@ -739,7 +739,6 @@ task.spawn(function()
 				end
 			end
 		end
-
 		return bestPrompt
 	end
 
@@ -758,14 +757,11 @@ task.spawn(function()
 			pressMissionKeyE(0.18)
 			return false
 		end
-
 		pcall(function()
 			prompt.Enabled = true
 		end)
-
 		local holdTime = tonumber(prompt.HoldDuration) or 0
 		local durasiTekan = (holdTime > 0) and (holdTime + 0.15) or 0.18
-
 		pcall(function()
 			prompt:InputHoldBegin()
 		end)
@@ -773,22 +769,16 @@ task.spawn(function()
 		pcall(function()
 			prompt:InputHoldEnd()
 		end)
-
 		if typeof(fireproximityprompt) == "function" then
 			pcall(fireproximityprompt, prompt)
 		end
-
 		pcall(function()
 			ProximityPromptService:PromptTriggered(prompt, lpMission)
 		end)
-
 		return true
 	end
 
-	local autoMissionEnabled = false
-	local missionRunToken = 0
-
-	local function refreshMissionVisual()
+	refreshMissionVisual = function()
 		if autoMissionEnabled then
 			missionTeleToggleBtn.BackgroundColor3 = Color3.fromRGB(24, 115, 70)
 			missionTeleToggleBtn.Text = "AUTO MISI: ON"
@@ -798,9 +788,12 @@ task.spawn(function()
 			missionTeleToggleBtn.Text = "AUTO MISI: OFF"
 			missionTeleToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
 		end
+		if saveAllSettings then
+			saveAllSettings()
+		end
 	end
 
-	local function runAutoMissionCycle(token)
+	runAutoMissionCycle = function(token)
 		while autoMissionEnabled and token == missionRunToken do
 			local char = lpMission and lpMission.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -808,15 +801,12 @@ task.spawn(function()
 				hrp.AssemblyLinearVelocity = Vector3.zero
 				hrp.CFrame = CFrame.new(MISSION_COORD + Vector3.new(0, 2, 0))
 				task.wait(0.35)
-
 				if not autoMissionEnabled or token ~= missionRunToken then
 					break
 				end
-
 				local prompt = findNearestMissionPrompt(hrp.Position)
 				triggerMissionPrompt(prompt)
 			end
-
 			task.wait(1.5)
 		end
 	end
@@ -825,7 +815,6 @@ task.spawn(function()
 		autoMissionEnabled = not autoMissionEnabled
 		missionRunToken += 1
 		refreshMissionVisual()
-
 		if autoMissionEnabled then
 			local currentToken = missionRunToken
 			task.spawn(function()
@@ -835,246 +824,172 @@ task.spawn(function()
 	end)
 end)
 
-task.spawn(function()
-	local env = (typeof(getgenv) == "function") and getgenv() or _G
-	env.GoldMissionSaved = env.GoldMissionSaved or {}
+-- AUTO PELEBURAN (-15, -16, -120)
+local function runSmeltCycle(tok)
+	local SMELT_COORD = Vector3.new(-15, -16, -120)
+	while smeltEnabled and tok == smeltToken do
+		local _, hrp = getCharParts()
+		if hrp then
+			hrp.AssemblyLinearVelocity = Vector3.zero
+			hrp.CFrame = CFrame.new(SMELT_COORD + Vector3.new(0, 2.5, 0))
+			task.wait(0.3)
+			local prompt = findPromptNearPos(hrp.Position, 20)
+			if prompt then
+				triggerPrompt(prompt)
+			end
+		end
+		task.wait(1.5)
+	end
+end
 
-	local function isOn(btn)
+local function refreshSmeltVisual()
+	if smeltEnabled then
+		smeltToggleBtn.BackgroundColor3 = Color3.fromRGB(24, 115, 70)
+		smeltToggleBtn.Text = "AUTO PELEBURAN: ON"
+		smeltToggleBtn.TextColor3 = Color3.fromRGB(220, 255, 235)
+	else
+		smeltToggleBtn.BackgroundColor3 = Color3.fromRGB(120, 32, 38)
+		smeltToggleBtn.Text = "AUTO PELEBURAN: OFF"
+		smeltToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
+	end
+	if saveAllSettings then
+		saveAllSettings()
+	end
+end
+
+smeltToggleBtn.MouseButton1Click:Connect(function()
+	smeltEnabled = not smeltEnabled
+	smeltToken += 1
+	refreshSmeltVisual()
+	if smeltEnabled then
+		local tok = smeltToken
+		task.spawn(function()
+			runSmeltCycle(tok)
+		end)
+	end
+end)
+
+-- AUTO EXEC queue
+local function syncAutoExecQueue()
+	if autoExecEnabled and typeof(queue_on_teleport) == "function" then
+		pcall(function()
+			queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/renzoknight/script-renzo/refs/heads/main/ugc%20hun%20v1"))()')
+		end)
+	end
+end
+
+local function refreshAutoExecVisual()
+	if autoExecEnabled then
+		autoExecToggleBtn.BackgroundColor3 = Color3.fromRGB(24, 115, 70)
+		autoExecToggleBtn.Text = "AUTO EXEC: ON"
+		autoExecToggleBtn.TextColor3 = Color3.fromRGB(220, 255, 235)
+	else
+		autoExecToggleBtn.BackgroundColor3 = Color3.fromRGB(120, 32, 38)
+		autoExecToggleBtn.Text = "AUTO EXEC: OFF"
+		autoExecToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
+	end
+	if saveAllSettings then
+		saveAllSettings()
+	end
+end
+
+autoExecToggleBtn.MouseButton1Click:Connect(function()
+	autoExecEnabled = not autoExecEnabled
+	refreshAutoExecVisual()
+	syncAutoExecQueue()
+end)
+
+-- Simpan & restore state yang konsisten dan aman
+task.spawn(function()
+	local gEnv = (typeof(getgenv) == "function") and getgenv() or nil
+	local lEnv = _G
+	gEnv = gEnv or lEnv
+
+	gEnv.GoldMissionSaved = gEnv.GoldMissionSaved or lEnv.GoldMissionSaved or {}
+	lEnv.GoldMissionSaved = gEnv.GoldMissionSaved
+
+	local function isOnText(btn)
 		if not btn then return false end
 		return string.find(string.upper(tostring(btn.Text or "")), ": ON", 1, true) ~= nil
 	end
 
-	local function saveNow()
-		env.GoldMissionSaved.autoGold = isOn(toggleBtn)
-		env.GoldMissionSaved.returnToggle = isOn(returnToggleBtn)
-		env.GoldMissionSaved.smelt = isOn(smeltToggleBtn)
-		env.GoldMissionSaved.mission = isOn(missionTeleToggleBtn)
-		env.GoldMissionSaved.autoExec = isOn(autoExecToggleBtn)
+	saveAllSettings = function()
+		local data = {
+			autoGold = (missionEnabled == true) or isOnText(toggleBtn),
+			returnToggle = (autoReturnEnabled == true) or isOnText(returnToggleBtn),
+			smelt = (smeltEnabled == true) or isOnText(smeltToggleBtn),
+			mission = (autoMissionEnabled == true) or isOnText(missionTeleToggleBtn),
+			autoExec = (autoExecEnabled == true) or isOnText(autoExecToggleBtn),
+		}
+		gEnv.GoldMissionSaved.autoGold = data.autoGold
+		gEnv.GoldMissionSaved.returnToggle = data.returnToggle
+		gEnv.GoldMissionSaved.smelt = data.smelt
+		gEnv.GoldMissionSaved.mission = data.mission
+		gEnv.GoldMissionSaved.autoExec = data.autoExec
+
+		lEnv.GoldMissionSaved.autoGold = data.autoGold
+		lEnv.GoldMissionSaved.returnToggle = data.returnToggle
+		lEnv.GoldMissionSaved.smelt = data.smelt
+		lEnv.GoldMissionSaved.mission = data.mission
+		lEnv.GoldMissionSaved.autoExec = data.autoExec
 	end
 
-	task.wait(0.4)
+	task.wait(0.25)
 
-	if env.GoldMissionSaved.autoGold and typeof(toggleBtn) == "Instance" and not isOn(toggleBtn) then
+	local saved = gEnv.GoldMissionSaved or lEnv.GoldMissionSaved or {}
+
+	if saved.autoGold == true then
 		missionEnabled = true
 		local _, hrp = getCharParts()
 		anchorStartPos = hrp and hrp.Position or nil
-		if typeof(refreshBtn) == "function" then refreshBtn() end
+		refreshBtn()
 	end
 
-	if env.GoldMissionSaved.returnToggle and typeof(returnToggleBtn) == "Instance" and not isOn(returnToggleBtn) then
+	if saved.returnToggle == true then
 		autoReturnEnabled = true
-		returnToggleBtn.Text = "AUTO RETURN : ON"
-		returnToggleBtn.BackgroundColor3 = Color3.fromRGB(145, 95, 20)
-		returnToggleBtn.TextColor3 = Color3.fromRGB(255, 230, 140)
+		refreshReturnVisual()
 	end
 
-	for _, btn in ipairs({toggleBtn, returnToggleBtn, smeltToggleBtn, missionTeleToggleBtn}) do
-		if typeof(btn) == "Instance" then
-			btn:GetPropertyChangedSignal("Text"):Connect(saveNow)
-		end
-	end
-
-	saveNow()
-end)
-
-task.spawn(function()
-	if typeof(smeltToggleBtn) ~= "Instance" then
-		return
-	end
-
-	local ProximityPromptService = game:GetService("ProximityPromptService")
-	local VirtualInputManager = game:GetService("VirtualInputManager")
-	local lpSmelt = game:GetService("Players").LocalPlayer
-
-	local SMELT_COORD = Vector3.new(-15, -16, -120)
-
-	local function findNearestSmeltPrompt(refPos)
-		local bestPrompt = nil
-		local bestDist = math.huge
-
-		for _, desc in ipairs(workspace:GetDescendants()) do
-			if desc:IsA("ProximityPrompt") then
-				local parent = desc.Parent
-				local pos = nil
-				if parent and parent:IsA("BasePart") then
-					pos = parent.Position
-				elseif parent and parent:IsA("Attachment") then
-					pos = parent.WorldPosition
-				elseif parent and parent:IsA("Model") then
-					pos = (parent.PrimaryPart and parent.PrimaryPart.Position) or parent:GetPivot().Position
-				end
-
-				if pos then
-					local distKeTitik = (pos - SMELT_COORD).Magnitude
-					local distKeRef = (pos - refPos).Magnitude
-					if distKeTitik <= 18 or distKeRef <= 15 then
-						local d = math.min(distKeTitik, distKeRef)
-						if d < bestDist then
-							bestDist = d
-							bestPrompt = desc
-						end
-					end
-				end
-			end
-		end
-
-		return bestPrompt
-	end
-
-	local function pressSmeltKeyE(holdSec)
-		pcall(function()
-			VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-		end)
-		task.wait(holdSec or 0.15)
-		pcall(function()
-			VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-		end)
-	end
-
-	local function triggerSmeltPrompt(prompt)
-		if not prompt or not prompt.Parent then
-			pressSmeltKeyE(0.18)
-			return false
-		end
-
-		pcall(function()
-			prompt.Enabled = true
-		end)
-
-		local holdTime = tonumber(prompt.HoldDuration) or 0
-		local durasiTekan = (holdTime > 0) and (holdTime + 0.15) or 0.18
-
-		pcall(function()
-			prompt:InputHoldBegin()
-		end)
-		pressSmeltKeyE(durasiTekan)
-		pcall(function()
-			prompt:InputHoldEnd()
-		end)
-
-		if typeof(fireproximityprompt) == "function" then
-			pcall(fireproximityprompt, prompt)
-		end
-
-		pcall(function()
-			ProximityPromptService:PromptTriggered(prompt, lpSmelt)
-		end)
-
-		return true
-	end
-
-	local autoSmeltEnabled = false
-	local smeltRunToken = 0
-
-	local function refreshSmeltVisual()
-		if autoSmeltEnabled then
-			smeltToggleBtn.BackgroundColor3 = Color3.fromRGB(24, 115, 70)
-			smeltToggleBtn.Text = "AUTO PELEBURAN: ON"
-			smeltToggleBtn.TextColor3 = Color3.fromRGB(220, 255, 235)
-		else
-			smeltToggleBtn.BackgroundColor3 = Color3.fromRGB(120, 32, 38)
-			smeltToggleBtn.Text = "AUTO PELEBURAN: OFF"
-			smeltToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
-		end
-	end
-
-	local function runAutoSmeltCycle(token)
-		while autoSmeltEnabled and token == smeltRunToken do
-			local char = lpSmelt and lpSmelt.Character
-			local hrp = char and char:FindFirstChild("HumanoidRootPart")
-			if hrp then
-				hrp.AssemblyLinearVelocity = Vector3.zero
-				hrp.CFrame = CFrame.new(SMELT_COORD + Vector3.new(0, 2, 0))
-				task.wait(0.35)
-
-				if not autoSmeltEnabled or token ~= smeltRunToken then
-					break
-				end
-
-				local prompt = findNearestSmeltPrompt(hrp.Position)
-				triggerSmeltPrompt(prompt)
-			end
-
-			task.wait(1.5)
-		end
-	end
-
-	smeltToggleBtn.MouseButton1Click:Connect(function()
-		autoSmeltEnabled = not autoSmeltEnabled
-		smeltRunToken += 1
+	if saved.smelt == true then
+		smeltEnabled = true
+		smeltToken += 1
 		refreshSmeltVisual()
+		local tok = smeltToken
+		task.spawn(function()
+			runSmeltCycle(tok)
+		end)
+	end
 
-		if autoSmeltEnabled then
-			local currentToken = smeltRunToken
+	if saved.mission == true then
+		autoMissionEnabled = true
+		missionRunToken += 1
+		if refreshMissionVisual then
+			refreshMissionVisual()
+		end
+		if runAutoMissionCycle then
+			local currentToken = missionRunToken
 			task.spawn(function()
-				runAutoSmeltCycle(currentToken)
+				runAutoMissionCycle(currentToken)
 			end)
 		end
-	end)
-end)
-
-task.spawn(function()
-	if typeof(autoExecToggleBtn) ~= "Instance" then
-		return
 	end
 
-	local queueFn = queue_on_teleport
-		or (syn and syn.queue_on_teleport)
-		or (typeof(getgenv) == "function" and getgenv().queue_on_teleport)
-
-	local lp = game:GetService("Players").LocalPlayer
-	local autoExecEnabled = false
-	local sudahAntre = false
-
-	local function refreshAutoExecVisual()
-		if autoExecEnabled then
-			autoExecToggleBtn.BackgroundColor3 = Color3.fromRGB(24, 115, 70)
-			autoExecToggleBtn.Text = "AUTO EXEC: ON"
-			autoExecToggleBtn.TextColor3 = Color3.fromRGB(220, 255, 235)
-		else
-			autoExecToggleBtn.BackgroundColor3 = Color3.fromRGB(120, 32, 38)
-			autoExecToggleBtn.Text = "AUTO EXEC: OFF"
-			autoExecToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
-		end
-	end
-
-	local function antrekanScript()
-		if not autoExecEnabled or sudahAntre or typeof(queueFn) ~= "function" then
-			return
-		end
-		sudahAntre = true
-		pcall(function()
-			queueFn([[
-				task.wait(2.5)
-				pcall(function()
-					local src = game:HttpGet("https://raw.githubusercontent.com/renzoknight/script-renzo/refs/heads/main/ugc%20hun%20v1")
-					local fn = loadstring(src)
-					if typeof(fn) == "function" then
-						fn()
-					end
-				end)
-			]])
-		end)
-	end
-	
-
-	autoExecToggleBtn.MouseButton1Click:Connect(function()
-		autoExecEnabled = not autoExecEnabled
-		sudahAntre = false
+	if saved.autoExec == true then
+		autoExecEnabled = true
 		refreshAutoExecVisual()
-		if autoExecEnabled then
-			antrekanScript()
-		end
-	end)
+		syncAutoExecQueue()
+	end
 
-	if lp then
-		lp.OnTeleport:Connect(function(state)
-			if not autoExecEnabled then
-				return
-			end
-			if state == Enum.TeleportState.Started or state == Enum.TeleportState.InProgress then
-				antrekanScript()
-			end
-		end)
+	for _, btn in ipairs({toggleBtn, returnToggleBtn, smeltToggleBtn, missionTeleToggleBtn, autoExecToggleBtn}) do
+		if typeof(btn) == "Instance" then
+			btn:GetPropertyChangedSignal("Text"):Connect(saveAllSettings)
+		end
+	end
+
+	saveAllSettings()
+
+	while screenGui and screenGui.Parent do
+		saveAllSettings()
+		task.wait(0.5)
 	end
 end)
