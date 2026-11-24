@@ -50,10 +50,12 @@ local lastMachinePos = nil -- Menyimpan posisi mesin "SCAN FOR GOLD" (bukan port
 
 local MISSION_COORD = Vector3.new(107, -16, -88)
 local SMELT_COORD = Vector3.new(-15, -16, -120)
+local PORTAL_FALLBACK_COORD = Vector3.new(582.7000122070312, -0.9881315231323242, 1962.6180419921875)
 
 local BLOCKED_WORDS = {
-	"portal", "infoboard", "lobby", "hub", "spawn", "return", "back", "menu", "exit", "shop",
-	"cape", "halo", "crown", "ugc", "claim", "pedestal", "podium", "valkenheim"
+	"infoboard", "lobby", "hub", "spawn", "return", "back", "menu", "exit", "shop",
+	"cape", "halo", "crown", "ugc", "claim", "pedestal", "podium", "valkenheim",
+	"ore", "sparkletube", "location beam", "scan"
 }
 
 local function makePosKey(pos)
@@ -240,15 +242,15 @@ local function triggerPromptFast(prompt)
 end
 
 local function triggerPrompt(prompt)
-	if not prompt or not prompt.Parent or isBlockedObject(prompt) then
-		pressKeyE(0.08)
+	if not prompt or not prompt.Parent then
+		pressKeyE(0.12)
 		return false
 	end
 
 	pcall(function()
 		prompt.Enabled = true
 		prompt.RequiresLineOfSight = false
-		prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 60)
+		prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 65)
 	end)
 
 	local fired = false
@@ -264,7 +266,7 @@ local function triggerPrompt(prompt)
 	if not fired then
 		pcall(function()
 			prompt:InputHoldBegin()
-			task.wait(math.clamp(tonumber(prompt.HoldDuration) or 0.05, 0.03, 0.12))
+			task.wait(math.clamp(tonumber(prompt.HoldDuration) or 0.08, 0.05, 0.2))
 			prompt:InputHoldEnd()
 		end)
 	end
@@ -273,6 +275,7 @@ local function triggerPrompt(prompt)
 		ProximityPromptService:PromptTriggered(prompt, localPlayer)
 	end)
 
+	pressKeyE(0.12)
 	return true
 end
 
@@ -315,13 +318,14 @@ function findPromptNearCoord(coord, maxDist)
 	return bestPrompt
 end
 
+-- Cari prompt / mesin "SCAN FOR GOLD" (bukan portal, bukan podium jubah, bukan ore)
 local function findGoldMachineTakeTarget(originPos)
 	local bestPos = nil
 	local bestPrompt = nil
 	local bestScore = math.huge
 
 	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("ProximityPrompt") and not isBlockedObject(obj) then
+		if obj:IsA("ProximityPrompt") then
 			local act = string.lower(tostring(obj.ActionText or ""))
 			local objTxt = string.lower(tostring(obj.ObjectText or ""))
 			local fullLow = string.lower(obj:GetFullName())
@@ -331,7 +335,16 @@ local function findGoldMachineTakeTarget(originPos)
 				or string.find(objTxt, "portal", 1, true)
 				or string.find(objTxt, "lobby", 1, true)
 
-			local isMachinePrompt = not isPortal and (
+			local isBlocked = isPortal
+				or string.find(fullLow, "cape", 1, true)
+				or string.find(fullLow, "halo", 1, true)
+				or string.find(fullLow, "crown", 1, true)
+				or string.find(fullLow, "ugc", 1, true)
+				or string.find(fullLow, "podium", 1, true)
+				or string.find(fullLow, "pedestal", 1, true)
+				or string.find(fullLow, "ore", 1, true)
+
+			local isMachinePrompt = not isBlocked and (
 				string.find(act, "scan", 1, true)
 				or string.find(objTxt, "scan", 1, true)
 				or string.find(objTxt, "gold", 1, true)
@@ -356,23 +369,29 @@ local function findGoldMachineTakeTarget(originPos)
 
 	if not bestPos then
 		for _, obj in ipairs(workspace:GetDescendants()) do
-			if not isBlockedObject(obj) then
-				local fullLow = string.lower(obj:GetFullName())
-				local nameLow = string.lower(obj.Name)
-				local isPortal = string.find(fullLow, "portal", 1, true)
-				if not isPortal and (
-					string.find(nameLow, "scanningstand", 1, true)
-					or string.find(nameLow, "scan", 1, true)
-					or string.find(nameLow, "smelt", 1, true)
-				) then
-					local pos = getInstanceWorldPos(obj)
-					if pos then
-						local d = originPos and (pos - originPos).Magnitude or 0
-						if d < bestScore then
-							bestScore = d
-							bestPos = pos
-							bestPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-						end
+			local fullLow = string.lower(obj:GetFullName())
+			local nameLow = string.lower(obj.Name)
+			local isBlocked = string.find(fullLow, "portal", 1, true)
+				or string.find(fullLow, "cape", 1, true)
+				or string.find(fullLow, "halo", 1, true)
+				or string.find(fullLow, "crown", 1, true)
+				or string.find(fullLow, "ugc", 1, true)
+				or string.find(fullLow, "podium", 1, true)
+				or string.find(fullLow, "pedestal", 1, true)
+				or string.find(fullLow, "ore", 1, true)
+
+			if not isBlocked and (
+				string.find(nameLow, "scanningstand", 1, true)
+				or string.find(nameLow, "scan", 1, true)
+				or string.find(nameLow, "smelt", 1, true)
+			) then
+				local pos = getInstanceWorldPos(obj)
+				if pos then
+					local d = originPos and (pos - originPos).Magnitude or 0
+					if d < bestScore then
+						bestScore = d
+						bestPos = pos
+						bestPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
 					end
 				end
 			end
@@ -386,11 +405,6 @@ local function findGoldMachineTakeTarget(originPos)
 
 	if lastMachinePos then
 		return lastMachinePos, nil
-	end
-
-	local fallbackPrompt = findPromptNearCoord(SMELT_COORD, 28)
-	if fallbackPrompt then
-		return SMELT_COORD, fallbackPrompt
 	end
 
 	return nil, nil
@@ -535,6 +549,62 @@ local function findNextUnplacedGoldPos(originPos)
 	return bestPos, #allGold > 0
 end
 
+-- Mencari khusus PORTAL (bukan ore emas, bukan scan, bukan podium UGC)
+local function findPortalTarget(originPos)
+	local bestPos, bestPrompt = nil, nil
+	local bestDist = math.huge
+
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("ProximityPrompt") then
+			local act = string.lower(tostring(obj.ActionText or ""))
+			local objTxt = string.lower(tostring(obj.ObjectText or ""))
+			local fullLow = string.lower(obj:GetFullName())
+
+			local isOreOrScanOrUgc = string.find(fullLow, "ore", 1, true)
+				or string.find(act, "ore", 1, true)
+				or string.find(objTxt, "ore", 1, true)
+				or string.find(fullLow, "scan", 1, true)
+				or string.find(act, "scan", 1, true)
+				or string.find(objTxt, "scan", 1, true)
+				or string.find(fullLow, "sparkletube", 1, true)
+				or string.find(fullLow, "location beam", 1, true)
+				or string.find(fullLow, "cape", 1, true)
+				or string.find(fullLow, "halo", 1, true)
+				or string.find(fullLow, "crown", 1, true)
+				or string.find(fullLow, "ugc", 1, true)
+				or string.find(fullLow, "podium", 1, true)
+
+			local isPortal = not isOreOrScanOrUgc and (
+				string.find(fullLow, "portal", 1, true)
+				or string.find(act, "portal", 1, true)
+				or string.find(objTxt, "portal", 1, true)
+				or string.find(objTxt, "lobby", 1, true)
+				or string.find(objTxt, "pemburu emas", 1, true)
+				or string.find(objTxt, "gold hunters", 1, true)
+			)
+
+			if isPortal then
+				local pos = getInstanceWorldPos(obj.Parent) or getInstanceWorldPos(obj)
+				if pos then
+					local d = originPos and (pos - originPos).Magnitude or 0
+					if d < bestDist then
+						bestDist = d
+						bestPos = pos
+						bestPrompt = obj
+					end
+				end
+			end
+		end
+	end
+
+	if bestPos then
+		return bestPos, bestPrompt
+	end
+
+	return PORTAL_FALLBACK_COORD, nil
+end
+
+-- Ketika ore penuh: teleport ke PORTAL dan picu masuk ke PORTAL (bukan ke ore emas)
 local function kePortalMapUtamaJikaFull()
 	if not autoReturnEnabled then
 		returningActive = false
@@ -553,57 +623,12 @@ local function kePortalMapUtamaJikaFull()
 		return true
 	end
 
-	local targetPos, targetPrompt = nil, nil
-	local bestDist = math.huge
+	local portalPos, portalPrompt = findPortalTarget(hrp.Position)
 
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("ProximityPrompt") and not isBlockedObject(obj) then
-			local act = string.lower(obj.ActionText or "")
-			local objTxt = string.lower(obj.ObjectText or "")
-			local fullLow = string.lower(obj:GetFullName())
-
-			local isScanPrompt = string.find(act, "scan", 1, true)
-				or string.find(objTxt, "scan", 1, true)
-				or string.find(fullLow, "scan_prompt", 1, true)
-
-			local isPortalPrompt = not isScanPrompt and (
-				string.find(fullLow, "portal", 1, true)
-				or (string.find(act, "teleport", 1, true) and not string.find(fullLow, "scan", 1, true))
-				or string.find(objTxt, "pemburu emas", 1, true)
-				or string.find(objTxt, "gold hunters", 1, true)
-			)
-
-			if isPortalPrompt then
-				local p = obj.Parent
-				local pos = nil
-				if p and p:IsA("BasePart") then
-					pos = p.Position
-				elseif p and p:IsA("Attachment") then
-					pos = p.WorldPosition
-				else
-					local partAnc = obj:FindFirstAncestorWhichIsA("BasePart")
-					if partAnc then
-						pos = partAnc.Position
-					end
-				end
-
-				if pos then
-					local d = (pos - hrp.Position).Magnitude
-					if d < bestDist then
-						bestDist = d
-						targetPos = pos
-						targetPrompt = obj
-					end
-				end
-			end
+	for _ = 1, 6 do
+		if not autoReturnEnabled or not apakahOrePenuh() then
+			break
 		end
-	end
-
-	if not targetPos then
-		targetPos = Vector3.new(582.7000122070312, -0.9881315231323242, 1962.6180419921875)
-	end
-
-	for _ = 1, 5 do
 		char, hrp, hum = getCharParts()
 		if not hrp then
 			break
@@ -611,14 +636,21 @@ local function kePortalMapUtamaJikaFull()
 		if hum then
 			hum.PlatformStand = false
 		end
-		hrp.AssemblyLinearVelocity = Vector3.zero
-		hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 1.5, 0))
 
-		if targetPrompt and targetPrompt.Parent then
-			triggerPrompt(targetPrompt)
+		hrp.AssemblyLinearVelocity = Vector3.zero
+		hrp.CFrame = CFrame.new(portalPos + Vector3.new(0, 1.5, 0))
+
+		if portalPrompt and portalPrompt.Parent then
+			triggerPrompt(portalPrompt)
+		else
+			pressKeyE(0.14)
 		end
 
-		task.wait(0.25)
+		task.wait(0.28)
+	end
+
+	if not apakahOrePenuh() then
+		returningActive = false
 	end
 
 	return true
@@ -646,7 +678,7 @@ end
 task.spawn(function()
 	while true do
 		if kePortalMapUtamaJikaFull() then
-			task.wait(1)
+			task.wait(0.8)
 			continue
 		end
 
@@ -1070,7 +1102,7 @@ task.spawn(function()
 	end
 
 	local function triggerMissionPrompt(prompt)
-		if not prompt or not prompt.Parent or isBlockedObject(prompt) then
+		if not prompt or not prompt.Parent then
 			pressMissionKeyE(0.14)
 			return false
 		end
@@ -1209,7 +1241,7 @@ local function runSmeltCycle(tok)
 					break
 				end
 				local activePrompt = findPromptNearCoord(SMELT_COORD, 22) or prompt
-				if activePrompt and activePrompt.Parent and not isBlockedObject(activePrompt) then
+				if activePrompt and activePrompt.Parent then
 					triggerPrompt(activePrompt)
 				else
 					pressKeyE(0.08)
@@ -1223,7 +1255,6 @@ local function runSmeltCycle(tok)
 		smeltBusy = false
 		releaseTurn("smelt")
 
-		-- Jeda panjang setelah 2x submit agar tidak spam berulang
 		local waitSec = smeltCooldownSec
 		while smeltEnabled and tok == smeltToken and waitSec > 0 do
 			local step = math.min(waitSec, 0.25)
