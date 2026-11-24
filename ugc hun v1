@@ -55,7 +55,7 @@ local PORTAL_FALLBACK_COORD = Vector3.new(582.7000122070312, -0.9881315231323242
 local BLOCKED_WORDS = {
 	"infoboard", "lobby", "hub", "spawn", "return", "back", "menu", "exit", "shop",
 	"cape", "halo", "crown", "ugc", "claim", "pedestal", "podium", "valkenheim",
-	"ore", "sparkletube", "location beam", "scan"
+	"ore", "scan"
 }
 
 local function makePosKey(pos)
