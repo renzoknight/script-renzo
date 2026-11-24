@@ -1045,10 +1045,17 @@ task.spawn(function()
 		pcall(function()
 			queueFn([[
 				task.wait(2.5)
-				loadstring(game:HttpGet("LINK_RAW_SCRIPT_KAMU"))()
+				pcall(function()
+					local src = game:HttpGet("https://raw.githubusercontent.com/renzoknight/script-renzo/refs/heads/main/ugc%20hun%20v1")
+					local fn = loadstring(src)
+					if typeof(fn) == "function" then
+						fn()
+					end
+				end)
 			]])
 		end)
 	end
+	
 
 	autoExecToggleBtn.MouseButton1Click:Connect(function()
 		autoExecEnabled = not autoExecEnabled
