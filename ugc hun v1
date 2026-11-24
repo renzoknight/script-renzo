@@ -33,6 +33,7 @@ local smeltEnabled = false
 local smeltToken = 0
 local autoMissionEnabled = false
 local missionRunToken = 0
+local missionTeleportDelay = 25 -- Jeda 25 detik sebelum teleport ke misi
 local autoExecEnabled = false
 local flySpeed = 230
 local arriveDistance = 5.5
@@ -755,12 +756,22 @@ closeBtn.InputBegan:Connect(function(input)
 	end
 end)
 
--- AUTO MISI (107, -16, -88) - cek target dulu & giliran aman
+-- AUTO MISI (107, -16, -88) - delay 25 detik sebelum teleport ke misi
 local refreshMissionVisual
 local runAutoMissionCycle
 
 task.spawn(function()
 	local lpMission = Players.LocalPlayer
+
+	local function waitMissionDelay(sec, token)
+		local remaining = sec
+		while remaining > 0 and autoMissionEnabled and token == missionRunToken do
+			local step = math.min(remaining, 0.25)
+			task.wait(step)
+			remaining -= step
+		end
+		return autoMissionEnabled and token == missionRunToken
+	end
 
 	local function pressMissionKeyE(holdSec)
 		pcall(function()
@@ -823,6 +834,22 @@ task.spawn(function()
 			local prompt = findPromptNearCoord(MISSION_COORD, 22)
 			if not prompt then
 				-- Tidak di map/area misi: diam/jeda agar tidak teleport terus-terusan
+				releaseTurn("mission")
+				task.wait(3)
+				continue
+			end
+
+			-- Tunggu delay 25 detik dulu baru teleport ke koordinat misi
+			if not waitMissionDelay(missionTeleportDelay, token) then
+				break
+			end
+
+			if not autoMissionEnabled or token ~= missionRunToken then
+				break
+			end
+
+			prompt = findPromptNearCoord(MISSION_COORD, 22)
+			if not prompt then
 				releaseTurn("mission")
 				task.wait(3)
 				continue
