@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 
 local localPlayer = Players.LocalPlayer
@@ -38,6 +40,10 @@ local stepTimeout = 18
 local MAX_DIST_FROM_START = 2000
 
 local anchorStartPos = nil
+local sharedTurnOwner = nil -- "mission" atau "smelt" saat keduanya aktif barengan
+
+local MISSION_COORD = Vector3.new(107, -16, -88)
+local SMELT_COORD = Vector3.new(-15, -16, -120)
 
 local BLOCKED_WORDS = {
 	"portal", "infoboard", "lobby", "hub", "spawn", "return", "back", "menu", "exit", "shop"
@@ -412,6 +418,51 @@ local function findPromptNearPos(refPos, maxDist)
 	return bestPrompt
 end
 
+-- Cek keberadaan target di area/map agar tidak teleport terus jika di luar map
+local function findPromptNearCoord(coord, maxDist)
+	local bestPrompt = nil
+	local bestDist = maxDist or 22
+	for _, desc in ipairs(workspace:GetDescendants()) do
+		if desc:IsA("ProximityPrompt") then
+			local parent = desc.Parent
+			local pos = nil
+			if parent and parent:IsA("BasePart") then
+				pos = parent.Position
+			elseif parent and parent:IsA("Attachment") then
+				pos = parent.WorldPosition
+			elseif parent and parent:IsA("Model") then
+				pos = (parent.PrimaryPart and parent.PrimaryPart.Position) or parent:GetPivot().Position
+			end
+			if pos then
+				local d = (pos - coord).Magnitude
+				if d <= bestDist then
+					bestDist = d
+					bestPrompt = desc
+				end
+			end
+		end
+	end
+	return bestPrompt
+end
+
+local function canTakeTurn(roleName)
+	if autoMissionEnabled and smeltEnabled then
+		if not sharedTurnOwner then
+			sharedTurnOwner = roleName
+		end
+		return sharedTurnOwner == roleName
+	end
+	return true
+end
+
+local function releaseTurn(roleName)
+	if autoMissionEnabled and smeltEnabled and sharedTurnOwner == roleName then
+		sharedTurnOwner = (roleName == "mission") and "smelt" or "mission"
+	elseif not (autoMissionEnabled and smeltEnabled) then
+		sharedTurnOwner = nil
+	end
+end
+
 -- Loop utama misi
 task.spawn(function()
 	while true do
@@ -695,6 +746,7 @@ closeBtn.InputBegan:Connect(function(input)
 		smeltEnabled = false
 		autoMissionEnabled = false
 		autoExecEnabled = false
+		sharedTurnOwner = nil
 		anchorStartPos = nil
 		if saveAllSettings then
 			saveAllSettings()
@@ -703,44 +755,12 @@ closeBtn.InputBegan:Connect(function(input)
 	end
 end)
 
--- AUTO MISI (107, -16, -88)
+-- AUTO MISI (107, -16, -88) - cek target dulu & giliran aman
 local refreshMissionVisual
 local runAutoMissionCycle
 
 task.spawn(function()
-	local VirtualInputManager = game:GetService("VirtualInputManager")
 	local lpMission = Players.LocalPlayer
-	local MISSION_COORD = Vector3.new(107, -16, -88)
-
-	local function findNearestMissionPrompt(refPos)
-		local bestPrompt = nil
-		local bestDist = math.huge
-		for _, desc in ipairs(workspace:GetDescendants()) do
-			if desc:IsA("ProximityPrompt") then
-				local parent = desc.Parent
-				local pos = nil
-				if parent and parent:IsA("BasePart") then
-					pos = parent.Position
-				elseif parent and parent:IsA("Attachment") then
-					pos = parent.WorldPosition
-				elseif parent and parent:IsA("Model") then
-					pos = (parent.PrimaryPart and parent.PrimaryPart.Position) or parent:GetPivot().Position
-				end
-				if pos then
-					local distKeTitik = (pos - MISSION_COORD).Magnitude
-					local distKeRef = (pos - refPos).Magnitude
-					if distKeTitik <= 18 or distKeRef <= 15 then
-						local d = math.min(distKeTitik, distKeRef)
-						if d < bestDist then
-							bestDist = d
-							bestPrompt = desc
-						end
-					end
-				end
-			end
-		end
-		return bestPrompt
-	end
 
 	local function pressMissionKeyE(holdSec)
 		pcall(function()
@@ -795,6 +815,19 @@ task.spawn(function()
 
 	runAutoMissionCycle = function(token)
 		while autoMissionEnabled and token == missionRunToken do
+			if not canTakeTurn("mission") then
+				task.wait(0.35)
+				continue
+			end
+
+			local prompt = findPromptNearCoord(MISSION_COORD, 22)
+			if not prompt then
+				-- Tidak di map/area misi: diam/jeda agar tidak teleport terus-terusan
+				releaseTurn("mission")
+				task.wait(3)
+				continue
+			end
+
 			local char = lpMission and lpMission.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
 			if hrp then
@@ -804,16 +837,25 @@ task.spawn(function()
 				if not autoMissionEnabled or token ~= missionRunToken then
 					break
 				end
-				local prompt = findNearestMissionPrompt(hrp.Position)
 				triggerMissionPrompt(prompt)
 			end
+
+			releaseTurn("mission")
 			task.wait(1.5)
+		end
+		if sharedTurnOwner == "mission" then
+			sharedTurnOwner = smeltEnabled and "smelt" or nil
 		end
 	end
 
 	missionTeleToggleBtn.MouseButton1Click:Connect(function()
 		autoMissionEnabled = not autoMissionEnabled
 		missionRunToken += 1
+		if not (autoMissionEnabled and smeltEnabled) then
+			sharedTurnOwner = nil
+		elseif not sharedTurnOwner then
+			sharedTurnOwner = "mission"
+		end
 		refreshMissionVisual()
 		if autoMissionEnabled then
 			local currentToken = missionRunToken
@@ -824,21 +866,38 @@ task.spawn(function()
 	end)
 end)
 
--- AUTO PELEBURAN (-15, -16, -120)
+-- AUTO PELEBURAN (-15, -16, -120) - cek target dulu & giliran aman
 local function runSmeltCycle(tok)
-	local SMELT_COORD = Vector3.new(-15, -16, -120)
 	while smeltEnabled and tok == smeltToken do
+		if not canTakeTurn("smelt") then
+			task.wait(0.35)
+			continue
+		end
+
+		local prompt = findPromptNearCoord(SMELT_COORD, 22)
+		if not prompt then
+			-- Tidak di map/area peleburan: diam/jeda agar tidak teleport terus-terusan
+			releaseTurn("smelt")
+			task.wait(3)
+			continue
+		end
+
 		local _, hrp = getCharParts()
 		if hrp then
 			hrp.AssemblyLinearVelocity = Vector3.zero
 			hrp.CFrame = CFrame.new(SMELT_COORD + Vector3.new(0, 2.5, 0))
 			task.wait(0.3)
-			local prompt = findPromptNearPos(hrp.Position, 20)
-			if prompt then
-				triggerPrompt(prompt)
+			if not smeltEnabled or tok ~= smeltToken then
+				break
 			end
+			triggerPrompt(prompt)
 		end
+
+		releaseTurn("smelt")
 		task.wait(1.5)
+	end
+	if sharedTurnOwner == "smelt" then
+		sharedTurnOwner = autoMissionEnabled and "mission" or nil
 	end
 end
 
@@ -860,6 +919,11 @@ end
 smeltToggleBtn.MouseButton1Click:Connect(function()
 	smeltEnabled = not smeltEnabled
 	smeltToken += 1
+	if not (autoMissionEnabled and smeltEnabled) then
+		sharedTurnOwner = nil
+	elseif not sharedTurnOwner then
+		sharedTurnOwner = "smelt"
+	end
 	refreshSmeltVisual()
 	if smeltEnabled then
 		local tok = smeltToken
@@ -899,8 +963,9 @@ autoExecToggleBtn.MouseButton1Click:Connect(function()
 	syncAutoExecQueue()
 end)
 
--- Simpan & restore state yang konsisten dan aman
+-- Auto Save & Restore lintas map (Memory + File Executor)
 task.spawn(function()
+	local SAVE_FILE = "GoldMission_Settings.json"
 	local gEnv = (typeof(getgenv) == "function") and getgenv() or nil
 	local lEnv = _G
 	gEnv = gEnv or lEnv
@@ -913,6 +978,33 @@ task.spawn(function()
 		return string.find(string.upper(tostring(btn.Text or "")), ": ON", 1, true) ~= nil
 	end
 
+	local function writeDiskData(tbl)
+		if typeof(writefile) == "function" then
+			pcall(function()
+				writefile(SAVE_FILE, HttpService:JSONEncode(tbl))
+			end)
+		end
+	end
+
+	local function readDiskData()
+		if typeof(isfile) == "function" and typeof(readfile) == "function" then
+			local exists = false
+			pcall(function()
+				exists = isfile(SAVE_FILE)
+			end)
+			if exists then
+				local ok, decoded = pcall(function()
+					local raw = readfile(SAVE_FILE)
+					return raw and HttpService:JSONDecode(raw) or nil
+				end)
+				if ok and typeof(decoded) == "table" then
+					return decoded
+				end
+			end
+		end
+		return nil
+	end
+
 	saveAllSettings = function()
 		local data = {
 			autoGold = (missionEnabled == true) or isOnText(toggleBtn),
@@ -921,22 +1013,26 @@ task.spawn(function()
 			mission = (autoMissionEnabled == true) or isOnText(missionTeleToggleBtn),
 			autoExec = (autoExecEnabled == true) or isOnText(autoExecToggleBtn),
 		}
-		gEnv.GoldMissionSaved.autoGold = data.autoGold
-		gEnv.GoldMissionSaved.returnToggle = data.returnToggle
-		gEnv.GoldMissionSaved.smelt = data.smelt
-		gEnv.GoldMissionSaved.mission = data.mission
-		gEnv.GoldMissionSaved.autoExec = data.autoExec
 
-		lEnv.GoldMissionSaved.autoGold = data.autoGold
-		lEnv.GoldMissionSaved.returnToggle = data.returnToggle
-		lEnv.GoldMissionSaved.smelt = data.smelt
-		lEnv.GoldMissionSaved.mission = data.mission
-		lEnv.GoldMissionSaved.autoExec = data.autoExec
+		for k, v in pairs(data) do
+			gEnv.GoldMissionSaved[k] = v
+			lEnv.GoldMissionSaved[k] = v
+		end
+
+		writeDiskData(data)
 	end
 
 	task.wait(0.25)
 
-	local saved = gEnv.GoldMissionSaved or lEnv.GoldMissionSaved or {}
+	local diskSaved = readDiskData()
+	local memSaved = gEnv.GoldMissionSaved or lEnv.GoldMissionSaved or {}
+	local saved = {
+		autoGold = (diskSaved and diskSaved.autoGold == true) or (memSaved.autoGold == true),
+		returnToggle = (diskSaved and diskSaved.returnToggle == true) or (memSaved.returnToggle == true),
+		smelt = (diskSaved and diskSaved.smelt == true) or (memSaved.smelt == true),
+		mission = (diskSaved and diskSaved.mission == true) or (memSaved.mission == true),
+		autoExec = (diskSaved and diskSaved.autoExec == true) or (memSaved.autoExec == true),
+	}
 
 	if saved.autoGold == true then
 		missionEnabled = true
@@ -972,6 +1068,10 @@ task.spawn(function()
 				runAutoMissionCycle(currentToken)
 			end)
 		end
+	end
+
+	if autoMissionEnabled and smeltEnabled and not sharedTurnOwner then
+		sharedTurnOwner = "mission"
 	end
 
 	if saved.autoExec == true then
