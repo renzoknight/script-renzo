@@ -35,14 +35,15 @@ local autoMissionEnabled = false
 local missionRunToken = 0
 local missionTeleportDelay = 25 -- Jeda 25 detik sebelum teleport ke misi
 local autoExecEnabled = false
-local flySpeed = 420 -- Lebih kencang dari sebelumnya (bisa di-custom dari input GUI)
+local flySpeed = 420 -- Bisa di-custom dari input GUI
 local arriveDistance = 6.5
 local stepTimeout = 12
-local MAX_DIST_FROM_START = 2000
+local MAX_DIST_FROM_START = 2500
 
 local anchorStartPos = nil
 local sharedTurnOwner = nil -- "mission" atau "smelt" saat keduanya aktif barengan
 local placedGoldMarkers = {} -- Catatan titik kuning yang sudah diletak (tidak nunggu selesai)
+local lastMachinePos = nil -- Menyimpan posisi mesin "SCAN FOR GOLD" (bukan portal)
 
 local MISSION_COORD = Vector3.new(107, -16, -88)
 local SMELT_COORD = Vector3.new(-15, -16, -120)
@@ -137,6 +138,29 @@ local function isWithinMissionArea(pos)
 	return true
 end
 
+local function getInstanceWorldPos(inst)
+	if not inst then
+		return nil
+	end
+	if inst:IsA("BasePart") then
+		return inst.Position
+	elseif inst:IsA("Attachment") then
+		return inst.WorldPosition
+	elseif inst:IsA("Model") then
+		return (inst.PrimaryPart and inst.PrimaryPart.Position) or inst:GetPivot().Position
+	else
+		local partAnc = inst:FindFirstAncestorWhichIsA("BasePart")
+		if partAnc then
+			return partAnc.Position
+		end
+		local modelAnc = inst:FindFirstAncestorOfClass("Model")
+		if modelAnc then
+			return modelAnc:GetPivot().Position
+		end
+	end
+	return nil
+end
+
 local function getTargetPosition(obj)
 	if not obj or not obj.Parent or isBlockedObject(obj) then
 		return nil
@@ -144,17 +168,7 @@ local function getTargetPosition(obj)
 
 	local pos = nil
 	if obj:IsA("ProximityPrompt") then
-		local parent = obj.Parent
-		if parent and parent:IsA("BasePart") then
-			pos = parent.Position
-		elseif parent and parent:IsA("Attachment") then
-			pos = parent.WorldPosition
-		else
-			local model = obj:FindFirstAncestorOfClass("Model")
-			if model then
-				pos = model:GetPivot().Position
-			end
-		end
+		pos = getInstanceWorldPos(obj.Parent) or getInstanceWorldPos(obj)
 	elseif obj:IsA("Beam") then
 		local a0 = obj.Attachment0
 		local a1 = obj.Attachment1
@@ -165,12 +179,8 @@ local function getTargetPosition(obj)
 		elseif a1 then
 			pos = a1.WorldPosition
 		end
-	elseif obj:IsA("BasePart") then
-		pos = obj.Position
-	elseif obj:IsA("Attachment") then
-		pos = obj.WorldPosition
-	elseif obj:IsA("Model") then
-		pos = obj:GetPivot().Position
+	else
+		pos = getInstanceWorldPos(obj)
 	end
 
 	if isWithinMissionArea(pos) then
@@ -179,15 +189,26 @@ local function getTargetPosition(obj)
 	return nil
 end
 
+local function pressKeyE(holdSec)
+	pcall(function()
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+	end)
+	task.wait(holdSec or 0.14)
+	pcall(function()
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+	end)
+end
+
 local function triggerPromptFast(prompt)
 	if not prompt or not prompt.Parent then
+		pressKeyE(0.14)
 		return false
 	end
 
 	pcall(function()
 		prompt.Enabled = true
 		prompt.RequiresLineOfSight = false
-		prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 50)
+		prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 60)
 	end)
 
 	local fired = false
@@ -203,7 +224,7 @@ local function triggerPromptFast(prompt)
 	if not fired then
 		pcall(function()
 			prompt:InputHoldBegin()
-			task.wait(0.03)
+			task.wait(0.05)
 			prompt:InputHoldEnd()
 		end)
 	end
@@ -217,13 +238,14 @@ end
 
 local function triggerPrompt(prompt)
 	if not prompt or not prompt.Parent then
+		pressKeyE(0.16)
 		return false
 	end
 
 	pcall(function()
 		prompt.Enabled = true
 		prompt.RequiresLineOfSight = false
-		prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 50)
+		prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 60)
 	end)
 
 	local fired = false
@@ -249,6 +271,87 @@ local function triggerPrompt(prompt)
 	end)
 
 	return true
+end
+
+-- Cari prompt / mesin "SCAN FOR GOLD" (bukan portal) untuk ambil mesin pelebur
+local function findGoldMachineTakeTarget(originPos)
+	local bestPos = nil
+	local bestPrompt = nil
+	local bestScore = math.huge
+
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("ProximityPrompt") then
+			local act = string.lower(tostring(obj.ActionText or ""))
+			local objTxt = string.lower(tostring(obj.ObjectText or ""))
+			local fullLow = string.lower(obj:GetFullName())
+
+			local isPortal = string.find(fullLow, "portal", 1, true)
+				or string.find(act, "portal", 1, true)
+				or string.find(objTxt, "portal", 1, true)
+				or string.find(objTxt, "lobby", 1, true)
+
+			local isMachinePrompt = not isPortal and (
+				string.find(act, "scan", 1, true)
+				or string.find(objTxt, "scan", 1, true)
+				or string.find(objTxt, "gold", 1, true)
+				or string.find(fullLow, "scan", 1, true)
+				or string.find(fullLow, "smelt", 1, true)
+				or string.find(fullLow, "machine", 1, true)
+			)
+
+			if isMachinePrompt then
+				local pos = getInstanceWorldPos(obj.Parent) or getInstanceWorldPos(obj)
+				if pos then
+					local d = originPos and (pos - originPos).Magnitude or 0
+					if d < bestScore then
+						bestScore = d
+						bestPos = pos
+						bestPrompt = obj
+					end
+				end
+			end
+		end
+	end
+
+	-- Cek juga model/part ScanningStand atau tulisan SCAN FOR GOLD jika prompt tersembunyi
+	if not bestPos then
+		for _, obj in ipairs(workspace:GetDescendants()) do
+			local fullLow = string.lower(obj:GetFullName())
+			local nameLow = string.lower(obj.Name)
+			local isPortal = string.find(fullLow, "portal", 1, true)
+			if not isPortal and (
+				string.find(nameLow, "scanningstand", 1, true)
+				or string.find(nameLow, "scan", 1, true)
+				or string.find(nameLow, "smelt", 1, true)
+			) then
+				local pos = getInstanceWorldPos(obj)
+				if pos then
+					local d = originPos and (pos - originPos).Magnitude or 0
+					if d < bestScore then
+						bestScore = d
+						bestPos = pos
+						bestPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+					end
+				end
+			end
+		end
+	end
+
+	if bestPos then
+		lastMachinePos = bestPos
+		return bestPos, bestPrompt
+	end
+
+	if lastMachinePos then
+		return lastMachinePos, nil
+	end
+
+	local fallbackPrompt = findPromptNearCoord and findPromptNearCoord(SMELT_COORD, 30)
+	if fallbackPrompt then
+		return SMELT_COORD, fallbackPrompt
+	end
+
+	return nil, nil
 end
 
 local function apakahOrePenuh()
@@ -502,20 +605,12 @@ local function findPromptNearPos(refPos, maxDist)
 end
 
 -- Cek keberadaan target di area/map agar tidak teleport terus jika di luar map
-local function findPromptNearCoord(coord, maxDist)
+function findPromptNearCoord(coord, maxDist)
 	local bestPrompt = nil
 	local bestDist = maxDist or 22
 	for _, desc in ipairs(workspace:GetDescendants()) do
 		if desc:IsA("ProximityPrompt") then
-			local parent = desc.Parent
-			local pos = nil
-			if parent and parent:IsA("BasePart") then
-				pos = parent.Position
-			elseif parent and parent:IsA("Attachment") then
-				pos = parent.WorldPosition
-			elseif parent and parent:IsA("Model") then
-				pos = (parent.PrimaryPart and parent.PrimaryPart.Position) or parent:GetPivot().Position
-			end
+			local pos = getInstanceWorldPos(desc.Parent) or getInstanceWorldPos(desc)
 			if pos then
 				local d = (pos - coord).Magnitude
 				if d <= bestDist then
@@ -546,7 +641,7 @@ local function releaseTurn(roleName)
 	end
 end
 
--- Loop utama AUTO GOLD: letak cepat ke titik kuning yang belum diletak (tidak nunggu selesai), lalu pindah ke kuning lain; jika semua sudah/habis baru ambil mesin lagi
+-- Loop utama AUTO GOLD: letak ke titik kuning yang belum diletak (tidak nunggu selesai), lalu pindah ke kuning lain; jika kuning sudah habis/selesai baru ambil mesin di tempat SCAN FOR GOLD (bukan portal)
 task.spawn(function()
 	while true do
 		if kePortalMapUtamaJikaFull() then
@@ -576,6 +671,8 @@ task.spawn(function()
 				local actionPrompt = findPromptNearPos(nextGoldPos, 30)
 				if actionPrompt then
 					triggerPromptFast(actionPrompt)
+				else
+					pressKeyE(0.1)
 				end
 				-- Langsung tandai sudah diletak tanpa menunggu animasi/proses selesai
 				markGoldPlaced(nextGoldPos)
@@ -584,27 +681,32 @@ task.spawn(function()
 			continue
 		end
 
-		-- Jika semua kuning sudah diletak atau kuning-kuning sudah hilang, ambil mesin pelebur di tempat ambil mesin
-		if not anyGoldExists and missionEnabled and not shouldPauseGold() then
+		-- Jika kuning-kuning sudah habis/hilang atau semua sudah ditandai, ambil mesin pelebur di tempat SCAN FOR GOLD (bukan portal)
+		if missionEnabled and not shouldPauseGold() then
 			placedGoldMarkers = {}
-			local takePrompt = findPromptNearCoord(SMELT_COORD, 25)
-			if takePrompt then
-				flyToPosition("Ambil Mesin Pelebur", SMELT_COORD + Vector3.new(0, 2.5, 0))
+			local machinePos, machinePrompt = findGoldMachineTakeTarget(hrp.Position)
+			if machinePos then
+				flyToPosition("Ambil Mesin SCAN FOR GOLD", machinePos + Vector3.new(0, 2.5, 0))
 				if missionEnabled and not shouldPauseGold() then
-					triggerPromptFast(takePrompt)
+					local nearPrompt = machinePrompt or findPromptNearCoord(machinePos, 28)
+					if nearPrompt then
+						triggerPrompt(nearPrompt)
+					else
+						pressKeyE(0.2)
+					end
 				end
+
+				-- Tunggu sebentar hingga kuning-kuning baru muncul setelah ambil mesin
 				local waitStart = os.clock()
-				while missionEnabled and not shouldPauseGold() and (os.clock() - waitStart) < 1.8 do
+				while missionEnabled and not shouldPauseGold() and (os.clock() - waitStart) < 2.2 do
 					if #findAllGoldLocations() > 0 then
 						break
 					end
-					task.wait(0.1)
+					task.wait(0.12)
 				end
 			else
-				task.wait(0.8)
+				task.wait(0.7)
 			end
-		else
-			task.wait(0.15)
 		end
 
 		task.wait(0.1)
@@ -851,6 +953,10 @@ toggleBtn.InputBegan:Connect(function(input)
 			placedGoldMarkers = {}
 			local _, hrp = getCharParts()
 			anchorStartPos = hrp and hrp.Position or nil
+			local mPos = findGoldMachineTakeTarget(hrp and hrp.Position or nil)
+			if mPos then
+				lastMachinePos = mPos
+			end
 		else
 			anchorStartPos = nil
 			local _, hrp, hum = getCharParts()
