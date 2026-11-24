@@ -849,6 +849,7 @@ task.spawn(function()
 		env.GoldMissionSaved.returnToggle = isOn(returnToggleBtn)
 		env.GoldMissionSaved.smelt = isOn(smeltToggleBtn)
 		env.GoldMissionSaved.mission = isOn(missionTeleToggleBtn)
+		env.GoldMissionSaved.autoExec = isOn(autoExecToggleBtn)
 	end
 
 	task.wait(0.4)
