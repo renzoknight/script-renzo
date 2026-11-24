@@ -35,13 +35,14 @@ local autoMissionEnabled = false
 local missionRunToken = 0
 local missionTeleportDelay = 25 -- Jeda 25 detik sebelum teleport ke misi
 local autoExecEnabled = false
-local flySpeed = 230
-local arriveDistance = 5.5
-local stepTimeout = 18
+local flySpeed = 420 -- Lebih kencang dari sebelumnya (bisa di-custom dari input GUI)
+local arriveDistance = 6.5
+local stepTimeout = 12
 local MAX_DIST_FROM_START = 2000
 
 local anchorStartPos = nil
 local sharedTurnOwner = nil -- "mission" atau "smelt" saat keduanya aktif barengan
+local placedGoldMarkers = {} -- Catatan titik kuning yang sudah diletak (tidak nunggu selesai)
 
 local MISSION_COORD = Vector3.new(107, -16, -88)
 local SMELT_COORD = Vector3.new(-15, -16, -120)
@@ -49,6 +50,50 @@ local SMELT_COORD = Vector3.new(-15, -16, -120)
 local BLOCKED_WORDS = {
 	"portal", "infoboard", "lobby", "hub", "spawn", "return", "back", "menu", "exit", "shop"
 }
+
+local function makePosKey(pos)
+	if not pos then return "" end
+	return string.format("%d_%d_%d", math.floor(pos.X + 0.5), math.floor(pos.Y + 0.5), math.floor(pos.Z + 0.5))
+end
+
+local function isAlreadyPlaced(pos)
+	if not pos then return false end
+	local key = makePosKey(pos)
+	if placedGoldMarkers[key] then
+		return true
+	end
+	for _, recordedPos in pairs(placedGoldMarkers) do
+		if typeof(recordedPos) == "Vector3" and (recordedPos - pos).Magnitude <= 4.5 then
+			return true
+		end
+	end
+	return false
+end
+
+local function markGoldPlaced(pos)
+	if not pos then return end
+	local key = makePosKey(pos)
+	placedGoldMarkers[key] = pos
+end
+
+local function pruneMissingGoldMarkers(activePositions)
+	for key, recordedPos in pairs(placedGoldMarkers) do
+		if typeof(recordedPos) == "Vector3" then
+			local stillExists = false
+			for _, p in ipairs(activePositions) do
+				if (p - recordedPos).Magnitude <= 5.0 then
+					stillExists = true
+					break
+				end
+			end
+			if not stillExists then
+				placedGoldMarkers[key] = nil
+			end
+		else
+			placedGoldMarkers[key] = nil
+		end
+	end
+end
 
 local function getCharParts()
 	local char = localPlayer.Character
@@ -134,6 +179,42 @@ local function getTargetPosition(obj)
 	return nil
 end
 
+local function triggerPromptFast(prompt)
+	if not prompt or not prompt.Parent then
+		return false
+	end
+
+	pcall(function()
+		prompt.Enabled = true
+		prompt.RequiresLineOfSight = false
+		prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 50)
+	end)
+
+	local fired = false
+	if typeof(fireproximityprompt) == "function" then
+		local ok = pcall(function()
+			fireproximityprompt(prompt)
+		end)
+		if ok then
+			fired = true
+		end
+	end
+
+	if not fired then
+		pcall(function()
+			prompt:InputHoldBegin()
+			task.wait(0.03)
+			prompt:InputHoldEnd()
+		end)
+	end
+
+	pcall(function()
+		ProximityPromptService:PromptTriggered(prompt, localPlayer)
+	end)
+
+	return true
+end
+
 local function triggerPrompt(prompt)
 	if not prompt or not prompt.Parent then
 		return false
@@ -215,8 +296,6 @@ local function flyToPosition(label, goalPos)
 		return false
 	end
 
-	print("[GoldMission] Terbang ke", label)
-
 	local oldPlatformStand = hum.PlatformStand
 	hum.PlatformStand = true
 
@@ -246,7 +325,8 @@ local function flyToPosition(label, goalPos)
 
 		local safeDt = math.min(dt, 0.05)
 		local dir = delta.Unit
-		local speedNow = (dist < 18) and math.max(flySpeed * 0.55, 85) or flySpeed
+		local activeFlySpeed = math.max(tonumber(flySpeed) or 420, 40)
+		local speedNow = (dist < 22) and math.max(activeFlySpeed * 0.75, 160) or activeFlySpeed
 		local stepDist = math.min(speedNow * safeDt, dist)
 		local nextPos = currentPos + dir * stepDist
 
@@ -270,21 +350,8 @@ local function flyToPosition(label, goalPos)
 	return reached
 end
 
-local function findScanningStand()
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj.Name == "ScanningStand" and not isBlockedObject(obj) then
-			if getTargetPosition(obj) then
-				return obj
-			end
-		end
-	end
-	return nil
-end
-
-local function findGoldLocationPos(originPos)
-	local bestPos = nil
-	local bestDist = math.huge
-
+local function findAllGoldLocations()
+	local list = {}
 	for _, obj in ipairs(workspace:GetDescendants()) do
 		if isBlockedObject(obj) then
 			continue
@@ -295,17 +362,32 @@ local function findGoldLocationPos(originPos)
 			if obj:IsA("Beam") or obj:IsA("Attachment") or obj:IsA("BasePart") then
 				local pos = getTargetPosition(obj)
 				if pos then
-					local d = (pos - originPos).Magnitude
-					if d < bestDist then
-						bestDist = d
-						bestPos = pos
-					end
+					table.insert(list, pos)
 				end
 			end
 		end
 	end
+	return list
+end
 
-	return bestPos
+local function findNextUnplacedGoldPos(originPos)
+	local allGold = findAllGoldLocations()
+	pruneMissingGoldMarkers(allGold)
+
+	local bestPos = nil
+	local bestDist = math.huge
+
+	for _, pos in ipairs(allGold) do
+		if not isAlreadyPlaced(pos) then
+			local d = (pos - originPos).Magnitude
+			if d < bestDist then
+				bestDist = d
+				bestPos = pos
+			end
+		end
+	end
+
+	return bestPos, #allGold > 0
 end
 
 local function kePortalMapUtamaJikaFull()
@@ -464,7 +546,7 @@ local function releaseTurn(roleName)
 	end
 end
 
--- Loop utama misi
+-- Loop utama AUTO GOLD: letak cepat ke titik kuning yang belum diletak (tidak nunggu selesai), lalu pindah ke kuning lain; jika semua sudah/habis baru ambil mesin lagi
 task.spawn(function()
 	while true do
 		if kePortalMapUtamaJikaFull() then
@@ -473,13 +555,13 @@ task.spawn(function()
 		end
 
 		if not missionEnabled or shouldPauseGold() then
-			task.wait(0.15)
+			task.wait(0.1)
 			continue
 		end
 
 		local _, hrp = getCharParts()
 		if not hrp then
-			task.wait(0.25)
+			task.wait(0.2)
 			continue
 		end
 
@@ -487,54 +569,45 @@ task.spawn(function()
 			anchorStartPos = hrp.Position
 		end
 
-		local goldPos = findGoldLocationPos(hrp.Position)
-
-		if not goldPos then
-			local stand = findScanningStand()
-			local standPos = getTargetPosition(stand)
-			if stand and standPos and not shouldPauseGold() then
-				flyToPosition("ScanningStand", standPos + Vector3.new(0, 2.5, 0))
-				if missionEnabled and not shouldPauseGold() then
-					local scanPrompt = findPromptNearPos(standPos, 30)
-					if scanPrompt then
-						triggerPrompt(scanPrompt)
-					end
-				end
-			elseif not shouldPauseGold() then
-				print("[GoldMission] ScanningStand belum ketemu")
-			end
-
-			local waitStart = os.clock()
-			while missionEnabled and not shouldPauseGold() and (os.clock() - waitStart) < 2.2 do
-				local _, curHrp = getCharParts()
-				goldPos = findGoldLocationPos(curHrp and curHrp.Position or hrp.Position)
-				if goldPos then
-					break
-				end
-				task.wait(0.12)
-			end
-		end
-
-		if not missionEnabled or shouldPauseGold() then
-			continue
-		end
-
-		if kePortalMapUtamaJikaFull() then
-			task.wait(1)
-			continue
-		end
-
-		if goldPos and not shouldPauseGold() then
-			flyToPosition("LocationBeam", goldPos + Vector3.new(0, 2.5, 0))
+		local nextGoldPos, anyGoldExists = findNextUnplacedGoldPos(hrp.Position)
+		if nextGoldPos then
+			flyToPosition("Kuning Peleburan", nextGoldPos + Vector3.new(0, 2.5, 0))
 			if missionEnabled and not shouldPauseGold() then
-				local digPrompt = findPromptNearPos(goldPos, 30)
-				if digPrompt then
-					triggerPrompt(digPrompt)
+				local actionPrompt = findPromptNearPos(nextGoldPos, 30)
+				if actionPrompt then
+					triggerPromptFast(actionPrompt)
 				end
+				-- Langsung tandai sudah diletak tanpa menunggu animasi/proses selesai
+				markGoldPlaced(nextGoldPos)
 			end
+			task.wait(0.15)
+			continue
 		end
 
-		task.wait(0.25)
+		-- Jika semua kuning sudah diletak atau kuning-kuning sudah hilang, ambil mesin pelebur di tempat ambil mesin
+		if not anyGoldExists and missionEnabled and not shouldPauseGold() then
+			placedGoldMarkers = {}
+			local takePrompt = findPromptNearCoord(SMELT_COORD, 25)
+			if takePrompt then
+				flyToPosition("Ambil Mesin Pelebur", SMELT_COORD + Vector3.new(0, 2.5, 0))
+				if missionEnabled and not shouldPauseGold() then
+					triggerPromptFast(takePrompt)
+				end
+				local waitStart = os.clock()
+				while missionEnabled and not shouldPauseGold() and (os.clock() - waitStart) < 1.8 do
+					if #findAllGoldLocations() > 0 then
+						break
+					end
+					task.wait(0.1)
+				end
+			else
+				task.wait(0.8)
+			end
+		else
+			task.wait(0.15)
+		end
+
+		task.wait(0.1)
 	end
 end)
 
@@ -547,7 +620,7 @@ screenGui.DisplayOrder = 999
 screenGui.Parent = guiParent
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(220, 268)
+frame.Size = UDim2.fromOffset(220, 304)
 frame.Position = UDim2.fromScale(0.72, 0.30)
 frame.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
 frame.BorderSizePixel = 0
@@ -625,8 +698,8 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.fromOffset(204, 56)
-toggleBtn.Position = UDim2.fromOffset(8, 42)
+toggleBtn.Size = UDim2.fromOffset(204, 52)
+toggleBtn.Position = UDim2.fromOffset(8, 38)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(28, 36, 52)
 toggleBtn.Text = "AUTO GOLD : OFF"
 toggleBtn.TextColor3 = Color3.fromRGB(215, 225, 240)
@@ -637,9 +710,45 @@ toggleBtn.Parent = frame
 
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 
+-- Input Custom Fly Speed
+local speedBoxFrame = Instance.new("Frame")
+speedBoxFrame.Size = UDim2.fromOffset(204, 30)
+speedBoxFrame.Position = UDim2.fromOffset(8, 95)
+speedBoxFrame.BackgroundColor3 = Color3.fromRGB(22, 28, 42)
+speedBoxFrame.BorderSizePixel = 0
+speedBoxFrame.Parent = frame
+
+Instance.new("UICorner", speedBoxFrame).CornerRadius = UDim.new(0, 6)
+
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(0.54, 0, 1, 0)
+speedLabel.Position = UDim2.fromOffset(8, 0)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Text = "FLY SPEED:"
+speedLabel.TextColor3 = Color3.fromRGB(255, 220, 110)
+speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+speedLabel.Font = Enum.Font.GothamBold
+speedLabel.TextSize = 11
+speedLabel.Parent = speedBoxFrame
+
+local flySpeedInput = Instance.new("TextBox")
+flySpeedInput.Size = UDim2.new(0.42, -6, 0.76, 0)
+flySpeedInput.Position = UDim2.new(0.56, 0, 0.12, 0)
+flySpeedInput.BackgroundColor3 = Color3.fromRGB(36, 46, 68)
+flySpeedInput.Text = tostring(flySpeed)
+flySpeedInput.PlaceholderText = "420"
+flySpeedInput.TextColor3 = Color3.fromRGB(165, 255, 205)
+flySpeedInput.Font = Enum.Font.GothamBold
+flySpeedInput.TextSize = 11
+flySpeedInput.ClearTextOnFocus = false
+flySpeedInput.BorderSizePixel = 0
+flySpeedInput.Parent = speedBoxFrame
+
+Instance.new("UICorner", flySpeedInput).CornerRadius = UDim.new(0, 5)
+
 local returnToggleBtn = Instance.new("TextButton")
-returnToggleBtn.Size = UDim2.fromOffset(204, 34)
-returnToggleBtn.Position = UDim2.fromOffset(8, 104)
+returnToggleBtn.Size = UDim2.fromOffset(204, 32)
+returnToggleBtn.Position = UDim2.fromOffset(8, 130)
 returnToggleBtn.BackgroundColor3 = Color3.fromRGB(32, 36, 48)
 returnToggleBtn.Text = "AUTO RETURN : OFF"
 returnToggleBtn.TextColor3 = Color3.fromRGB(205, 215, 230)
@@ -651,8 +760,8 @@ returnToggleBtn.Parent = frame
 Instance.new("UICorner", returnToggleBtn).CornerRadius = UDim.new(0, 6)
 
 local smeltToggleBtn = Instance.new("TextButton")
-smeltToggleBtn.Size = UDim2.fromOffset(204, 34)
-smeltToggleBtn.Position = UDim2.fromOffset(8, 144)
+smeltToggleBtn.Size = UDim2.fromOffset(204, 32)
+smeltToggleBtn.Position = UDim2.fromOffset(8, 167)
 smeltToggleBtn.BackgroundColor3 = Color3.fromRGB(120, 32, 38)
 smeltToggleBtn.Text = "AUTO PELEBURAN: OFF"
 smeltToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
@@ -664,8 +773,8 @@ smeltToggleBtn.Parent = frame
 Instance.new("UICorner", smeltToggleBtn).CornerRadius = UDim.new(0, 6)
 
 local missionTeleToggleBtn = Instance.new("TextButton")
-missionTeleToggleBtn.Size = UDim2.fromOffset(204, 34)
-missionTeleToggleBtn.Position = UDim2.fromOffset(8, 184)
+missionTeleToggleBtn.Size = UDim2.fromOffset(204, 32)
+missionTeleToggleBtn.Position = UDim2.fromOffset(8, 204)
 missionTeleToggleBtn.BackgroundColor3 = Color3.fromRGB(120, 32, 38)
 missionTeleToggleBtn.Text = "AUTO MISI: OFF"
 missionTeleToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
@@ -677,8 +786,8 @@ missionTeleToggleBtn.Parent = frame
 Instance.new("UICorner", missionTeleToggleBtn).CornerRadius = UDim.new(0, 6)
 
 local autoExecToggleBtn = Instance.new("TextButton")
-autoExecToggleBtn.Size = UDim2.fromOffset(204, 34)
-autoExecToggleBtn.Position = UDim2.fromOffset(8, 224)
+autoExecToggleBtn.Size = UDim2.fromOffset(204, 32)
+autoExecToggleBtn.Position = UDim2.fromOffset(8, 241)
 autoExecToggleBtn.BackgroundColor3 = Color3.fromRGB(120, 32, 38)
 autoExecToggleBtn.Text = "AUTO EXEC: OFF"
 autoExecToggleBtn.TextColor3 = Color3.fromRGB(255, 210, 215)
@@ -690,6 +799,22 @@ autoExecToggleBtn.Parent = frame
 Instance.new("UICorner", autoExecToggleBtn).CornerRadius = UDim.new(0, 6)
 
 local saveAllSettings
+
+local function applyCustomFlySpeedFromText(raw)
+	local cleaned = tostring(raw or ""):gsub("[^%d%.]", "")
+	local num = tonumber(cleaned)
+	if num and num >= 40 and num <= 5000 then
+		flySpeed = num
+	end
+	flySpeedInput.Text = tostring(flySpeed)
+	if saveAllSettings then
+		saveAllSettings()
+	end
+end
+
+flySpeedInput.FocusLost:Connect(function()
+	applyCustomFlySpeedFromText(flySpeedInput.Text)
+end)
 
 local function refreshReturnVisual()
 	returnToggleBtn.Text = autoReturnEnabled and "AUTO RETURN : ON" or "AUTO RETURN : OFF"
@@ -723,6 +848,7 @@ toggleBtn.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		missionEnabled = not missionEnabled
 		if missionEnabled then
+			placedGoldMarkers = {}
 			local _, hrp = getCharParts()
 			anchorStartPos = hrp and hrp.Position or nil
 		else
@@ -748,6 +874,7 @@ closeBtn.InputBegan:Connect(function(input)
 		autoMissionEnabled = false
 		autoExecEnabled = false
 		sharedTurnOwner = nil
+		placedGoldMarkers = {}
 		anchorStartPos = nil
 		if saveAllSettings then
 			saveAllSettings()
@@ -833,13 +960,11 @@ task.spawn(function()
 
 			local prompt = findPromptNearCoord(MISSION_COORD, 22)
 			if not prompt then
-				-- Tidak di map/area misi: diam/jeda agar tidak teleport terus-terusan
 				releaseTurn("mission")
 				task.wait(3)
 				continue
 			end
 
-			-- Tunggu delay 25 detik dulu baru teleport ke koordinat misi
 			if not waitMissionDelay(missionTeleportDelay, token) then
 				break
 			end
@@ -903,7 +1028,6 @@ local function runSmeltCycle(tok)
 
 		local prompt = findPromptNearCoord(SMELT_COORD, 22)
 		if not prompt then
-			-- Tidak di map/area peleburan: diam/jeda agar tidak teleport terus-terusan
 			releaseTurn("smelt")
 			task.wait(3)
 			continue
@@ -1033,12 +1157,14 @@ task.spawn(function()
 	end
 
 	saveAllSettings = function()
+		local currentSpeed = tonumber(flySpeed) or 420
 		local data = {
 			autoGold = (missionEnabled == true) or isOnText(toggleBtn),
 			returnToggle = (autoReturnEnabled == true) or isOnText(returnToggleBtn),
 			smelt = (smeltEnabled == true) or isOnText(smeltToggleBtn),
 			mission = (autoMissionEnabled == true) or isOnText(missionTeleToggleBtn),
 			autoExec = (autoExecEnabled == true) or isOnText(autoExecToggleBtn),
+			flySpeed = currentSpeed,
 		}
 
 		for k, v in pairs(data) do
@@ -1059,10 +1185,17 @@ task.spawn(function()
 		smelt = (diskSaved and diskSaved.smelt == true) or (memSaved.smelt == true),
 		mission = (diskSaved and diskSaved.mission == true) or (memSaved.mission == true),
 		autoExec = (diskSaved and diskSaved.autoExec == true) or (memSaved.autoExec == true),
+		flySpeed = (diskSaved and tonumber(diskSaved.flySpeed)) or (tonumber(memSaved.flySpeed)) or flySpeed,
 	}
+
+	if saved.flySpeed and saved.flySpeed >= 40 and saved.flySpeed <= 5000 then
+		flySpeed = saved.flySpeed
+		flySpeedInput.Text = tostring(flySpeed)
+	end
 
 	if saved.autoGold == true then
 		missionEnabled = true
+		placedGoldMarkers = {}
 		local _, hrp = getCharParts()
 		anchorStartPos = hrp and hrp.Position or nil
 		refreshBtn()
