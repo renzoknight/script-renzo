@@ -31,6 +31,7 @@ local memorySettings = {
 	flyEnabled = false,
 	flySpeed = 50,
 	lastPetQuery = "",
+	autoExecutorEnabled = false,
 }
 
 local function canUseFileIo()
@@ -60,6 +61,9 @@ local function loadSettings()
 					if type(decoded.lastPetQuery) == "string" then
 						memorySettings.lastPetQuery = decoded.lastPetQuery
 					end
+					if type(decoded.autoExecutorEnabled) == "boolean" then
+						memorySettings.autoExecutorEnabled = decoded.autoExecutorEnabled
+					end
 				end
 			end
 		end
@@ -80,8 +84,8 @@ end
 
 local cfg = loadSettings()
 
--- Auto Executor (Best-effort Queue On Teleport across known executor hooks)
-local autoQueued = false
+-- Auto Executor (Toggle ON / OFF)
+local autoExecutorEnabled = cfg.autoExecutorEnabled == true
 
 local function getQueueTeleportFn()
 	if type(queue_on_teleport) == "function" then
@@ -109,9 +113,9 @@ local function getQueueTeleportFn()
 	return nil
 end
 
-local function queueScriptOnTeleport(force)
-	if autoQueued and not force then
-		return true
+local function syncAutoExecutorQueue()
+	if not autoExecutorEnabled then
+		return false
 	end
 	local qFn = getQueueTeleportFn()
 	if not qFn then
@@ -132,20 +136,14 @@ end)
 	)
 
 	local ok = pcall(qFn, payload)
-	if ok then
-		autoQueued = true
-		return true
-	end
-	return false
+	return ok == true
 end
-
-queueScriptOnTeleport(true)
 
 if localPlayer then
 	localPlayer.OnTeleport:Connect(function(state)
 		saveSettings()
-		if state == Enum.TeleportState.Started or state == Enum.TeleportState.InProgress or state == Enum.TeleportState.Failed then
-			queueScriptOnTeleport(true)
+		if autoExecutorEnabled and (state == Enum.TeleportState.Started or state == Enum.TeleportState.InProgress or state == Enum.TeleportState.Failed) then
+			syncAutoExecutorQueue()
 		end
 	end)
 end
@@ -273,7 +271,11 @@ local function startFly()
 	end)
 end
 
--- Helper Posisi Akurat ke Pet / Booth Terkait (Tidak meleset ke booth lain)
+-- Helper Posisi & Anti-Double Teleport
+local isTeleporting = false
+local lastTpTime = 0
+local TP_COOLDOWN = 0.85
+
 local function getObjectCFrame(inst)
 	if not inst or not inst.Parent then
 		return nil
@@ -295,12 +297,11 @@ local function getObjectCFrame(inst)
 	return nil
 end
 
-local function findNearest3DAnchorFromInstance(inst)
+local function findAnchorFromInstance(inst)
 	if not inst then
 		return nil
 	end
 
-	-- Jika inst adalah GUI di dalam workspace (BillboardGui / SurfaceGui), adornee atau ancestor-nya punya CFrame
 	if inst:IsA("GuiObject") or inst:IsA("BillboardGui") or inst:IsA("SurfaceGui") then
 		if inst:IsA("BillboardGui") or inst:IsA("SurfaceGui") then
 			if inst.Adornee and inst.Adornee:IsA("BasePart") then
@@ -333,8 +334,8 @@ local function findNearest3DAnchorFromInstance(inst)
 	return nil
 end
 
-local function findBoothNearPosition(pos, text)
-	if not pos then
+local function findMatchingBoothNearAnchor(anchorPos, text)
+	if not anchorPos then
 		return nil
 	end
 	local lower = string.lower(text or "")
@@ -359,7 +360,7 @@ local function findBoothNearPosition(pos, text)
 			if string.find(n, "booth", 1, true) or string.find(n, "stall", 1, true) or string.find(n, "stand", 1, true) or string.find(n, "shop", 1, true) then
 				local cf = getObjectCFrame(obj)
 				if cf then
-					local dist = (cf.Position - pos).Magnitude
+					local dist = (cf.Position - anchorPos).Magnitude
 					local ownerBonus = 0
 					if matchedPlayer then
 						local ownerAttr = tostring(obj:GetAttribute("Owner") or obj:GetAttribute("UserId") or obj:GetAttribute("Player") or obj:GetAttribute("Seller") or "")
@@ -380,33 +381,43 @@ local function findBoothNearPosition(pos, text)
 		end
 	end
 
-	-- Hanya pakai booth jika jaraknya memang dekat dengan posisi pet/anchor (< 45 studs) atau cocok owner
-	if bestCf and (bestScore < 45 or bestScore < -200) then
+	if bestCf and (bestScore < 35 or bestScore < -200) then
 		return bestCf
 	end
 	return nil
 end
 
-local function moveCharacterToCFrame(hrp, targetCf)
+local function moveCharacterOnce(hrp, targetCf)
 	if not hrp or not targetCf then
 		return
 	end
-	local dest = targetCf + Vector3.new(0, 4.5, 0)
+	local destPos = targetCf.Position + Vector3.new(0, 4.5, 0)
+	local lookDir = targetCf.LookVector
+	if lookDir.Magnitude < 1e-3 then
+		lookDir = Vector3.zAxis
+	end
+	local finalCf = CFrame.lookAt(destPos, destPos + lookDir)
+
 	local wasFly = flyEnabled
 	if wasFly then
 		stopFly()
 	end
+
 	pcall(function()
 		local char = hrp.Parent
 		if char and char:IsA("Model") and char.PrimaryPart then
-			char:PivotTo(CFrame.new(dest.Position, dest.Position + targetCf.LookVector))
+			char:PivotTo(finalCf)
 		else
-			hrp.CFrame = CFrame.new(dest.Position, dest.Position + targetCf.LookVector)
+			hrp.CFrame = finalCf
+		end
+		if hrp.AssemblyLinearVelocity then
+			hrp.AssemblyLinearVelocity = Vector3.zero
 		end
 	end)
+
 	if wasFly then
-		task.delay(0.15, function()
-			if memorySettings.flyEnabled then
+		task.delay(0.25, function()
+			if memorySettings.flyEnabled and not flyEnabled then
 				startFly()
 			end
 		end)
@@ -414,56 +425,70 @@ local function moveCharacterToCFrame(hrp, targetCf)
 end
 
 local function teleportToEntry(entry)
+	local now = os.clock()
+	if isTeleporting or (now - lastTpTime) < TP_COOLDOWN then
+		return
+	end
 	if not entry then
 		return
 	end
+
 	local char = localPlayer and localPlayer.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart")
 	if not hrp then
 		return
 	end
 
-	-- 1. Cari anchor 3D paling dekat dengan instance pet tersebut
-	local anchorCf = nil
-	if entry.instance and entry.instance.Parent then
-		anchorCf = findNearest3DAnchorFromInstance(entry.instance)
-	end
+	isTeleporting = true
+	lastTpTime = now
 
-	if anchorCf then
-		-- Cek apakah ada booth yang memang menempel/dekat dengan anchor pet ini
-		local boothCf = findBoothNearPosition(anchorCf.Position, entry.contextText)
-		moveCharacterToCFrame(hrp, boothCf or anchorCf)
-		return
-	end
+	local ok, err = pcall(function()
+		local anchorCf = nil
+		if entry.instance and entry.instance.Parent then
+			anchorCf = findAnchorFromInstance(entry.instance)
+		end
 
-	-- 2. Jika item berasal dari UI saja, cek apakah nama seller muncul dan punya posisi karakter/booth dekat
-	if entry.contextText then
-		local lower = string.lower(entry.contextText)
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= localPlayer then
-				local n1 = string.lower(plr.Name)
-				local n2 = string.lower(plr.DisplayName)
-				if (#n1 > 0 and string.find(lower, n1, 1, true)) or (#n2 > 0 and string.find(lower, n2, 1, true)) then
-					local pChar = plr.Character
-					local pHrp = pChar and pChar:FindFirstChild("HumanoidRootPart")
-					if pHrp then
-						moveCharacterToCFrame(hrp, pHrp.CFrame)
-						return
+		if anchorCf then
+			local boothCf = findMatchingBoothNearAnchor(anchorCf.Position, entry.contextText)
+			moveCharacterOnce(hrp, boothCf or anchorCf)
+			return
+		end
+
+		if entry.contextText then
+			local lower = string.lower(entry.contextText)
+			for _, plr in ipairs(Players:GetPlayers()) do
+				if plr ~= localPlayer then
+					local n1 = string.lower(plr.Name)
+					local n2 = string.lower(plr.DisplayName)
+					if (#n1 > 0 and string.find(lower, n1, 1, true)) or (#n2 > 0 and string.find(lower, n2, 1, true)) then
+						local pChar = plr.Character
+						local pHrp = pChar and pChar:FindFirstChild("HumanoidRootPart")
+						if pHrp then
+							moveCharacterOnce(hrp, pHrp.CFrame)
+							return
+						end
 					end
 				end
 			end
 		end
-	end
 
-	-- 3. Klik tombol aksi bawaan di kartu UI jika tersedia
-	if entry.uiButton and typeof(firesignal) == "function" then
-		pcall(function()
-			firesignal(entry.uiButton.MouseButton1Click)
-		end)
+		if entry.uiButton and typeof(firesignal) == "function" then
+			pcall(function()
+				firesignal(entry.uiButton.MouseButton1Click)
+			end)
+		end
+	end)
+
+	task.delay(0.35, function()
+		isTeleporting = false
+	end)
+
+	if not ok and err then
+		warn("[GeminiFlyRadar] TP error:", err)
 	end
 end
 
--- Pet Scanner (KG + Token lebih akurat, Chunked)
+-- Pet Scanner (KG + Token, Chunked & Terbatas)
 local MAX_RESULTS = 120
 local isScanning = false
 
@@ -499,10 +524,8 @@ local function extractToken(text)
 	if type(text) ~= "string" then
 		return nil
 	end
-	-- Hapus bagian berat KG agar tidak salah dianggap token
 	local cleaned = text:gsub("%[?%d+%.?%d*%s*[kK][gG]%]?", " ")
 
-	-- Format eksplisit token / t
 	local n1, s1 = cleaned:match("(%d[%d,%.]*)%s*([kKmMbB]?)%s*[tT][oO][kK][eE][nN][sS]?")
 	if n1 then
 		return parseNumberSuffix(n1, s1)
@@ -513,13 +536,11 @@ local function extractToken(text)
 		return parseNumberSuffix(n2, s2)
 	end
 
-	-- Format suffix K/M/B setelah angka (bukan KG)
 	local n3, s3 = cleaned:match("(%d+%.?%d*)%s*([kKmMbB])%f[^%a]")
 	if n3 then
 		return parseNumberSuffix(n3, s3)
 	end
 
-	-- Format angka harga berdiri sendiri di label terpisah (hindari angka level/jumlah kecil jika ada label lain)
 	local n4 = cleaned:match("^%s*([%$]?%s*%d[%d,%.]*)%s*$")
 	if n4 then
 		local digits = n4:gsub("[%$%s,]", "")
@@ -607,7 +628,6 @@ local function scanPetsByNameAsync(query)
 				candidateToken = extractToken(txt)
 				table.insert(contextParts, txt)
 
-				-- Telusuri hingga 6 tingkat ancestor agar label KG & Token terpisah tetap terbaca
 				local container = desc.Parent
 				local hop = 0
 				while container and container ~= localPlayer and hop < 6 do
@@ -712,8 +732,8 @@ screenGui.Parent = guiParent
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.fromOffset(390, 415)
-mainFrame.Position = UDim2.fromScale(0.32, 0.2)
+mainFrame.Size = UDim2.fromOffset(390, 455)
+mainFrame.Position = UDim2.fromScale(0.32, 0.17)
 mainFrame.BackgroundColor3 = Color3.fromRGB(11, 17, 30)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
@@ -833,10 +853,58 @@ flyBtn.MouseButton1Click:Connect(function()
 	refreshFlyBtn()
 end)
 
--- 2. input speed
+-- 2. auto executor OFF / ON
+local autoRow = Instance.new("Frame")
+autoRow.Size = UDim2.new(1, -24, 0, 38)
+autoRow.Position = UDim2.fromOffset(12, 88)
+autoRow.BackgroundColor3 = Color3.fromRGB(17, 27, 47)
+autoRow.BorderSizePixel = 0
+autoRow.Parent = mainFrame
+Instance.new("UICorner", autoRow).CornerRadius = UDim.new(0, 8)
+
+local autoLbl = Instance.new("TextLabel")
+autoLbl.Size = UDim2.new(0.65, 0, 1, 0)
+autoLbl.Position = UDim2.fromOffset(12, 0)
+autoLbl.BackgroundTransparency = 1
+autoLbl.Text = "auto executor"
+autoLbl.TextColor3 = Color3.fromRGB(238, 245, 255)
+autoLbl.TextXAlignment = Enum.TextXAlignment.Left
+autoLbl.Font = Enum.Font.GothamSemibold
+autoLbl.TextSize = 14
+autoLbl.Parent = autoRow
+
+local autoBtn = Instance.new("TextButton")
+autoBtn.Size = UDim2.fromOffset(72, 26)
+autoBtn.Position = UDim2.new(1, -82, 0.5, -13)
+autoBtn.BackgroundColor3 = Color3.fromRGB(28, 40, 64)
+autoBtn.Text = "OFF"
+autoBtn.TextColor3 = Color3.fromRGB(215, 228, 248)
+autoBtn.Font = Enum.Font.GothamBold
+autoBtn.TextSize = 13
+autoBtn.BorderSizePixel = 0
+autoBtn.Parent = autoRow
+Instance.new("UICorner", autoBtn).CornerRadius = UDim.new(0, 6)
+
+local function refreshAutoBtn()
+	autoBtn.Text = autoExecutorEnabled and "ON" or "OFF"
+	autoBtn.BackgroundColor3 = autoExecutorEnabled and Color3.fromRGB(44, 116, 208) or Color3.fromRGB(28, 40, 64)
+	autoBtn.TextColor3 = autoExecutorEnabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(215, 228, 248)
+end
+
+autoBtn.MouseButton1Click:Connect(function()
+	autoExecutorEnabled = not autoExecutorEnabled
+	memorySettings.autoExecutorEnabled = autoExecutorEnabled
+	saveSettings()
+	if autoExecutorEnabled then
+		syncAutoExecutorQueue()
+	end
+	refreshAutoBtn()
+end)
+
+-- 3. input speed
 local speedRow = Instance.new("Frame")
 speedRow.Size = UDim2.new(1, -24, 0, 38)
-speedRow.Position = UDim2.fromOffset(12, 90)
+speedRow.Position = UDim2.fromOffset(12, 130)
 speedRow.BackgroundColor3 = Color3.fromRGB(17, 27, 47)
 speedRow.BorderSizePixel = 0
 speedRow.Parent = mainFrame
@@ -878,10 +946,10 @@ speedBox.FocusLost:Connect(function()
 	saveSettings()
 end)
 
--- 3. input pet
+-- 4. input pet
 local petRow = Instance.new("Frame")
 petRow.Size = UDim2.new(1, -24, 0, 38)
-petRow.Position = UDim2.fromOffset(12, 134)
+petRow.Position = UDim2.fromOffset(12, 172)
 petRow.BackgroundColor3 = Color3.fromRGB(17, 27, 47)
 petRow.BorderSizePixel = 0
 petRow.Parent = mainFrame
@@ -915,12 +983,12 @@ searchBtn.BorderSizePixel = 0
 searchBtn.Parent = petRow
 Instance.new("UICorner", searchBtn).CornerRadius = UDim.new(0, 6)
 
--- 4. pet kg yang paling besar + harga token + TP
+-- 5. pet kg yang paling besar + harga token + TP
 local bestEntry = nil
 
 local topKgFrame = Instance.new("Frame")
 topKgFrame.Size = UDim2.new(1, -24, 0, 42)
-topKgFrame.Position = UDim2.fromOffset(12, 178)
+topKgFrame.Position = UDim2.fromOffset(12, 214)
 topKgFrame.BackgroundColor3 = Color3.fromRGB(17, 29, 52)
 topKgFrame.BorderSizePixel = 0
 topKgFrame.Parent = mainFrame
@@ -957,10 +1025,10 @@ topTpBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
--- 5. daftar pet (scroll ke bawah) + KG + Token + TP
+-- 6. daftar pet (scroll ke bawah) + KG + Token + TP
 local listFrame = Instance.new("Frame")
-listFrame.Size = UDim2.new(1, -24, 0, 176)
-listFrame.Position = UDim2.fromOffset(12, 226)
+listFrame.Size = UDim2.new(1, -24, 0, 182)
+listFrame.Position = UDim2.fromOffset(12, 262)
 listFrame.BackgroundColor3 = Color3.fromRGB(17, 27, 47)
 listFrame.BorderSizePixel = 0
 listFrame.Parent = mainFrame
@@ -1099,4 +1167,7 @@ if cfg.flyEnabled then
 	startFly()
 end
 refreshFlyBtn()
-queueScriptOnTeleport(true)
+refreshAutoBtn()
+if autoExecutorEnabled then
+	syncAutoExecutorQueue()
+end
