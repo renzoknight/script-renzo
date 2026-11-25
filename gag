@@ -7,7 +7,7 @@ local CoreGui = game:GetService("CoreGui")
 local localPlayer = Players.LocalPlayer
 
 -- Ganti dengan URL raw GitHub milikmu jika mau auto-run saat teleport/rejoin
-local GITHUB_RAW_URL = "https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/script.lua"
+local GITHUB_RAW_URL = https://raw.githubusercontent.com/renzoknight/script-renzo/refs/heads/main/gag
 local SETTINGS_FILE = "GeminiFlyRadar_Settings.json"
 
 local function getGuiParent()
