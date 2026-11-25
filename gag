@@ -6,8 +6,7 @@ local CoreGui = game:GetService("CoreGui")
 
 local localPlayer = Players.LocalPlayer
 
--- Ganti dengan URL raw GitHub milikmu jika mau auto-run saat teleport/rejoin
-local GITHUB_RAW_URL = https://raw.githubusercontent.com/renzoknight/script-renzo/refs/heads/main/gag
+local GITHUB_RAW_URL = "https://raw.githubusercontent.com/renzoknight/script-renzo/refs/heads/main/gag"
 local SETTINGS_FILE = "GeminiFlyRadar_Settings.json"
 
 local function getGuiParent()
@@ -81,41 +80,79 @@ end
 
 local cfg = loadSettings()
 
--- Auto Executor (Queue On Teleport via GitHub Raw)
-local function queueScriptOnTeleport()
-	if not GITHUB_RAW_URL or GITHUB_RAW_URL == "" or string.find(GITHUB_RAW_URL, "USERNAME/REPO", 1, true) then
+-- Auto Executor (Queue On Teleport)
+local autoQueued = false
+
+local function getQueueTeleportFn()
+	if type(queue_on_teleport) == "function" then
+		return queue_on_teleport
+	end
+	if type(queueonteleport) == "function" then
+		return queueonteleport
+	end
+	if type(syn) == "table" and type(syn.queue_on_teleport) == "function" then
+		return syn.queue_on_teleport
+	end
+	if type(fluxus) == "table" and type(fluxus.queue_on_teleport) == "function" then
+		return fluxus.queue_on_teleport
+	end
+	if type(getgenv) == "function" then
+		local ok, env = pcall(getgenv)
+		if ok and type(env) == "table" then
+			if type(env.queue_on_teleport) == "function" then
+				return env.queue_on_teleport
+			end
+			if type(env.queueonteleport) == "function" then
+				return env.queueonteleport
+			end
+		end
+	end
+	return nil
+end
+
+local function queueScriptOnTeleport(force)
+	if autoQueued and not force then
+		return true
+	end
+	local qFn = getQueueTeleportFn()
+	if not qFn then
 		return false
 	end
 
 	local payload = string.format(
-		"if not game:IsLoaded() then game.Loaded:Wait() end; pcall(function() loadstring(game:HttpGet(%q))() end)",
+		[[
+if not game:IsLoaded() then
+	game.Loaded:Wait()
+end
+task.wait(1.5)
+pcall(function()
+	loadstring(game:HttpGet(%q))()
+end)
+]],
 		GITHUB_RAW_URL
 	)
 
-	local queueFn = nil
-	if type(queue_on_teleport) == "function" then
-		queueFn = queue_on_teleport
-	elseif type(queueonteleport) == "function" then
-		queueFn = queueonteleport
-	elseif type(syn) == "table" and type(syn.queue_on_teleport) == "function" then
-		queueFn = syn.queue_on_teleport
-	end
-
-	if queueFn then
-		local ok = pcall(queueFn, payload)
-		return ok == true
+	local ok = pcall(qFn, payload)
+	if ok then
+		autoQueued = true
+		return true
 	end
 	return false
 end
 
+-- Daftarkan sejak awal supaya siap sebelum teleport terjadi
+queueScriptOnTeleport(true)
+
 if localPlayer then
-	localPlayer.OnTeleport:Connect(function()
+	localPlayer.OnTeleport:Connect(function(state)
 		saveSettings()
-		queueScriptOnTeleport()
+		if state == Enum.TeleportState.Started or state == Enum.TeleportState.InProgress or state == Enum.TeleportState.Failed then
+			queueScriptOnTeleport(true)
+		end
 	end)
 end
 
--- Fly State (ringan, tidak recreate BodyMover tiap frame)
+-- Fly State (ringan)
 local flyEnabled = false
 local flySpeed = cfg.flySpeed
 local flyConn = nil
@@ -260,7 +297,7 @@ local function getTargetCFrame(inst)
 
 	local cur = inst.Parent
 	local depth = 0
-	while cur and cur ~= workspace and depth < 12 do
+	while cur and cur ~= workspace and depth < 14 do
 		if cur:IsA("BasePart") then
 			return cur.CFrame
 		elseif cur:IsA("Model") then
@@ -281,6 +318,16 @@ local function getTargetCFrame(inst)
 	return nil
 end
 
+local function isBoothLike(obj)
+	local n = string.lower(obj.Name or "")
+	return string.find(n, "booth", 1, true)
+		or string.find(n, "stall", 1, true)
+		or string.find(n, "stand", 1, true)
+		or string.find(n, "shop", 1, true)
+		or string.find(n, "plaza", 1, true)
+		or string.find(n, "trade", 1, true)
+end
+
 local function findBoothByPlayerName(text)
 	if type(text) ~= "string" then
 		return nil
@@ -290,12 +337,13 @@ local function findBoothByPlayerName(text)
 		if plr ~= localPlayer then
 			local n1 = string.lower(plr.Name)
 			local n2 = string.lower(plr.DisplayName)
-			if string.find(lower, n1, 1, true) or string.find(lower, n2, 1, true) then
-				for _, obj in ipairs(workspace:GetChildren()) do
-					local objLower = string.lower(obj.Name)
-					if string.find(objLower, "booth", 1, true) or string.find(objLower, "stall", 1, true) or string.find(objLower, "stand", 1, true) then
-						local ownerAttr = obj:GetAttribute("Owner") or obj:GetAttribute("UserId")
-						if tostring(ownerAttr) == tostring(plr.UserId) or string.find(string.lower(tostring(ownerAttr)), n1, 1, true) then
+			if (#n1 > 0 and string.find(lower, n1, 1, true)) or (#n2 > 0 and string.find(lower, n2, 1, true)) then
+				for _, obj in ipairs(workspace:GetDescendants()) do
+					if isBoothLike(obj) and (obj:IsA("Model") or obj:IsA("BasePart") or obj:IsA("Folder")) then
+						local ownerAttr = obj:GetAttribute("Owner") or obj:GetAttribute("UserId") or obj:GetAttribute("Player") or obj:GetAttribute("Seller")
+						if tostring(ownerAttr) == tostring(plr.UserId)
+							or (#n1 > 0 and string.find(string.lower(tostring(ownerAttr or "")), n1, 1, true))
+							or (#n2 > 0 and string.find(string.lower(tostring(ownerAttr or "")), n2, 1, true)) then
 							local cf = getTargetCFrame(obj)
 							if cf then
 								return cf
@@ -315,6 +363,53 @@ local function findBoothByPlayerName(text)
 	return nil
 end
 
+local function findNearestBoothFallback(hrp)
+	if not hrp then
+		return nil
+	end
+	local bestCf = nil
+	local bestDist = math.huge
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if isBoothLike(obj) and (obj:IsA("Model") or obj:IsA("BasePart")) then
+			local cf = getTargetCFrame(obj)
+			if cf then
+				local dist = (cf.Position - hrp.Position).Magnitude
+				if dist < bestDist then
+					bestDist = dist
+					bestCf = cf
+				end
+			end
+		end
+	end
+	return bestCf
+end
+
+local function moveCharacterToCFrame(hrp, targetCf)
+	if not hrp or not targetCf then
+		return
+	end
+	local dest = targetCf + Vector3.new(0, 4.5, 0)
+	local wasFly = flyEnabled
+	if wasFly then
+		stopFly()
+	end
+	pcall(function()
+		local char = hrp.Parent
+		if char and char:IsA("Model") and char.PrimaryPart then
+			char:PivotTo(CFrame.new(dest.Position, dest.Position + targetCf.LookVector))
+		else
+			hrp.CFrame = CFrame.new(dest.Position, dest.Position + targetCf.LookVector)
+		end
+	end)
+	if wasFly then
+		task.delay(0.15, function()
+			if memorySettings.flyEnabled then
+				startFly()
+			end
+		end)
+	end
+end
+
 local function teleportToEntry(entry)
 	if not entry then
 		return
@@ -325,30 +420,60 @@ local function teleportToEntry(entry)
 		return
 	end
 
-	local targetCf = nil
+	-- 1. Coba langsung dari instance di workspace
 	if entry.instance and entry.instance:IsDescendantOf(workspace) then
-		targetCf = getTargetCFrame(entry.instance)
+		local cf = getTargetCFrame(entry.instance)
+		if cf then
+			moveCharacterToCFrame(hrp, cf)
+			return
+		end
 	end
 
-	if not targetCf and entry.contextText then
-		targetCf = findBoothByPlayerName(entry.contextText)
+	-- 2. Cari booth/pemain dari teks konteks
+	if entry.contextText then
+		local cf = findBoothByPlayerName(entry.contextText)
+		if cf then
+			moveCharacterToCFrame(hrp, cf)
+			return
+		end
 	end
 
-	if not targetCf and entry.uiButton and typeof(firesignal) == "function" then
-		pcall(function()
+	-- 3. Klik tombol aksi/TP di dalam container UI yang sama jika ada
+	if entry.uiButton and typeof(firesignal) == "function" then
+		local fired = pcall(function()
 			firesignal(entry.uiButton.MouseButton1Click)
 		end)
-		return
+		if fired then
+			return
+		end
 	end
 
-	if targetCf then
-		hrp.CFrame = targetCf + Vector3.new(0, 4, 0)
+	-- 4. Fallback ke booth terdekat jika UI tidak menyertakan koordinat/nama seller
+	local nearBooth = findNearestBoothFallback(hrp)
+	if nearBooth then
+		moveCharacterToCFrame(hrp, nearBooth)
 	end
 end
 
--- Pet Scanner (KG + Token, Chunked & Terbatas)
+-- Pet Scanner (KG + Token fleksibel, Chunked & Terbatas)
 local MAX_RESULTS = 50
 local isScanning = false
+
+local function parseNumberSuffix(numStr, suffix)
+	local val = tonumber(numStr)
+	if not val then
+		return nil
+	end
+	local s = string.lower(suffix or "")
+	if s == "k" then
+		val = val * 1e3
+	elseif s == "m" then
+		val = val * 1e6
+	elseif s == "b" then
+		val = val * 1e9
+	end
+	return val
+end
 
 local function extractKg(text)
 	if type(text) ~= "string" then
@@ -365,13 +490,73 @@ local function extractToken(text)
 	if type(text) ~= "string" then
 		return nil
 	end
-	local tokStr = text:match("(%d+%.?%d*)%s*[tT][oO][kK][eE][nN]")
-		or text:match("[tT][oO][kK][eE][nN]%s*:?%s*(%d+%.?%d*)")
-		or text:match("(%d+%.?%d*)%s*[tT]$")
-	if tokStr then
-		return tonumber(tokStr)
+	-- Abaikan teks yang jelas-jelas berat KG
+	local cleaned = text:gsub("(%d+%.?%d*)%s*[kK][gG]", "")
+
+	-- Pola eksplisit kata token / t
+	local n1, s1 = cleaned:match("(%d+%.?%d*)%s*([kKmMbB]?)%s*[tT][oO][kK][eE][nN][sS]?")
+	if n1 then
+		return parseNumberSuffix(n1, s1)
 	end
+
+	local s2, n2 = cleaned:match("[tT][oO][kK][eE][nN][sS]?%s*:?%s*([kKmMbB]?)%s*(%d+%.?%d*)")
+	if n2 then
+		return parseNumberSuffix(n2, s2)
+	end
+
+	-- Pola angka dengan suffix K/M/B atau berdiri sendiri di label harga (bukan KG)
+	local n3, s3 = cleaned:match("(%d+%.?%d*)%s*([kKmMbB])%f[^%a]")
+	if n3 then
+		return parseNumberSuffix(n3, s3)
+	end
+
+	local n4 = cleaned:match("^%s*(%d[%d,%.]*)%s*$")
+	if n4 then
+		local plain = n4:gsub(",", "")
+		local num = tonumber(plain)
+		if num and num > 0 then
+			return num
+		end
+	end
+
 	return nil
+end
+
+local function formatTokenDisplay(tok)
+	if type(tok) ~= "number" then
+		return "- Token"
+	end
+	if tok >= 1e6 then
+		return string.format("%.2fM Token", tok / 1e6)
+	elseif tok >= 1e3 then
+		return string.format("%.1fK Token", tok / 1e3)
+	end
+	return tostring(tok) .. " Token"
+end
+
+local function collectSearchRootsAndNodes()
+	local nodes = {}
+	local pg = localPlayer and localPlayer:FindFirstChildOfClass("PlayerGui")
+	if pg then
+		for _, d in ipairs(pg:GetDescendants()) do
+			if d:IsA("TextLabel") or d:IsA("TextButton") then
+				table.insert(nodes, d)
+			end
+		end
+	end
+
+	for _, child in ipairs(workspace:GetChildren()) do
+		if child:IsA("Model") or child:IsA("Folder") then
+			table.insert(nodes, child)
+			for _, sub in ipairs(child:GetChildren()) do
+				if sub:IsA("Model") or sub:IsA("Folder") or sub:IsA("BasePart") then
+					table.insert(nodes, sub)
+				end
+			end
+		end
+	end
+
+	return nodes
 end
 
 local function scanPetsByNameAsync(query)
@@ -382,29 +567,9 @@ local function scanPetsByNameAsync(query)
 	end
 
 	local seen = {}
-	local pg = localPlayer and localPlayer:FindFirstChildOfClass("PlayerGui")
-	local targets = {}
-
-	if pg then
-		for _, d in ipairs(pg:GetDescendants()) do
-			if d:IsA("TextLabel") or d:IsA("TextButton") then
-				table.insert(targets, d)
-			end
-		end
-	end
-
-	for _, child in ipairs(workspace:GetChildren()) do
-		if child:IsA("Model") or child:IsA("Folder") then
-			table.insert(targets, child)
-			for _, sub in ipairs(child:GetChildren()) do
-				if sub:IsA("Model") or sub:IsA("Folder") or sub:IsA("BasePart") then
-					table.insert(targets, sub)
-				end
-			end
-		end
-	end
-
+	local targets = collectSearchRootsAndNodes()
 	local processed = 0
+
 	for _, desc in ipairs(targets) do
 		if #results >= MAX_RESULTS then
 			break
@@ -423,28 +588,38 @@ local function scanPetsByNameAsync(query)
 
 		if desc:IsA("TextLabel") or desc:IsA("TextButton") then
 			local txt = desc.Text or ""
-			if #txt > 0 and #txt < 160 and string.find(string.lower(txt), cleanQuery, 1, true) then
+			if #txt > 0 and #txt < 180 and string.find(string.lower(txt), cleanQuery, 1, true) then
 				candidateName = txt
 				candidateKg = extractKg(txt)
 				candidateToken = extractToken(txt)
 				table.insert(contextParts, txt)
 
-				if desc.Parent then
-					for _, sib in ipairs(desc.Parent:GetChildren()) do
+				-- Cek beberapa tingkat parent agar ketemu label KG / Token / tombol TP di kartu booth
+				local container = desc.Parent
+				local hop = 0
+				while container and container ~= localPlayer and hop < 4 do
+					for _, sib in ipairs(container:GetDescendants()) do
 						if sib:IsA("TextLabel") or sib:IsA("TextButton") then
 							local sTxt = sib.Text or ""
-							table.insert(contextParts, sTxt)
-							if not candidateKg then
-								candidateKg = extractKg(sTxt)
-							end
-							if not candidateToken then
-								candidateToken = extractToken(sTxt)
-							end
-							if sib:IsA("TextButton") and not linkedBtn then
-								linkedBtn = sib
+							if #sTxt > 0 and #sTxt < 140 then
+								table.insert(contextParts, sTxt)
+								if not candidateKg then
+									candidateKg = extractKg(sTxt)
+								end
+								if not candidateToken then
+									candidateToken = extractToken(sTxt)
+								end
+								if sib:IsA("TextButton") and not linkedBtn then
+									local bLow = string.lower(sTxt)
+									if string.find(bLow, "tp", 1, true) or string.find(bLow, "go", 1, true) or string.find(bLow, "visit", 1, true) or string.find(bLow, "buy", 1, true) then
+										linkedBtn = sib
+									end
+								end
 							end
 						end
 					end
+					container = container.Parent
+					hop += 1
 				end
 			end
 		else
@@ -459,11 +634,26 @@ local function scanPetsByNameAsync(query)
 					candidateKg = tonumber(attrKg) or extractKg(attrKg)
 				end
 
-				local attrTok = desc:GetAttribute("Token") or desc:GetAttribute("Tokens") or desc:GetAttribute("Price")
+				local attrTok = desc:GetAttribute("Token") or desc:GetAttribute("Tokens") or desc:GetAttribute("Price") or desc:GetAttribute("Cost")
 				if type(attrTok) == "number" then
 					candidateToken = attrTok
 				elseif type(attrTok) == "string" then
 					candidateToken = tonumber(attrTok) or extractToken(attrTok)
+				end
+
+				for _, sub in ipairs(desc:GetDescendants()) do
+					if sub:IsA("TextLabel") or sub:IsA("TextButton") then
+						local sTxt = sub.Text or ""
+						if #sTxt > 0 and #sTxt < 140 then
+							table.insert(contextParts, sTxt)
+							if not candidateKg then
+								candidateKg = extractKg(sTxt)
+							end
+							if not candidateToken then
+								candidateToken = extractToken(sTxt)
+							end
+						end
+					end
 				end
 			end
 		end
@@ -506,7 +696,7 @@ screenGui.Parent = guiParent
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.fromOffset(385, 415)
+mainFrame.Size = UDim2.fromOffset(390, 415)
 mainFrame.Position = UDim2.fromScale(0.32, 0.2)
 mainFrame.BackgroundColor3 = Color3.fromRGB(11, 17, 30)
 mainFrame.BorderSizePixel = 0
@@ -529,7 +719,7 @@ local titleLbl = Instance.new("TextLabel")
 titleLbl.Size = UDim2.new(1, -46, 1, 0)
 titleLbl.Position = UDim2.fromOffset(12, 0)
 titleLbl.BackgroundTransparency = 1
-titleLbl.Text = "Fly & Pet Radar (Token + Save)"
+titleLbl.Text = "Fly & Pet Radar (Auto + Token)"
 titleLbl.TextColor3 = Color3.fromRGB(240, 246, 255)
 titleLbl.TextXAlignment = Enum.TextXAlignment.Left
 titleLbl.Font = Enum.Font.GothamBold
@@ -783,8 +973,7 @@ petScroll.Parent = listFrame
 
 local function formatKgToken(item)
 	local kgText = item.hasKg and (tostring(item.kg) .. " kg") or "? kg"
-	local tokText = item.token and (tostring(item.token) .. " Token") or "- Token"
-	return kgText .. " | " .. tokText
+	return kgText .. " | " .. formatTokenDisplay(item.token)
 end
 
 local function renderResults(list)
@@ -895,4 +1084,4 @@ if cfg.flyEnabled then
 	startFly()
 end
 refreshFlyBtn()
-queueScriptOnTeleport()
+queueScriptOnTeleport(true)
