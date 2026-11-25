@@ -34,36 +34,47 @@ local memorySettings = {
 	autoExecutorEnabled = false,
 }
 
-local function canUseFileIo()
-	return type(writefile) == "function" and type(readfile) == "function"
+local function canWriteFile()
+	return type(writefile) == "function"
+end
+
+local function canReadFile()
+	return type(readfile) == "function"
+end
+
+local function fileExistsSafe(path)
+	if type(isfile) == "function" then
+		local ok, res = pcall(isfile, path)
+		if ok then
+			return res == true
+		end
+	end
+	if canReadFile() then
+		local ok, data = pcall(readfile, path)
+		return ok and type(data) == "string" and #data > 0
+	end
+	return false
 end
 
 local function loadSettings()
-	if canUseFileIo() then
-		local exists = true
-		if type(isfile) == "function" then
-			local ok, res = pcall(isfile, SETTINGS_FILE)
-			exists = ok and res == true
-		end
-		if exists then
-			local ok, raw = pcall(readfile, SETTINGS_FILE)
-			if ok and type(raw) == "string" and #raw > 0 then
-				local decOk, decoded = pcall(function()
-					return HttpService:JSONDecode(raw)
-				end)
-				if decOk and type(decoded) == "table" then
-					if type(decoded.flyEnabled) == "boolean" then
-						memorySettings.flyEnabled = decoded.flyEnabled
-					end
-					if type(decoded.flySpeed) == "number" then
-						memorySettings.flySpeed = math.clamp(decoded.flySpeed, 5, 300)
-					end
-					if type(decoded.lastPetQuery) == "string" then
-						memorySettings.lastPetQuery = decoded.lastPetQuery
-					end
-					if type(decoded.autoExecutorEnabled) == "boolean" then
-						memorySettings.autoExecutorEnabled = decoded.autoExecutorEnabled
-					end
+	if canReadFile() and fileExistsSafe(SETTINGS_FILE) then
+		local ok, raw = pcall(readfile, SETTINGS_FILE)
+		if ok and type(raw) == "string" and #raw > 0 then
+			local decOk, decoded = pcall(function()
+				return HttpService:JSONDecode(raw)
+			end)
+			if decOk and type(decoded) == "table" then
+				if type(decoded.flyEnabled) == "boolean" then
+					memorySettings.flyEnabled = decoded.flyEnabled
+				end
+				if type(decoded.flySpeed) == "number" then
+					memorySettings.flySpeed = math.clamp(decoded.flySpeed, 5, 300)
+				end
+				if type(decoded.lastPetQuery) == "string" then
+					memorySettings.lastPetQuery = decoded.lastPetQuery
+				end
+				if type(decoded.autoExecutorEnabled) == "boolean" then
+					memorySettings.autoExecutorEnabled = decoded.autoExecutorEnabled
 				end
 			end
 		end
@@ -72,7 +83,12 @@ local function loadSettings()
 end
 
 local function saveSettings()
-	if canUseFileIo() then
+	memorySettings.flySpeed = math.clamp(tonumber(memorySettings.flySpeed) or 50, 5, 300)
+	memorySettings.lastPetQuery = tostring(memorySettings.lastPetQuery or "")
+	memorySettings.autoExecutorEnabled = memorySettings.autoExecutorEnabled == true
+	memorySettings.flyEnabled = memorySettings.flyEnabled == true
+
+	if canWriteFile() then
 		local encOk, encoded = pcall(function()
 			return HttpService:JSONEncode(memorySettings)
 		end)
@@ -84,7 +100,7 @@ end
 
 local cfg = loadSettings()
 
--- Auto Executor (Toggle ON / OFF)
+-- Auto Executor (Toggle ON / OFF + Save)
 local autoExecutorEnabled = cfg.autoExecutorEnabled == true
 
 local function getQueueTeleportFn()
@@ -141,6 +157,7 @@ end
 
 if localPlayer then
 	localPlayer.OnTeleport:Connect(function(state)
+		memorySettings.autoExecutorEnabled = autoExecutorEnabled
 		saveSettings()
 		if autoExecutorEnabled and (state == Enum.TeleportState.Started or state == Enum.TeleportState.InProgress or state == Enum.TeleportState.Failed) then
 			syncAutoExecutorQueue()
@@ -1158,6 +1175,10 @@ petBox.FocusLost:Connect(function(enterPressed)
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
+	memorySettings.autoExecutorEnabled = autoExecutorEnabled
+	memorySettings.flyEnabled = flyEnabled
+	memorySettings.flySpeed = flySpeed
+	memorySettings.lastPetQuery = petBox.Text or ""
 	saveSettings()
 	stopFly()
 	screenGui:Destroy()
